@@ -707,7 +707,7 @@
                     <label for="slack_webhook_url">
                         <i class="fas fa-link"></i> Slack Webhook URL
                     </label>
-                    @php($slackSaved = !empty($notificationSettings['slack_webhook_url']))
+                    @php $slackSaved = !empty($notificationSettings['slack_webhook_url']); @endphp
                     {{-- The saved URL is a credential and is never printed into the page. --}}
                     <input type="url" class="form-control" id="slack_webhook_url" name="slack_webhook_url"
                            value=""
