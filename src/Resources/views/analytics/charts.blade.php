@@ -474,7 +474,7 @@ charts.miningTrends = new Chart(document.getElementById('miningTrendsChart'), {
                 title: { display: true, text: '{{ trans("mining-manager::analytics.value") }} (ISK)', color: '#fff' },
                 ticks: {
                     color: '#f5576c',
-                    callback: function(value) { return (value / 1000000).toFixed(0) + 'M'; }
+                    callback: function(value) { return (value / 1000000).toFixed(0) + ' M'; }
                 },
                 grid: { drawOnChartArea: false }
             },
@@ -693,7 +693,7 @@ function getDoughnutChartOptions() {
                 callbacks: {
                     label: function(context) {
                         const value = context.parsed || 0;
-                        return context.label + ': ' + (value / 1000000).toFixed(1) + 'M ISK';
+                        return context.label + ': ' + (value / 1000000).toFixed(1) + ' M ISK';
                     }
                 }
             }

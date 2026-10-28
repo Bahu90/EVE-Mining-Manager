@@ -488,8 +488,8 @@ class AnalyticsController extends Controller
 
         $metrics[] = [
             'label' => trans('mining-manager::analytics.total_value'),
-            'value_1' => number_format($period1['total_value'] / 1000000, 2) . 'M ISK',
-            'value_2' => number_format($period2['total_value'] / 1000000, 2) . 'M ISK',
+            'value_1' => number_format($period1['total_value'] / 1000000, 2) . ' M ISK',
+            'value_2' => number_format($period2['total_value'] / 1000000, 2) . ' M ISK',
             'change' => number_format(abs($valueChange), 1) . '%',
             'change_type' => $valueChange > 0 ? 'positive' : ($valueChange < 0 ? 'negative' : 'neutral'),
         ];

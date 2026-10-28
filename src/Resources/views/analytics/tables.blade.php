@@ -167,11 +167,11 @@
                                     <td>{{ $miner->corporation_name ?? 'N/A' }}</td>
                                     <td data-order="{{ $miner->total_quantity ?? 0 }}">{{ number_format($miner->total_quantity ?? 0, 0) }}</td>
                                     <td data-order="{{ $miner->total_value ?? 0 }}">
-                                        <span class="text-success">{{ number_format(($miner->total_value ?? 0) / 1000000, 2) }}M ISK</span>
+                                        <span class="text-success">{{ number_format(($miner->total_value ?? 0) / 1000000, 2) }} M ISK</span>
                                     </td>
                                     <td>{{ $miner->days_active ?? 0 }}</td>
                                     <td data-order="{{ ($miner->days_active ?? 0) > 0 ? (($miner->total_value ?? 0) / ($miner->days_active ?? 1)) : 0 }}">
-                                        {{ number_format(($miner->days_active ?? 0) > 0 ? (($miner->total_value ?? 0) / ($miner->days_active ?? 1)) / 1000000 : 0, 2) }}M ISK
+                                        {{ number_format(($miner->days_active ?? 0) > 0 ? (($miner->total_value ?? 0) / ($miner->days_active ?? 1)) / 1000000 : 0, 2) }} M ISK
                                     </td>
                                     @php
                                         $lastActivity = $miner->last_activity ? \Carbon\Carbon::parse($miner->last_activity) : null;
@@ -229,7 +229,7 @@
                                     </td>
                                     <td data-order="{{ $ore->total_quantity ?? 0 }}">{{ number_format($ore->total_quantity ?? 0, 0) }}</td>
                                     <td data-order="{{ $ore->total_value ?? 0 }}">
-                                        <span class="text-success">{{ number_format(($ore->total_value ?? 0) / 1000000, 2) }}M ISK</span>
+                                        <span class="text-success">{{ number_format(($ore->total_value ?? 0) / 1000000, 2) }} M ISK</span>
                                     </td>
                                     <td data-order="{{ ($ore->total_quantity ?? 0) > 0 ? (($ore->total_value ?? 0) / ($ore->total_quantity ?? 1)) : 0 }}">
                                         {{ number_format(($ore->total_quantity ?? 0) > 0 ? (($ore->total_value ?? 0) / ($ore->total_quantity ?? 1)) : 0, 0) }} ISK
@@ -309,11 +309,11 @@
                                     </td>
                                     <td data-order="{{ $system->total_quantity ?? 0 }}">{{ number_format($system->total_quantity ?? 0, 0) }}</td>
                                     <td data-order="{{ $system->total_value ?? 0 }}">
-                                        <span class="text-success">{{ number_format(($system->total_value ?? 0) / 1000000, 2) }}M ISK</span>
+                                        <span class="text-success">{{ number_format(($system->total_value ?? 0) / 1000000, 2) }} M ISK</span>
                                     </td>
                                     <td>{{ $system->unique_miners ?? 0 }}</td>
                                     <td data-order="{{ ($system->unique_miners ?? 0) > 0 ? (($system->total_value ?? 0) / ($system->unique_miners ?? 1)) : 0 }}">
-                                        {{ number_format(($system->unique_miners ?? 0) > 0 ? (($system->total_value ?? 0) / ($system->unique_miners ?? 1)) / 1000000 : 0, 2) }}M ISK
+                                        {{ number_format(($system->unique_miners ?? 0) > 0 ? (($system->total_value ?? 0) / ($system->unique_miners ?? 1)) / 1000000 : 0, 2) }} M ISK
                                     </td>
                                 </tr>
                                 @endforeach

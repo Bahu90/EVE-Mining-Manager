@@ -359,7 +359,7 @@
                     <span class="info-box-text">ISK in cargo</span>
                     <span class="info-box-number">
                         @if($pricingAvailable)
-                            ~ {{ number_format($totalIsk / 1000000, 1) }}M
+                            ~ {{ number_format($totalIsk / 1000000, 1) }} M
                         @else
                             &mdash;
                         @endif
@@ -529,7 +529,7 @@
                             @if($drillIsk !== null && $drillIsk > 0)
                                 <span class="drill-isk-badge ml-2" title="Approx ISK value at current market prices">
                                     <i class="fas fa-coins"></i>
-                                    ~ {{ number_format($drillIsk / 1000000, 1) }}M ISK
+                                    ~ {{ number_format($drillIsk / 1000000, 1) }} M ISK
                                 </span>
                             @endif
                         </h5>
@@ -615,7 +615,7 @@
                                             <td class="text-right">{{ number_format($row->total_quantity) }}</td>
                                             <td class="text-right">
                                                 @if(!empty($row->isk_value))
-                                                    <span class="text-success">~ {{ number_format($row->isk_value / 1000000, 2) }}M</span>
+                                                    <span class="text-success">~ {{ number_format($row->isk_value / 1000000, 2) }} M</span>
                                                     <small class="text-muted d-block" style="font-size: 0.7em;">
                                                         @ {{ number_format($row->unit_price, 2) }} ISK
                                                     </small>
@@ -641,7 +641,7 @@
                                         </td>
                                         <td class="text-right" style="font-weight: 600;">
                                             @if(($perDrillIsk[$structureId] ?? null) !== null)
-                                                <span class="text-success">~ {{ number_format($perDrillIsk[$structureId] / 1000000, 2) }}M</span>
+                                                <span class="text-success">~ {{ number_format($perDrillIsk[$structureId] / 1000000, 2) }} M</span>
                                             @else
                                                 <span class="text-muted">&mdash;</span>
                                             @endif

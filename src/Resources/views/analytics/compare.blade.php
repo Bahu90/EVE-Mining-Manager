@@ -548,7 +548,7 @@
                                          class="img-circle" style="width: 24px; height: 24px;">
                                     {{ $item['name'] }}
                                 </td>
-                                <td class="text-right text-success">{{ number_format(($item['total_value'] ?? 0) / 1000000, 2) }}M ISK</td>
+                                <td class="text-right text-success">{{ number_format(($item['total_value'] ?? 0) / 1000000, 2) }} M ISK</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -589,7 +589,7 @@
                                          class="img-circle" style="width: 24px; height: 24px;">
                                     {{ $item['name'] }}
                                 </td>
-                                <td class="text-right text-success">{{ number_format(($item['total_value'] ?? 0) / 1000000, 2) }}M ISK</td>
+                                <td class="text-right text-success">{{ number_format(($item['total_value'] ?? 0) / 1000000, 2) }} M ISK</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -680,7 +680,7 @@
                                         {{ $miner['character_name'] }}
                                     </td>
                                     <td class="text-right">{{ number_format($miner['total_quantity'], 0) }}</td>
-                                    <td class="text-right text-success">{{ number_format(($miner['total_value'] ?? 0) / 1000000, 2) }}M</td>
+                                    <td class="text-right text-success">{{ number_format(($miner['total_value'] ?? 0) / 1000000, 2) }} M</td>
                                     <td class="text-right">{{ $miner['days_active'] }}</td>
                                     <td class="text-right">{{ number_format($miner['avg_per_day'], 0) }}</td>
                                 </tr>
@@ -723,10 +723,10 @@
                                              class="img-circle" style="width: 24px;">
                                         {{ $miner['character_name'] }}
                                     </td>
-                                    <td class="text-right text-success">{{ number_format(($miner['total_value'] ?? 0) / 1000000, 2) }}M</td>
+                                    <td class="text-right text-success">{{ number_format(($miner['total_value'] ?? 0) / 1000000, 2) }} M</td>
                                     <td class="text-right">{{ number_format($miner['total_quantity'], 0) }}</td>
                                     <td class="text-right">{{ $miner['days_active'] }}</td>
-                                    <td class="text-right text-success">{{ number_format(($miner['avg_value_per_day'] ?? 0) / 1000000, 2) }}M</td>
+                                    <td class="text-right text-success">{{ number_format(($miner['avg_value_per_day'] ?? 0) / 1000000, 2) }} M</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -788,11 +788,11 @@
                                         <i class="fas fa-map-marker-alt text-warning"></i>
                                         {{ $system['system_name'] }}
                                     </td>
-                                    <td class="text-right text-success">{{ number_format(($system['total_value'] ?? 0) / 1000000, 2) }}M ISK</td>
+                                    <td class="text-right text-success">{{ number_format(($system['total_value'] ?? 0) / 1000000, 2) }} M ISK</td>
                                     <td class="text-right">{{ number_format($system['total_quantity'], 0) }}</td>
                                     <td class="text-right">{{ $system['unique_miners'] }}</td>
                                     <td class="text-right">{{ $system['days_active'] }}</td>
-                                    <td class="text-right text-success">{{ number_format(($system['avg_value_per_day'] ?? 0) / 1000000, 2) }}M</td>
+                                    <td class="text-right text-success">{{ number_format(($system['avg_value_per_day'] ?? 0) / 1000000, 2) }} M</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -851,7 +851,7 @@
                                         <i class="fas fa-gem text-info"></i>
                                         {{ $ore['ore_name'] }}
                                     </td>
-                                    <td class="text-right text-success">{{ number_format(($ore['total_value'] ?? 0) / 1000000, 2) }}M</td>
+                                    <td class="text-right text-success">{{ number_format(($ore['total_value'] ?? 0) / 1000000, 2) }} M</td>
                                     <td class="text-right">{{ number_format($ore['total_quantity'], 0) }}</td>
                                     <td class="text-right">{{ $ore['miners_count'] }}</td>
                                     <td class="text-right">{{ number_format($ore['avg_value_per_unit'] ?? 0, 0) }} ISK</td>
@@ -1053,7 +1053,7 @@ $(document).ready(function() {
                         callbacks: {
                             label: function(context) {
                                 return context.dataset.label + ': ' +
-                                       (context.parsed.y / 1000000).toFixed(2) + 'M ISK';
+                                       (context.parsed.y / 1000000).toFixed(2) + ' M ISK';
                             }
                         }
                     }
@@ -1064,8 +1064,8 @@ $(document).ready(function() {
                         ticks: {
                             color: '#a0a0a0',
                             callback: function(value) {
-                                if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'B';
-                                return (value / 1000000).toFixed(0) + 'M';
+                                if (value >= 1000000000) return (value / 1000000000).toFixed(1) + ' B';
+                                return (value / 1000000).toFixed(0) + ' M';
                             }
                         },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' }
@@ -1105,7 +1105,7 @@ $(document).ready(function() {
                         intersect: false,
                         callbacks: {
                             label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + 'M ISK';
+                                return context.dataset.label + ': ' + context.parsed.y.toFixed(2) + ' M ISK';
                             }
                         }
                     }
@@ -1121,7 +1121,7 @@ $(document).ready(function() {
                         ticks: {
                             color: '#a0a0a0',
                             callback: function(value) {
-                                return value.toFixed(0) + 'M';
+                                return value.toFixed(0) + ' M';
                             }
                         },
                         grid: { color: 'rgba(255, 255, 255, 0.1)' }

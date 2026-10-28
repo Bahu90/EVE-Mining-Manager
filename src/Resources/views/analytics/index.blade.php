@@ -276,7 +276,7 @@
                                         @endif
                                     </td>
                                     <td class="text-right">{{ number_format($miner->total_quantity ?? 0, 0) }}</td>
-                                    <td class="text-right text-success">{{ number_format(($miner->total_value ?? 0) / 1000000, 0) }}M ISK</td>
+                                    <td class="text-right text-success">{{ number_format(($miner->total_value ?? 0) / 1000000, 0) }} M ISK</td>
                                 </tr>
                                 @empty
                                 <tr>
@@ -392,7 +392,7 @@
                                 <tr>
                                     <td><i class="fas fa-globe"></i> {{ $system->system_name }}</td>
                                     <td class="text-right">{{ number_format($system->total_quantity ?? 0, 0) }}</td>
-                                    <td class="text-right text-success">{{ number_format(($system->total_value ?? 0) / 1000000, 0) }}M ISK</td>
+                                    <td class="text-right text-success">{{ number_format(($system->total_value ?? 0) / 1000000, 0) }} M ISK</td>
                                     <td class="text-right">{{ $system->unique_miners ?? 0 }}</td>
                                     <td>
                                         @php
@@ -475,7 +475,7 @@ new Chart(dailyTrendsCtx, {
                             if (context.datasetIndex === 0) {
                                 label += context.parsed.y.toLocaleString() + ' units';
                             } else {
-                                label += context.parsed.y.toLocaleString() + 'M ISK';
+                                label += context.parsed.y.toLocaleString() + ' M ISK';
                             }
                         }
                         return label;
@@ -534,7 +534,7 @@ new Chart(document.getElementById('oreBreakdownChart'), {
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        return context.label + ': ' + (context.parsed / 1000000).toFixed(1) + 'M ISK';
+                        return context.label + ': ' + (context.parsed / 1000000).toFixed(1) + ' M ISK';
                     }
                 }
             }
