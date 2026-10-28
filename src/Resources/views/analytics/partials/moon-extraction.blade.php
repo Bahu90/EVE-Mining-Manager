@@ -72,13 +72,13 @@
 <div class="row mb-3">
     <div class="col-md-4">
         <div class="moon-stat-card" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-            <h3>{{ number_format($data['pool_isk'] / 1000000, 0) }} M</h3>
+            <h3>{{ \MiningManager\Support\IskFormat::short($data['pool_isk']) }} ISK</h3>
             <p>{{ trans('mining-manager::analytics.pool_value_isk') }}</p>
         </div>
     </div>
     <div class="col-md-4">
         <div class="moon-stat-card" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
-            <h3>{{ number_format($data['mined_isk'] / 1000000, 0) }} M</h3>
+            <h3>{{ \MiningManager\Support\IskFormat::short($data['mined_isk']) }} ISK</h3>
             <p>{{ trans('mining-manager::analytics.mined_value_isk') }}</p>
         </div>
     </div>
@@ -115,7 +115,7 @@
                             <tr>
                                 <td><i class="fas fa-gem"></i> {{ $ore['name'] }}</td>
                                 <td class="text-right">{{ number_format($ore['volume_m3'], 0) }} m&sup3;</td>
-                                <td class="text-right text-success">{{ number_format($ore['value'] / 1000000, 1) }} M ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($ore['value']) }} ISK</td>
                             </tr>
                             @empty
                             <tr>
@@ -127,7 +127,7 @@
                             <tr class="font-weight-bold">
                                 <td>{{ trans('mining-manager::analytics.total') }}</td>
                                 <td class="text-right">{{ number_format($data['pool_m3'], 0) }} m&sup3;</td>
-                                <td class="text-right text-success">{{ number_format($data['pool_isk'] / 1000000, 1) }} M ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($data['pool_isk']) }} ISK</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -163,7 +163,7 @@
                                 <td><i class="fas fa-gem"></i> {{ $ore->typeName }}</td>
                                 <td class="text-right">{{ number_format($ore->qty, 0) }}</td>
                                 <td class="text-right">{{ number_format($ore->mined_m3, 0) }} m&sup3;</td>
-                                <td class="text-right text-success">{{ number_format($ore->mined_isk / 1000000, 1) }} M ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($ore->mined_isk) }} ISK</td>
                                 <td class="text-center">{{ $ore->miners }}</td>
                             </tr>
                             @empty
@@ -177,7 +177,7 @@
                                 <td>{{ trans('mining-manager::analytics.total') }}</td>
                                 <td></td>
                                 <td class="text-right">{{ number_format($data['mined_m3'], 0) }} m&sup3;</td>
-                                <td class="text-right text-success">{{ number_format($data['mined_isk'] / 1000000, 1) }} M ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($data['mined_isk']) }} ISK</td>
                                 <td class="text-center">{{ $data['unique_miners'] }}</td>
                             </tr>
                         </tfoot>
@@ -219,11 +219,11 @@ $(document).ready(function() {
     var minedOres = @json($data['mined_ores']->keyBy('type_id')->toArray());
 
     var labels = poolOres.map(function(o) { return o.name; });
-    var poolValues = poolOres.map(function(o) { return (o.value / 1000000).toFixed(1); });
+    var poolValues = poolOres.map(function(o) { return o.value; });
     var minedValues = poolOres.map(function(o) {
         var typeId = o.type_id;
         var mined = minedOres[typeId];
-        return mined ? (mined.mined_isk / 1000000).toFixed(1) : 0;
+        return mined ? Number(mined.mined_isk) : 0;
     });
 
     new Chart(ctx, {
@@ -257,7 +257,7 @@ $(document).ready(function() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y + ' M ISK';
+                            return context.dataset.label + ': ' + mmIsk(context.parsed.y) + ' ISK';
                         }
                     }
                 }
@@ -271,7 +271,7 @@ $(document).ready(function() {
                     beginAtZero: true,
                     ticks: {
                         color: '#ccc',
-                        callback: function(value) { return value + ' M'; }
+                        callback: function(value) { return mmIsk(value, 1); }
                     },
                     grid: { color: 'rgba(255,255,255,0.1)' },
                 }

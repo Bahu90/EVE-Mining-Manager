@@ -449,7 +449,7 @@ charts.miningTrends = new Chart(document.getElementById('miningTrendsChart'), {
                         let label = context.dataset.label || '';
                         if (label) label += ': ';
                         if (context.dataset.yAxisID === 'y1') {
-                            label += (context.parsed.y / 1000000).toFixed(1) + ' M ISK';
+                            label += mmIsk(context.parsed.y) + ' ISK';
                         } else {
                             label += context.parsed.y.toLocaleString();
                         }
@@ -474,7 +474,7 @@ charts.miningTrends = new Chart(document.getElementById('miningTrendsChart'), {
                 title: { display: true, text: '{{ trans("mining-manager::analytics.value") }} (ISK)', color: '#fff' },
                 ticks: {
                     color: '#f5576c',
-                    callback: function(value) { return (value / 1000000).toFixed(0) + ' M'; }
+                    callback: function(value) { return mmIsk(value, 1); }
                 },
                 grid: { drawOnChartArea: false }
             },
@@ -541,8 +541,8 @@ charts.minerActivity = new Chart(document.getElementById('minerActivityChart'), 
     data: {
         labels: minerActivityData.labels,
         datasets: [{
-            label: '{{ trans("mining-manager::analytics.value") }} (M ISK)',
-            data: minerActivityData.values.map(v => v / 1000000),
+            label: '{{ trans("mining-manager::analytics.value") }} (ISK)',
+            data: minerActivityData.values,
             backgroundColor: colors.primary[3],
             borderColor: colors.primary[3],
             borderWidth: 1
@@ -561,8 +561,8 @@ charts.systemActivity = new Chart(document.getElementById('systemActivityChart')
     data: {
         labels: systemActivityData.labels,
         datasets: [{
-            label: '{{ trans("mining-manager::analytics.value") }} (M ISK)',
-            data: systemActivityData.values.map(v => v / 1000000),
+            label: '{{ trans("mining-manager::analytics.value") }} (ISK)',
+            data: systemActivityData.values,
             backgroundColor: colors.primary[4],
             borderColor: colors.primary[4],
             borderWidth: 1
@@ -584,8 +584,8 @@ function buildHeatmapChart(view) {
 
     if (view === 'summary') {
         datasets = [{
-            label: 'Avg Value (M ISK)',
-            data: (heatmapData.summary || []).map(d => d.avg_value / 1000000),
+            label: 'Avg Value (ISK)',
+            data: (heatmapData.summary || []).map(d => d.avg_value),
             backgroundColor: labels.map((_, i) => {
                 const values = (heatmapData.summary || []).map(d => d.avg_value);
                 const max = Math.max(...values);
@@ -601,7 +601,7 @@ function buildHeatmapChart(view) {
         sourceData.forEach((entry, i) => {
             datasets.push({
                 label: entry.label,
-                data: entry.data.map(v => v / 1000000),
+                data: entry.data,
                 backgroundColor: heatmapColors[i % heatmapColors.length],
                 borderColor: heatmapColors[i % heatmapColors.length],
                 borderWidth: 1
@@ -623,7 +623,7 @@ function buildHeatmapChart(view) {
                 tooltip: {
                     callbacks: {
                         label: function(ctx) {
-                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + ' M ISK';
+                            return ctx.dataset.label + ': ' + mmIsk(ctx.parsed.y) + ' ISK';
                         }
                     }
                 }
@@ -631,8 +631,8 @@ function buildHeatmapChart(view) {
             scales: {
                 y: {
                     stacked: view !== 'summary',
-                    title: { display: true, text: view === 'summary' ? 'Avg Value (M ISK)' : 'Total Value (M ISK)', color: '#fff' },
-                    ticks: { color: '#fff' },
+                    title: { display: true, text: view === 'summary' ? 'Avg Value (ISK)' : 'Total Value (ISK)', color: '#fff' },
+                    ticks: { color: '#fff', callback: function(value) { return mmIsk(value, 1); } },
                     grid: { color: 'rgba(255, 255, 255, 0.1)' }
                 },
                 x: {
@@ -693,7 +693,7 @@ function getDoughnutChartOptions() {
                 callbacks: {
                     label: function(context) {
                         const value = context.parsed || 0;
-                        return context.label + ': ' + (value / 1000000).toFixed(1) + ' M ISK';
+                        return context.label + ': ' + mmIsk(value) + ' ISK';
                     }
                 }
             }
@@ -706,10 +706,17 @@ function getBarChartOptions() {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-            legend: { labels: { color: '#fff' } }
+            legend: { labels: { color: '#fff' } },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return (context.dataset.label || '').replace(' (ISK)', '') + ': ' + mmIsk(context.parsed.y) + ' ISK';
+                    }
+                }
+            }
         },
         scales: {
-            y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+            y: { ticks: { color: '#fff', callback: function(value) { return mmIsk(value, 1); } }, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
             x: { ticks: { color: '#fff', maxRotation: 45, minRotation: 45 }, grid: { color: 'rgba(255, 255, 255, 0.1)' } }
         }
     };

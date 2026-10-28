@@ -32,13 +32,13 @@
 <div class="row mb-3">
     <div class="col-md-4">
         <div class="moon-stat-card" style="background: linear-gradient(135deg, #4e73df 0%, #224abe 100%);">
-            <h3>{{ number_format(($summary['total_pool_isk'] ?? 0) / 1000000, 0) }} M</h3>
+            <h3>{{ \MiningManager\Support\IskFormat::short(($summary['total_pool_isk'] ?? 0)) }} ISK</h3>
             <p>{{ trans('mining-manager::analytics.pool_value_isk') }}</p>
         </div>
     </div>
     <div class="col-md-4">
         <div class="moon-stat-card" style="background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%);">
-            <h3>{{ number_format(($summary['total_mined_isk'] ?? 0) / 1000000, 0) }} M</h3>
+            <h3>{{ \MiningManager\Support\IskFormat::short(($summary['total_mined_isk'] ?? 0)) }} ISK</h3>
             <p>{{ trans('mining-manager::analytics.mined_value_isk') }}</p>
         </div>
     </div>
@@ -116,8 +116,8 @@
                                         <span class="mm-pct-label">{{ $moon->util_pct }}%</span>
                                     </div>
                                 </td>
-                                <td class="text-right text-success">{{ number_format($moon->pool_isk / 1000000, 0) }} M</td>
-                                <td class="text-right text-success">{{ number_format($moon->mined_isk / 1000000, 0) }} M</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($moon->pool_isk) }} ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($moon->mined_isk) }} ISK</td>
                                 <td>
                                     <div class="mm-progress-wrap">
                                         <div class="progress" style="height: 22px;">
@@ -290,7 +290,7 @@
                                 <td><i class="fas fa-gem"></i> {{ $ore->ore_name }}</td>
                                 <td class="text-right">{{ number_format($ore->total_quantity, 0) }}</td>
                                 <td class="text-right">{{ number_format($ore->total_m3, 0) }} m&sup3;</td>
-                                <td class="text-right text-success">{{ number_format($ore->total_isk / 1000000, 1) }} M ISK</td>
+                                <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short($ore->total_isk) }} ISK</td>
                                 <td>
                                     @php $orePct = $maxOreIsk > 0 ? ($ore->total_isk / $maxOreIsk) * 100 : 0; @endphp
                                     <div class="mm-progress-wrap">
@@ -359,7 +359,7 @@ $(document).ready(function() {
     // Pool Ore Distribution (ISK) — what extractions offered
     @php
         $poolLabels = array_keys($poolOreDistribution);
-        $poolIskValues = array_values(array_map(fn($v) => round($v['isk'] / 1000000, 1), $poolOreDistribution));
+        $poolIskValues = array_values(array_map(fn($v) => round($v['isk']), $poolOreDistribution));
         $poolVolValues = array_values(array_map(fn($v) => round($v['volume'], 0), $poolOreDistribution));
     @endphp
     new Chart(document.getElementById('poolOreIskChart').getContext('2d'), {
@@ -384,7 +384,7 @@ $(document).ready(function() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ' + context.parsed.toFixed(1) + ' M ISK';
+                            return context.label + ': ' + mmIsk(context.parsed) + ' ISK';
                         }
                     }
                 }
@@ -431,7 +431,7 @@ $(document).ready(function() {
         data: {
             labels: {!! json_encode(array_keys($oreByCategoryIsk), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
-                data: {!! json_encode(array_values(array_map(fn($v) => round($v / 1000000, 1), $oreByCategoryIsk)), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
+                data: {!! json_encode(array_values(array_map(fn($v) => round($v), $oreByCategoryIsk)), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: oreColors.slice(0, {{ count($oreByCategoryIsk) }}),
                 borderWidth: 1,
                 borderColor: '#1a1a2e',
@@ -448,7 +448,7 @@ $(document).ready(function() {
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ' + context.parsed.toFixed(1) + ' M ISK';
+                            return context.label + ': ' + mmIsk(context.parsed) + ' ISK';
                         }
                     }
                 }

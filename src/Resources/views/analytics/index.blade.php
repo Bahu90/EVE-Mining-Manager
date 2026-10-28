@@ -165,8 +165,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="mb-1 opacity-75">{{ trans('mining-manager::analytics.total_value') }}</p>
-                        <h3>{{ number_format(($analytics['total_value'] ?? 0) / 1000000000, 2) }}</h3>
-                        <small>{{ trans('mining-manager::analytics.billion_isk') }}</small>
+                        <h3>{{ \MiningManager\Support\IskFormat::short($analytics['total_value'] ?? 0) }}</h3>
+                        <small>ISK</small>
                     </div>
                     <i class="fas fa-coins fa-3x opacity-50"></i>
                 </div>
@@ -191,8 +191,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="mb-1 opacity-75">{{ trans('mining-manager::analytics.avg_per_miner') }}</p>
-                        <h3>{{ number_format(($analytics['unique_miners'] ?? 0) > 0 ? (($analytics['total_value'] ?? 0) / ($analytics['unique_miners'] ?? 1)) / 1000000 : 0, 0) }}</h3>
-                        <small>{{ trans('mining-manager::analytics.million_isk') }}</small>
+                        <h3>{{ \MiningManager\Support\IskFormat::short(($analytics['unique_miners'] ?? 0) > 0 ? ($analytics['total_value'] ?? 0) / $analytics['unique_miners'] : 0) }}</h3>
+                        <small>ISK</small>
                     </div>
                     <i class="fas fa-chart-line fa-3x opacity-50"></i>
                 </div>
@@ -276,7 +276,7 @@
                                         @endif
                                     </td>
                                     <td class="text-right">{{ number_format($miner->total_quantity ?? 0, 0) }}</td>
-                                    <td class="text-right text-success">{{ number_format(($miner->total_value ?? 0) / 1000000, 0) }} M ISK</td>
+                                    <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short(($miner->total_value ?? 0)) }} ISK</td>
                                 </tr>
                                 @empty
                                 <tr>
@@ -392,7 +392,7 @@
                                 <tr>
                                     <td><i class="fas fa-globe"></i> {{ $system->system_name }}</td>
                                     <td class="text-right">{{ number_format($system->total_quantity ?? 0, 0) }}</td>
-                                    <td class="text-right text-success">{{ number_format(($system->total_value ?? 0) / 1000000, 0) }} M ISK</td>
+                                    <td class="text-right text-success">{{ \MiningManager\Support\IskFormat::short(($system->total_value ?? 0)) }} ISK</td>
                                     <td class="text-right">{{ $system->unique_miners ?? 0 }}</td>
                                     <td>
                                         @php
@@ -446,7 +446,7 @@ new Chart(dailyTrendsCtx, {
             yAxisID: 'y'
         }, {
             label: '{{ trans("mining-manager::analytics.value") }}',
-            data: dailyTrendsData.map(d => d.total_value / 1000000),
+            data: dailyTrendsData.map(d => d.total_value),
             borderColor: '#f5576c',
             backgroundColor: 'rgba(245, 87, 108, 0.1)',
             borderWidth: 2,
@@ -475,7 +475,7 @@ new Chart(dailyTrendsCtx, {
                             if (context.datasetIndex === 0) {
                                 label += context.parsed.y.toLocaleString() + ' units';
                             } else {
-                                label += context.parsed.y.toLocaleString() + ' M ISK';
+                                label += mmIsk(context.parsed.y) + ' ISK';
                             }
                         }
                         return label;
@@ -495,7 +495,7 @@ new Chart(dailyTrendsCtx, {
                 type: 'linear',
                 display: true,
                 position: 'right',
-                ticks: { color: '#fff' },
+                ticks: { color: '#fff', callback: function(value) { return mmIsk(value, 1); } },
                 grid: { drawOnChartArea: false }
             },
             x: {
@@ -534,7 +534,7 @@ new Chart(document.getElementById('oreBreakdownChart'), {
             tooltip: {
                 callbacks: {
                     label: function(context) {
-                        return context.label + ': ' + (context.parsed / 1000000).toFixed(1) + ' M ISK';
+                        return context.label + ': ' + mmIsk(context.parsed) + ' ISK';
                     }
                 }
             }
