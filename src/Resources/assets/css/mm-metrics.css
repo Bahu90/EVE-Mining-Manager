@@ -617,3 +617,17 @@
 .mm-metrics .mmx-anomalies i {
     margin-right: 4px;
 }
+
+/* Idle refineries are hidden until the button below the grid shows them. */
+.mm-metrics .mmx-cards .mmx-card[data-active="0"] {
+    display: none;
+}
+
+.mm-metrics #mmx-structures.mmx-js .mmx-card[data-active="0"]:not(.mmx-hidden) {
+    display: flex;
+}
+
+.mm-metrics .mmx-idle-toggle {
+    margin-top: 12px;
+    text-align: center;
+}

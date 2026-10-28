@@ -247,7 +247,15 @@
 
     {{-- Refineries --}}
     @if(!empty($data['structures']))
-    @php $activeStructures = count(array_filter($data['structures'], fn ($s) => $s['active'])); @endphp
+    @php
+        // Mined refineries first, most ISK first; idle ones wait behind a button.
+        $mmStructures = collect($data['structures'])
+            ->sortBy([fn ($a, $b) => $b['active'] <=> $a['active'], fn ($a, $b) => $b['isk'] <=> $a['isk']])
+            ->values()
+            ->all();
+        $activeStructures = count(array_filter($mmStructures, fn ($s) => $s['active']));
+        $idleStructures = count($mmStructures) - $activeStructures;
+    @endphp
     <section class="mmx-section" id="mmx-structures">
         <div class="mmx-section-head">
             <div>
@@ -267,8 +275,11 @@
                 @endforeach
             </div>
         </div>
+        @if($activeStructures === 0)
+            <p class="mmx-note">{{ trans('mining-manager::metrics.structures_none_mined') }}</p>
+        @endif
         <div class="mmx-cards">
-            @foreach($data['structures'] as $s)
+            @foreach($mmStructures as $s)
                 <div class="mmx-card {{ $s['active'] ? '' : 'mmx-quiet' }}"
                      data-tier="{{ $s['rarity'] ?? '' }}"
                      data-active="{{ $s['active'] ? 1 : 0 }}"
@@ -285,6 +296,15 @@
                 </div>
             @endforeach
         </div>
+        @if($idleStructures > 0)
+            <div class="mmx-idle-toggle">
+                <button type="button" class="mmx-btn mmx-btn-ghost" data-idle-toggle
+                        data-show="{{ trans('mining-manager::metrics.show_idle', ['count' => $idleStructures]) }}"
+                        data-hide="{{ trans('mining-manager::metrics.hide_idle') }}">
+                    {{ trans('mining-manager::metrics.show_idle', ['count' => $idleStructures]) }}
+                </button>
+            </div>
+        @endif
     </section>
     @endif
 

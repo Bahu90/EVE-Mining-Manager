@@ -198,22 +198,36 @@
         var cards = Array.prototype.slice.call(section.querySelectorAll('.mmx-card'));
         var search = section.querySelector('[data-search]');
         var count = section.querySelector('[data-count]');
+        var idleToggle = section.querySelector('[data-idle-toggle]');
+        section.classList.add('mmx-js');
         var tier = 'all';
+        var showIdle = false;
 
+        // Idle refineries stay hidden until asked for. The count is the mined
+        // ones against every refinery the filters match.
         function apply() {
             var text = (search.value || '').trim().toLowerCase();
-            var shown = 0;
+            var matching = 0;
             var active = 0;
             cards.forEach(function (card) {
-                var visible = (tier === 'all' || card.getAttribute('data-tier') === tier)
+                var isActive = card.getAttribute('data-active') === '1';
+                var matches = (tier === 'all' || card.getAttribute('data-tier') === tier)
                     && (!text || card.getAttribute('data-text').indexOf(text) !== -1);
-                card.classList.toggle('mmx-hidden', !visible);
-                if (visible) {
-                    shown++;
-                    if (card.getAttribute('data-active') === '1') { active++; }
+                card.classList.toggle('mmx-hidden', !matches || (!isActive && !showIdle));
+                if (matches) {
+                    matching++;
+                    if (isActive) { active++; }
                 }
             });
-            count.textContent = active + ' / ' + shown;
+            count.textContent = active + ' / ' + matching;
+        }
+
+        if (idleToggle) {
+            idleToggle.addEventListener('click', function () {
+                showIdle = !showIdle;
+                idleToggle.textContent = idleToggle.getAttribute(showIdle ? 'data-hide' : 'data-show');
+                apply();
+            });
         }
 
         section.querySelectorAll('[data-tier]').forEach(function (button) {
@@ -227,6 +241,7 @@
             });
         });
         search.addEventListener('input', apply);
+        apply();
     });
 
     // ---- Player cards: sort and search ----

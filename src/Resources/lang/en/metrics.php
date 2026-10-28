@@ -39,7 +39,10 @@ return [
     'volume' => 'Volume',
 
     'structures' => 'Refineries',
-    'structures_text' => 'Every :corp refinery with a moon drill, by system and moon tier, with what was mined there in the month. Refineries nobody mined at are dimmed.',
+    'structures_text' => 'The :corp refineries mined at in the month, most ISK first, by system and moon tier. Refineries nobody mined at are behind the button below.',
+    'structures_none_mined' => 'Nothing was mined at the refineries this month.',
+    'show_idle' => 'Show :count idle refineries',
+    'hide_idle' => 'Hide idle refineries',
     'results' => 'Results',
     'search_system' => 'Search system or name',
     'all' => 'All',
