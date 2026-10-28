@@ -89,7 +89,7 @@ class VersionChecker
                 'is_dev_branch'  => true,
                 'latest'         => $latest,
                 'status'         => 'dev_branch',
-                'message'        => 'You are running a development branch (' . $current . '), not a tagged release. The "Latest release" pill above is the most recent stable Packagist tag — your branch may be ahead of or behind that depending on local commits. Switch to a tagged version (composer require mattfalahe/mining-manager:^X.Y.Z) for a definitive "up to date" comparison.',
+                'message'        => 'You are running a development branch (' . $current . '), not a tagged release. The "Latest release" pill above is the most recent stable Packagist tag — your branch may be ahead of or behind that depending on local commits. Switch to a tagged version (composer require bahu90/mining-manager:^X.Y.Z) for a definitive "up to date" comparison.',
                 'release_url'    => null,
             ], $current);
         }
