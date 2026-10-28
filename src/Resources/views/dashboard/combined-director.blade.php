@@ -786,13 +786,26 @@
 @push('javascript')
 <script src="{{ asset('vendor/mining-manager/js/vendor/chart.min.js') }}"></script>
 <script>
-// ISK formatting helper (global scope for AJAX lazy-load access)
+// ISK in short form, written as the corporation pages write it: a space
+// before the unit ("52.70 B"), so the B is never read as an 8.
 function formatISK(value) {
     value = parseFloat(value) || 0;
-    if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
-    if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    var abs = Math.abs(value);
+    var steps = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+    for (var i = 0; i < steps.length; i++) {
+        if (abs >= steps[i][0]) {
+            return (value / steps[i][0]).toFixed(2) + ' ' + steps[i][1];
+        }
+    }
     return value.toFixed(0);
+}
+
+// The same figure for a table cell or tile: the number, then the unit and
+// ISK smaller and dimmed, so the two never run together.
+function iskHtml(value) {
+    var parts = formatISK(value).split(' ');
+    var unit = (parts[1] ? parts[1] + ' ' : '') + 'ISK';
+    return '<span class="mm-isk-num">' + parts[0] + '</span> <span class="mm-isk-unit">' + unit + '</span>';
 }
 
 $(document).ready(function() {
@@ -989,10 +1002,10 @@ $('#corporation-tab').on('shown.bs.tab', function() {
         .done(function(data) {
             // === CURRENT MONTH STATS ===
             var cm = data.corpCurrentMonthStats || {};
-            $('#corp-all-ore-value').text(formatISK(cm.all_ore_value || 0) + ' ISK');
-            $('#corp-moon-ore-value').text(formatISK(cm.moon_ore_value || 0) + ' ISK');
+            $('#corp-all-ore-value').html(iskHtml(cm.all_ore_value || 0));
+            $('#corp-moon-ore-value').html(iskHtml(cm.moon_ore_value || 0));
             $('#corp-active-miners').text(cm.active_miners || 0);
-            $('#corp-tax-collected').text(formatISK(cm.tax_collected || 0) + ' ISK');
+            $('#corp-tax-collected').html(iskHtml(cm.tax_collected || 0));
 
             // === LAST 12 MONTHS STATS ===
             var l12 = data.corpLast12MonthsStats || {};
@@ -1049,7 +1062,7 @@ function populateTopMinersTable(selector, miners) {
             '<td>' + (i + 1) + '</td>' +
             '<td>' + name + '</td>' +
             '<td>' + (m.corporation_name || '-') + '</td>' +
-            '<td>' + formatISK(m.total_value || 0) + ' ISK</td>' +
+            '<td>' + iskHtml(m.total_value || 0) + '</td>' +
             '</tr>'
         );
     }
@@ -1258,8 +1271,8 @@ function loadGuestMinersData(month) {
         .done(function(data) {
             // Summary stats
             $('#guest-count').text(data.guestCount || 0);
-            $('#guest-total-value').text(formatISK(data.totalValue || 0) + ' ISK');
-            $('#guest-moon-value').text(formatISK(data.totalMoonOreValue || 0) + ' ISK');
+            $('#guest-total-value').html(iskHtml(data.totalValue || 0));
+            $('#guest-moon-value').html(iskHtml(data.totalMoonOreValue || 0));
 
             // Populate table
             var $tbody = $('#guest-miners-table');
@@ -1279,9 +1292,9 @@ function loadGuestMinersData(month) {
                         '<td>' + (i + 1) + '</td>' +
                         '<td>' + (m.character_name || 'Unknown') + ' ' + regBadge + '</td>' +
                         '<td>' + (m.corporation_name || 'Unknown') + '</td>' +
-                        '<td>' + formatISK(m.total_value || 0) + ' ISK</td>' +
-                        '<td>' + formatISK(m.moon_ore_value || 0) + ' ISK</td>' +
-                        '<td>' + formatISK(m.total_tax || 0) + ' ISK</td>' +
+                        '<td>' + iskHtml(m.total_value || 0) + '</td>' +
+                        '<td>' + iskHtml(m.moon_ore_value || 0) + '</td>' +
+                        '<td>' + iskHtml(m.total_tax || 0) + '</td>' +
                         '<td>' + (m.active_days || 0) + '</td>' +
                         '<td>' + (m.last_seen || '-') + '</td>' +
                         '</tr>'

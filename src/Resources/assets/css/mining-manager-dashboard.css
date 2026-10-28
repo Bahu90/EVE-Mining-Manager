@@ -4214,3 +4214,16 @@ div.mining-manager-wrapper div[class*="col-"] div.card-body {
     font-size: 0.75rem;
     opacity: 0.75;
 }
+
+/* Short ISK figures: the unit sits apart from the number, smaller and
+   dimmed, so "52.70 B" is not read as "52.708". */
+.mm-isk-num {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.mm-isk-unit {
+    font-size: 0.78em;
+    opacity: 0.65;
+    letter-spacing: 0.04em;
+}

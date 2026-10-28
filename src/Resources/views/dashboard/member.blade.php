@@ -404,12 +404,26 @@
 Chart.defaults.color = '#fff';
 Chart.defaults.borderColor = '#444';
 
-// ISK formatting helper
+// ISK in short form, written as the corporation pages write it: a space
+// before the unit ("52.70 B"), so the B is never read as an 8.
 function formatISK(value) {
-    if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
-    if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
-    if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+    value = parseFloat(value) || 0;
+    var abs = Math.abs(value);
+    var steps = [[1e12, 'T'], [1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+    for (var i = 0; i < steps.length; i++) {
+        if (abs >= steps[i][0]) {
+            return (value / steps[i][0]).toFixed(2) + ' ' + steps[i][1];
+        }
+    }
     return value.toFixed(0);
+}
+
+// The same figure for a table cell or tile: the number, then the unit and
+// ISK smaller and dimmed, so the two never run together.
+function iskHtml(value) {
+    var parts = formatISK(value).split(' ');
+    var unit = (parts[1] ? parts[1] + ' ' : '') + 'ISK';
+    return '<span class="mm-isk-num">' + parts[0] + '</span> <span class="mm-isk-unit">' + unit + '</span>';
 }
 
 // Group color mapping

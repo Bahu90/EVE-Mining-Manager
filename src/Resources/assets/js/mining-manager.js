@@ -65,10 +65,10 @@ MiningManager.formatISK = function(value, compact = false) {
     if (isNaN(num)) return '0 ISK';
     
     if (compact) {
-        if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T ISK';
-        if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B ISK';
-        if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M ISK';
-        if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K ISK';
+        if (num >= 1e12) return (num / 1e12).toFixed(2) + ' T ISK';
+        if (num >= 1e9) return (num / 1e9).toFixed(2) + ' B ISK';
+        if (num >= 1e6) return (num / 1e6).toFixed(2) + ' M ISK';
+        if (num >= 1e3) return (num / 1e3).toFixed(2) + ' K ISK';
     }
     
     return num.toLocaleString('en-US', {
