@@ -302,10 +302,6 @@
                                 <i class="fas fa-download"></i>
                                 {{ trans('mining-manager::reports.export_data') }}
                             </button>
-                            <a href="{{ route('mining-manager.reports.index') }}" class="btn btn-secondary btn-lg">
-                                <i class="fas fa-arrow-left"></i>
-                                {{ trans('mining-manager::reports.back_to_reports') }}
-                            </a>
                             <button type="button" class="btn btn-info btn-lg" id="resetBtn">
                                 <i class="fas fa-redo"></i>
                                 {{ trans('mining-manager::reports.reset') }}

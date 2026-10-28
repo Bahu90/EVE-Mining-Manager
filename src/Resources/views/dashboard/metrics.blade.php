@@ -47,34 +47,18 @@
             @if($data['configured'] ?? false)
                 <div class="mmx-subtitle">{{ trans('mining-manager::metrics.subtitle', ['corp' => $data['corporation']['name']]) }}</div>
                 @if(!empty($anomalies) && $anomalies['isk'] > 0)
-                    <a class="mmx-anomalies" href="{{ route('mining-manager.ledger.my-mining', ['source' => \MiningManager\Support\MiningSource::ALL]) }}">
+                    <div class="mmx-anomalies">
                         <i class="fas fa-meteor"></i>
                         {{ trans('mining-manager::metrics.anomalies_' . $anomalies['scope'], ['isk' => $fmt($anomalies['isk'])]) }}
-                    </a>
+                    </div>
                 @endif
             @endif
-        </div>
-        <div class="mmx-actions">
-            <a class="mmx-btn mmx-btn-ghost" href="{{ route('mining-manager.ledger.my-mining') }}">
-                <i class="fas fa-user-astronaut"></i> {{ trans('mining-manager::metrics.my_mining') }}
-            </a>
-            <a class="mmx-btn mmx-btn-ghost" href="{{ route('mining-manager.taxes.my-taxes') }}">
-                <i class="fas fa-coins"></i> {{ trans('mining-manager::metrics.my_taxes') }}
-            </a>
-            <a class="mmx-btn" href="{{ route('mining-manager.dashboard.details') }}">
-                <i class="fas fa-chart-bar"></i> {{ trans('mining-manager::metrics.details') }}
-            </a>
         </div>
     </div>
 
     @if(!($data['configured'] ?? false))
         <div class="mmx-empty">
             {{ trans('mining-manager::metrics.not_configured') }}
-            @can('mining-manager.admin')
-                <div class="mt-3">
-                    <a class="mmx-btn" href="{{ route('mining-manager.settings.index') }}">{{ trans('mining-manager::metrics.open_settings') }}</a>
-                </div>
-            @endcan
         </div>
     @else
 

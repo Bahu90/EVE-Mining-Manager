@@ -321,7 +321,7 @@
                                     <small class="text-warning d-block">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         No webhooks are subscribed to <strong>Report Generated</strong> events.
-                                        Configure subscriptions in <a href="{{ route('mining-manager.settings.index') }}#webhooks">Settings → Webhooks</a>.
+                                        Configure subscriptions in Settings → Webhooks.
                                     </small>
                                 @endif
                             </div>
@@ -345,10 +345,6 @@
                             <i class="fas fa-cogs"></i>
                             {{ trans('mining-manager::reports.generate_report') }}
                         </button>
-                        <a href="{{ route('mining-manager.reports.index') }}" class="btn btn-secondary btn-lg">
-                            <i class="fas fa-arrow-left"></i>
-                            {{ trans('mining-manager::reports.back_to_list') }}
-                        </a>
                         <button type="button" class="btn btn-info btn-lg" id="resetBtn">
                             <i class="fas fa-redo"></i>
                             {{ trans('mining-manager::reports.reset_form') }}

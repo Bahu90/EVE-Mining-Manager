@@ -20,6 +20,8 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 
 ### Names that match the pages
 
+- **Pages no longer link to other pages; the left menu is the way around.** Gone: My Mining / My Taxes / Details buttons on Moon Mining, the Pay now button on the tax banner, Back to … buttons, links from tips to Settings, Help, Events, the Planner, tax details and SeAT's Moons Reporter. Tabs inside a section and opening an entry's details stay.
+- **Full Dashboard** has its own menu item under Moon Mining.
 - The **Dashboard** menu item is now **Moon Mining**, which is what it shows; its **Details** button is now **Full Dashboard**, the all-ore dashboard.
 - Page headers match their menu items: Mining Ledger (both tabs), Moon Extractions, Moon Planner (planner, blueprints, simulator), Metenox Cargo, Theft Detection.
 - **One set of tabs on every moon page:** Extractions, Active, Calendar, Planner, Blueprints, Simulator, Compositions, Metenox Cargo, each shown only to who can open it.

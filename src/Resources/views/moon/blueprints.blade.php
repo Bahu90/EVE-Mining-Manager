@@ -129,7 +129,7 @@
         <div class="mm-note mm-note-warn">
             <i class="fas fa-exclamation-triangle"></i>
             No <strong>Moon Owner Corporation</strong> is configured yet. Set one in
-            <a href="{{ route('mining-manager.settings.index') }}">Settings &rsaquo; General</a>
+            Settings &rsaquo; General
             so a blueprint knows which refineries it can use.
         </div>
     @else
@@ -147,9 +147,6 @@
             <button type="button" class="btn btn-sm btn-success" id="btn-new-blueprint">
                 <i class="fas fa-plus"></i> New Blueprint
             </button>
-            <a class="btn btn-sm btn-outline-secondary ml-1" href="{{ route('mining-manager.moon.planner') }}">
-                <i class="fas fa-calendar-check"></i> Back to Planner
-            </a>
         </div>
     </div>
 

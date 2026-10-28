@@ -340,9 +340,6 @@
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     <i class="fas fa-chart-bar"></i> {{ trans('mining-manager::analytics.generate_comparison') }}
                                 </button>
-                                <a href="{{ route('mining-manager.analytics.index') }}" class="btn btn-secondary btn-lg">
-                                    <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::analytics.back_to_overview') }}
-                                </a>
                             </div>
                         </div>
                     </form>

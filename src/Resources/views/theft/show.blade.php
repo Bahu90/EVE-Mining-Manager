@@ -11,14 +11,6 @@
 @section('full')
 <div class="mining-manager-wrapper mining-dashboard">
 
-    {{-- Back Button --}}
-    <div class="row mb-3">
-        <div class="col-12">
-            <a href="{{ route('mining-manager.theft.index') }}" class="btn btn-default">
-                <i class="fas fa-arrow-left"></i> Back to Incidents List
-            </a>
-        </div>
-    </div>
 
     {{-- Incident Overview --}}
     <div class="row">
@@ -232,9 +224,6 @@
                             <td><span class="badge badge-warning">{{ ucfirst($incident->miningTax->status) }}</span></td>
                         </tr>
                     </table>
-                    <a href="{{ route('mining-manager.taxes.details', $incident->character_id) }}" class="btn btn-sm btn-primary">
-                        <i class="fas fa-eye"></i> View Full Tax Details
-                    </a>
                 </div>
             </div>
         </div>

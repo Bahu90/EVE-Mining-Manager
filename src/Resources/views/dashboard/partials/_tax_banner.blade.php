@@ -33,8 +33,5 @@
             </small>
         @endif
     </div>
-    <a href="{{ route('mining-manager.taxes.my-taxes') }}" class="btn btn-sm btn-mm-primary mt-2 mt-md-0">
-        {{ trans('mining-manager::taxes.banner_pay_now') }}
-    </a>
 </div>
 @endif

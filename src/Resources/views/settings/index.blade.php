@@ -480,10 +480,6 @@
                                 {{ trans('mining-manager::settings.need_more_help') }}
                             </h5>
                             <p>{{ trans('mining-manager::settings.documentation_text') }}</p>
-                            <a href="{{ route('mining-manager.help') }}" class="btn btn-primary mr-2">
-                                <i class="fas fa-question-circle"></i>
-                                Full Documentation
-                            </a>
                             <a href="https://github.com/Bahu90/EVE-Mining-Manager"
                                target="_blank"
                                class="btn btn-info">

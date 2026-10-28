@@ -23,12 +23,9 @@
 
 <div class="extraction-details">
     
-    {{-- BACK BUTTON --}}
+    {{-- ACTIONS --}}
     <div class="row mb-3">
         <div class="col-12">
-            <a href="{{ route('mining-manager.moon.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::moons.back_to_list') }}
-            </a>
             @can('mining-manager.director')
             <form action="{{ route('mining-manager.moon.update', $extraction->id) }}" method="POST" style="display: inline;">
                 @csrf
@@ -366,7 +363,7 @@
                             <i class="fas fa-satellite-dish"></i>
                             <strong>{{ trans('mining-manager::moons.moon_not_scanned_title') }}</strong>
                             {{ trans('mining-manager::moons.moon_not_scanned') }}
-                            <a href="{{ url('/tools/moons') }}" target="_blank" class="alert-link">{{ trans('mining-manager::moons.moon_not_scanned_link') }}</a>
+                            <strong>{{ trans('mining-manager::moons.moon_not_scanned_link') }}</strong>
                         </div>
                     @endif
                     @if($extraction->is_jackpot)
@@ -551,7 +548,7 @@
                         <ol>
                             <li><strong>Scan the Moon:</strong> Use a Survey Scanner probe in-game to scan this moon</li>
                             <li><strong>Copy the Report:</strong> Copy the moon scan results from your in-game survey window</li>
-                            <li><strong>Submit to SeAT:</strong> Paste the scan report into the <a href="{{ url('/tools/moons') }}" target="_blank">SeAT Moons Reporter tool</a></li>
+                            <li><strong>Submit to SeAT:</strong> Paste the scan report into the <strong>SeAT Moons Reporter tool</strong></li>
                             <li><strong>Update This Page:</strong> Composition will appear with the next extraction update, or click the "Refresh Data" button above</li>
                         </ol>
                     </div>

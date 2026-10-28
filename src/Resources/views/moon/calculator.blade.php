@@ -172,7 +172,7 @@
                 </ul>
                 <p class="mb-0">
                     {{ trans('mining-manager::moons.scan_required_how') }}
-                    <a href="{{ url('/tools/moons') }}" target="_blank" class="alert-link">{{ trans('mining-manager::moons.moon_not_scanned_link') }}</a>
+                    <strong>{{ trans('mining-manager::moons.moon_not_scanned_link') }}</strong>
                 </p>
             </div>
         </div>

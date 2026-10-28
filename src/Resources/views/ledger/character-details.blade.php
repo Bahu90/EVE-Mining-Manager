@@ -74,11 +74,6 @@
                             @endif
                             <p class="text-muted mb-0">{{ trans('mining-manager::ledger.mining_ledger') }} - {{ $monthDate->format('F Y') }}</p>
                         </div>
-                        <div class="col-auto">
-                            <a href="{{ route('mining-manager.ledger.index', ['month' => $month]) }}" class="btn btn-secondary">
-                                <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::ledger.view_all') }}
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>

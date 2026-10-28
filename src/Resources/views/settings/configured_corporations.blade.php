@@ -140,11 +140,6 @@
 @section('full')
 <div class="mining-manager-wrapper configured-corporations-page">
 
-    <div class="mb-3">
-        <a href="{{ route('mining-manager.settings.index') }}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Settings
-        </a>
-    </div>
 
     @if($corporations->isEmpty())
         <div class="empty-state">

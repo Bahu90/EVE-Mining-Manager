@@ -23,14 +23,6 @@
 
 <div class="structure-extractions">
     
-    {{-- BACK BUTTON --}}
-    <div class="row mb-3">
-        <div class="col-12">
-            <a href="{{ route('mining-manager.moon.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::moons.back_to_list') }}
-            </a>
-        </div>
-    </div>
 
     {{-- STRUCTURE INFORMATION --}}
     @if($extractions->isNotEmpty())

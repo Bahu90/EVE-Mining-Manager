@@ -112,9 +112,6 @@
 
     {{-- BACK LINK --}}
     <div class="mb-3">
-        <a href="{{ route('mining-manager.reports.index') }}" class="btn btn-sm btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::reports.back_to_reports') }}
-        </a>
     </div>
 
     {{-- REPORT METADATA --}}
@@ -414,9 +411,6 @@
 
     {{-- BACK LINK (bottom) --}}
     <div class="mt-3">
-        <a href="{{ route('mining-manager.reports.index') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> {{ trans('mining-manager::reports.back_to_reports') }}
-        </a>
     </div>
 
 </div>
@@ -511,14 +505,14 @@ $(document).ready(function() {
                     <p class="text-muted mb-0">
                         <i class="fas fa-info-circle"></i>
                         Channel selection is controlled by webhook subscriptions in
-                        <a href="{{ route('mining-manager.settings.index') }}#webhooks">Settings → Webhooks</a>.
+                        Settings → Webhooks.
                     </p>
                 @else
                     <div class="alert alert-warning mb-0">
                         <i class="fas fa-exclamation-triangle"></i>
                         No webhooks are currently subscribed to <strong>Report Generated</strong>.
                         Enable the subscription on at least one webhook in
-                        <a href="{{ route('mining-manager.settings.index') }}#webhooks">Settings → Webhooks</a>
+                        Settings → Webhooks
                         before sending.
                     </div>
                 @endif

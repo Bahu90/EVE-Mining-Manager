@@ -85,14 +85,6 @@
                                         <i class="fas fa-money-bill-wave"></i>
                                         {{ trans('mining-manager::taxes.payment_wallet') }}
                                     </div>
-                                    <div class="input-group-append">
-                                        <a href="{{ route('mining-manager.settings.index') }}#tax-rates"
-                                           class="btn btn-outline-secondary"
-                                           data-toggle="tooltip"
-                                           title="{{ trans('mining-manager::taxes.change_in_settings') }}">
-                                            <i class="fas fa-cog"></i>
-                                        </a>
-                                    </div>
                                 </div>
                                 <small class="form-text text-muted">
                                     <i class="fas fa-info-circle"></i>

@@ -58,7 +58,7 @@ return [
     'scan_required_how' => 'Scan each one with a survey probe and add the result to SeAT. Until then their chunks are still valued from the game\'s notices.',
     'moon_not_scanned_title' => 'Moon scan missing. Mining Manager is using the game\'s notices for this moon.',
     'moon_not_scanned' => 'With no scan in SeAT, this chunk\'s ore and value come from the game\'s extraction notices, and only once the first one is in. Scanning the moon makes the scan the source again, adds the moon to Find Moons and its quality rating, and lets the simulator work with it.',
-    'moon_not_scanned_link' => 'Add the scan in SeAT\'s Moons Reporter',
+    'moon_not_scanned_link' => 'Add the scan in SeAT\'s Moons Reporter (Tools, Moons)',
     'volume_checks' => 'Ore volumes reported by the game',
     'volume_check_same' => 'same as at the start',
     'volume_check_changed' => ':change from the start',

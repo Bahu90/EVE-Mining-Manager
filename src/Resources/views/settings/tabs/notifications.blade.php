@@ -776,7 +776,7 @@
         <div class="card-body">
             <small class="form-text text-muted mb-3 d-block">
                 Minimum gap (hours) between two chunk arrivals before the
-                <a href="{{ route('mining-manager.moon.planner') }}">Moon Extraction Planner</a>
+                Moon Extraction Planner
                 warns about clustering. Default <strong>24h</strong>. Chunks not mined promptly can
                 be wasted, so smaller corps may prefer a wider gap (e.g. 36h) to give a small crew
                 time to clear each belt; larger groups can tighten it (e.g. 12h). Clamped to
@@ -828,7 +828,7 @@
         <div class="card-body">
             <small class="form-text text-muted mb-3 d-block">
                 How close two pulls on the same refinery can be, arrival to arrival, before the
-                <a href="{{ route('mining-manager.moon.planner') }}">Moon Extraction Planner</a> warns. An
+                Moon Extraction Planner warns. An
                 extraction takes at least 6 days, and the next one can only be started once the chunk is in, so
                 the default of <strong>7 days</strong> leaves a day to start it. Anything closer is flagged when you
                 plan or move a pull, in the blueprint preview and on the planner, and Auto-fill leaves it out. It is

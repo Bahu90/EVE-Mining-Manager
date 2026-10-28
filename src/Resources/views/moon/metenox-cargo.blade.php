@@ -315,9 +315,7 @@
                 That setting is currently unset, so this page has nothing to show.
             </p>
             <p class="mb-0">
-                Fix it: <a href="{{ route('mining-manager.settings.index') }}" class="btn btn-sm btn-warning">
-                    <i class="fas fa-cog"></i> Open Settings → General
-                </a> and set the Moon Owner Corporation.
+                Fix it: set the Moon Owner Corporation under Settings → General.
             </p>
         </div>
     @endif

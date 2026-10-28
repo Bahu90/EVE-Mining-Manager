@@ -216,8 +216,7 @@
                                     in taxes this period thanks to active mining events.
                                     <small class="text-muted d-block mt-1">
                                         The discount is already applied to your "Estimated Tax This Month" figure above.
-                                        <a href="{{ route('mining-manager.events.my-events') }}">View your events</a>
-                                        to see which ones contributed.
+                                        Mining Events, My Events, shows which ones contributed.
                                     </small>
                                 </p>
                             </div>
@@ -235,9 +234,6 @@
                                 <div class="icon">
                                     <i class="fas fa-piggy-bank"></i>
                                 </div>
-                                <a href="{{ route('mining-manager.events.my-events') }}" class="small-box-footer">
-                                    View events <i class="fas fa-arrow-circle-right"></i>
-                                </a>
                             </div>
                         </div>
                         @endif
