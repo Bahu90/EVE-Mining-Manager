@@ -2,6 +2,8 @@
 
 namespace MiningManager\Services\Configuration;
 
+use MiningManager\Services\Security\SecretValue;
+use MiningManager\Services\Security\WebhookUrlPolicy;
 use MiningManager\Models\Setting;
 use MiningManager\Models\WebhookConfiguration;
 use Illuminate\Support\Facades\Cache;
@@ -73,7 +75,7 @@ class SettingsManagerService
     {
         $cacheKey = self::CACHE_PREFIX . ($this->activeCorporationId ?? 'global') . '_' . $key;
 
-        return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($key, $default) {
+        return $this->openSecret($key, Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($key, $default) {
             $setting = Setting::getValue($key, null, $this->activeCorporationId);
 
             if ($setting !== null) {
@@ -83,7 +85,7 @@ class SettingsManagerService
             // Fallback to config
             $configKey = 'mining-manager.' . $key;
             return config($configKey, $default);
-        });
+        }));
     }
 
     /**
@@ -98,7 +100,7 @@ class SettingsManagerService
     {
         $cacheKey = self::CACHE_PREFIX . ($corporationId ?? 'global') . '_' . $key;
 
-        return Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($key, $default, $corporationId) {
+        return $this->openSecret($key, Cache::remember($cacheKey, self::CACHE_DURATION, function () use ($key, $default, $corporationId) {
             $setting = Setting::getValue($key, null, $corporationId);
 
             if ($setting !== null) {
@@ -107,7 +109,7 @@ class SettingsManagerService
 
             $configKey = 'mining-manager.' . $key;
             return config($configKey, $default);
-        });
+        }));
     }
 
     /**
@@ -147,6 +149,21 @@ class SettingsManagerService
      * @param string|null $type
      * @return void
      */
+    /**
+     * Settings that hold credentials. They are stored encrypted and read back
+     * decrypted (cache entries keep the encrypted form).
+     */
+    public const SECRET_KEYS = ['notifications.slack_webhook_url'];
+
+    private function openSecret(string $key, $value)
+    {
+        if (in_array($key, self::SECRET_KEYS, true) && is_string($value)) {
+            return SecretValue::open($value) ?? '';
+        }
+
+        return $value;
+    }
+
     public function updateSetting(string $key, $value, ?string $type = null)
     {
         if ($type === null) {
@@ -166,6 +183,10 @@ class SettingsManagerService
         Cache::forget($globalCacheKey);
         if ($corpCacheKey) {
             Cache::forget($corpCacheKey);
+        }
+
+        if (in_array($key, self::SECRET_KEYS, true) && is_string($value)) {
+            $value = SecretValue::seal($value);
         }
 
         Setting::setValue($key, $value, $type, $this->activeCorporationId);
@@ -1566,10 +1587,17 @@ class SettingsManagerService
             ->orderBy('corporation_id')
             ->orderBy('key')
             ->get()
+            ->filter(function ($setting) use ($includeWebhooks) {
+                // The Slack URL is a credential like the webhooks, so it only
+                // travels when the admin asked for webhooks to be included.
+                return $includeWebhooks || !in_array($setting->key, self::SECRET_KEYS, true);
+            })
             ->map(function ($setting) {
                 return [
                     'key' => $setting->key,
-                    'value' => $setting->value,
+                    'value' => in_array($setting->key, self::SECRET_KEYS, true)
+                        ? SecretValue::open($setting->value)
+                        : $setting->value,
                     'type' => $setting->type,
                     'corporation_id' => $setting->corporation_id,
                     'description' => $setting->description,
@@ -1591,7 +1619,12 @@ class SettingsManagerService
                 ->orderBy('name')
                 ->get()
                 ->map(function ($hook) {
+                    // The URL is hidden from toArray(), which made exported
+                    // webhooks impossible to import. Put it in explicitly,
+                    // decrypted, since the admin opted in to exporting it.
                     $row = $hook->toArray();
+                    unset($row['webhook_url_hint']);
+                    $row['webhook_url'] = $hook->webhook_url;
 
                     // Delivery statistics belong to the install that produced
                     // them, not to the configuration being moved.
@@ -1678,6 +1711,17 @@ class SettingsManagerService
             if (!empty($data['webhooks']) && is_array($data['webhooks'])) {
                 foreach ($data['webhooks'] as $hook) {
                     if (!is_array($hook) || empty($hook['name'])) {
+                        $skipped++;
+                        continue;
+                    }
+
+                    // Same rules as the webhook form: HTTPS to a public host.
+                    // An imported file is not trusted more than a typed URL.
+                    if (!WebhookUrlPolicy::isAllowed($hook['webhook_url'] ?? null)) {
+                        Log::warning('Mining Manager: skipped importing webhook with a refused URL', [
+                            'name' => $hook['name'],
+                            'reason' => WebhookUrlPolicy::problem($hook['webhook_url'] ?? null),
+                        ]);
                         $skipped++;
                         continue;
                     }

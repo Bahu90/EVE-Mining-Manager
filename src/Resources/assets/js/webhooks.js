@@ -21,6 +21,12 @@ function openWebhookModal(webhookId = null) {
     const modalTitle = document.getElementById('webhook-modal-title');
     modalTitle.textContent = webhookId ? 'Edit Webhook' : 'Add Webhook';
 
+    // The saved URL is never sent back to the browser. A new webhook needs
+    // one; when editing, an empty field keeps the saved URL.
+    const urlField = document.getElementById('webhook-url');
+    urlField.required = !webhookId;
+    urlField.placeholder = 'https://...';
+
     if (webhookId) {
         // Load webhook data
         loadWebhookData(webhookId);
@@ -48,7 +54,11 @@ function loadWebhookData(webhookId) {
                 document.getElementById('webhook-id').value = webhook.id;
                 document.getElementById('webhook-name').value = webhook.name;
                 document.getElementById('webhook-type').value = webhook.type;
-                document.getElementById('webhook-url').value = webhook.webhook_url;
+                const urlInput = document.getElementById('webhook-url');
+                urlInput.value = '';
+                urlInput.placeholder = webhook.webhook_url_hint
+                    ? 'Saved (' + webhook.webhook_url_hint + '). Leave blank to keep it.'
+                    : 'https://...';
 
                 // Assigned corporation (empty string = Global/NULL)
                 const corpSelect = document.getElementById('webhook-corporation-id');

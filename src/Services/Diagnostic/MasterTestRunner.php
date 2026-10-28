@@ -838,11 +838,28 @@ class MasterTestRunner
             return $this->warn('Webhook configurations', 'notifications', 'No webhooks configured — notifications will be silently dropped');
         }
 
-        // HTTPS-only audit cross-check: scan for any webhook URL still using
-        // http:// despite the H4 fix. Should be zero on a properly-saved install.
-        $httpUrls = WebhookConfiguration::where('webhook_url', 'like', 'http://%')
-            ->where('webhook_url', 'not like', 'https://%')
-            ->count();
+        // HTTPS-only audit cross-check: any webhook URL still using http://,
+        // or one that can no longer be decrypted (APP_KEY changed). URLs are
+        // stored encrypted, so this is checked on the decrypted values.
+        $httpUrls = 0;
+        $unreadable = 0;
+        foreach (WebhookConfiguration::all() as $hook) {
+            $url = $hook->webhook_url;
+            if ($url === null || $url === '') {
+                $unreadable++;
+            } elseif (!str_starts_with(strtolower($url), 'https://')) {
+                $httpUrls++;
+            }
+        }
+
+        if ($unreadable > 0) {
+            return $this->warn(
+                'Webhook configurations',
+                'notifications',
+                "{$unreadable} webhook(s) have a URL that cannot be read",
+                ['hint' => 'Usually APP_KEY changed since they were saved. Enter the URL again in Settings → Webhooks.']
+            );
+        }
 
         if ($httpUrls > 0) {
             return $this->warn(

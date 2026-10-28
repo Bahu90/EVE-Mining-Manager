@@ -707,12 +707,24 @@
                     <label for="slack_webhook_url">
                         <i class="fas fa-link"></i> Slack Webhook URL
                     </label>
+                    @php($slackSaved = !empty($notificationSettings['slack_webhook_url']))
+                    {{-- The saved URL is a credential and is never printed into the page. --}}
                     <input type="url" class="form-control" id="slack_webhook_url" name="slack_webhook_url"
-                           value="{{ old('slack_webhook_url', $notificationSettings['slack_webhook_url'] ?? '') }}"
-                           placeholder="https://hooks.slack.com/services/...">
+                           value=""
+                           autocomplete="off"
+                           placeholder="{{ $slackSaved ? 'Saved (' . \MiningManager\Services\Security\SecretValue::hint($notificationSettings['slack_webhook_url']) . '). Leave blank to keep it.' : 'https://hooks.slack.com/services/...' }}">
+                    @error('slack_webhook_url')
+                        <small class="form-text text-danger">{{ $message }}</small>
+                    @enderror
                     <small class="form-text text-muted">
                         Create an incoming webhook in your Slack workspace settings.
                     </small>
+                    @if($slackSaved)
+                        <div class="form-check mt-1">
+                            <input type="checkbox" class="form-check-input" id="slack_webhook_url_clear" name="slack_webhook_url_clear" value="1">
+                            <label class="form-check-label" for="slack_webhook_url_clear">Remove the saved Slack URL</label>
+                        </div>
+                    @endif
                 </div>
 
                 @php

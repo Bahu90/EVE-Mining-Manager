@@ -2,6 +2,7 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\WebhookUrlPolicy;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Services\Configuration\SettingsManagerService;
@@ -697,13 +698,16 @@ class SettingsController extends Controller
             // slack_enabled=true and an empty URL, and every notification
             // dispatch returns "Slack webhook URL not configured" with no
             // save-time error pointing at the missing field.
+            // Blank keeps the saved URL (it is never sent back to the page),
+            // so "required when enabled" is checked after validation against
+            // what is stored. WebhookUrlPolicy refuses http://, credentials
+            // and private or internal hosts.
             'slack_webhook_url' => [
                 'nullable',
-                'required_if:slack_enabled,1',
-                'required_if:slack_enabled,true',
                 'url',
-                'starts_with:https://',
+                WebhookUrlPolicy::rule(),
             ],
+            'slack_webhook_url_clear' => 'nullable|boolean',
 
             // Metenox cargo full threshold — clamped to a sane range so an
             // operator can't accidentally disable the alert (0%) or set it
@@ -825,7 +829,21 @@ class SettingsController extends Controller
 
             // Slack
             $data['slack_enabled'] = $request->has('slack_enabled');
-            $data['slack_webhook_url'] = $request->input('slack_webhook_url', '');
+            // The saved URL is never shown again, so an empty field means
+            // "keep it". The clear box removes it.
+            $slackUrl = trim((string) $request->input('slack_webhook_url', ''));
+            if ($request->boolean('slack_webhook_url_clear')) {
+                $data['slack_webhook_url'] = '';
+            } elseif ($slackUrl !== '') {
+                $data['slack_webhook_url'] = $slackUrl;
+            }
+
+            if ($data['slack_enabled']
+                && ($data['slack_webhook_url'] ?? $this->settingsService->getSetting('notifications.slack_webhook_url', '')) === '') {
+                return redirect()->back()
+                    ->withInput($request->except('slack_webhook_url'))
+                    ->withErrors(['slack_webhook_url' => 'Enter a Slack webhook URL to turn Slack notifications on.']);
+            }
 
             $slackTypes = $this->storedNotificationMap('slack_types');
             foreach (SettingsManagerService::SLACK_NOTIFICATION_TYPES as $type) {
@@ -1563,8 +1581,8 @@ class SettingsController extends Controller
         try {
             $webhook = \MiningManager\Models\WebhookConfiguration::findOrFail($id);
 
-            // Include sensitive webhook_url in response
-            $webhook->makeVisible(['webhook_url']);
+            // The URL is not sent back: the edit form shows the host only
+            // (webhook_url_hint) and keeps the saved URL when left blank.
 
             return response()->json([
                 'success' => true,
@@ -1661,7 +1679,8 @@ class SettingsController extends Controller
         try {
             $webhook = \MiningManager\Models\WebhookConfiguration::findOrFail($id);
 
-            $validator = Validator::make($request->all(), $this->webhookValidationRules());
+            // URL optional on edit: blank keeps the saved one.
+            $validator = Validator::make($request->all(), $this->webhookValidationRules(false));
 
             if ($validator->fails()) {
                 return response()->json([
@@ -1672,6 +1691,9 @@ class SettingsController extends Controller
             }
 
             $data = $validator->validated();
+            if (trim((string) ($data['webhook_url'] ?? '')) === '') {
+                unset($data['webhook_url']);
+            }
 
             // Convert checkboxes to booleans (boolean() checks actual value, not just key existence)
             // is_enabled: only update when the form actually submits the
@@ -1840,7 +1862,7 @@ class SettingsController extends Controller
      *
      * @return array<string, mixed>
      */
-    private function webhookValidationRules(): array
+    private function webhookValidationRules(bool $requireUrl = true): array
     {
         $crossPluginRule = function ($attribute, $value, $fail) {
             if (!$value) {
@@ -1861,7 +1883,7 @@ class SettingsController extends Controller
             'type' => 'required|in:discord,slack,custom',
             // HTTPS-only — Discord/Slack/standard webhooks are always HTTPS.
             // The starts_with rule blocks http://, file://, gopher://, etc.
-            'webhook_url' => ['required', 'url', 'starts_with:https://'],
+            'webhook_url' => [$requireUrl ? 'required' : 'nullable', 'url', WebhookUrlPolicy::rule()],
             // is_enabled — explicit boolean validation. Coercing it via
             // $request->boolean() in the controller without going through the
             // validator means a payload of `is_enabled=banana` silently

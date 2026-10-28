@@ -2,6 +2,7 @@
 
 namespace MiningManager\Services\Notification\Concerns;
 
+use MiningManager\Services\Security\WebhookUrlPolicy;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -85,12 +86,18 @@ trait WebhookDispatchTrait
         int $maxAttempts = 3,
         int $retryDelaySeconds = 2
     ): Response {
+        // Checked when sending as well as when saving: rows saved before the
+        // check existed, or a host whose DNS now points inside the network.
+        if ($problem = WebhookUrlPolicy::problem($url)) {
+            throw new \RuntimeException('Webhook URL refused: ' . $problem);
+        }
+
         $lastException = null;
         $response = null;
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
-                $response = Http::timeout(10)->post($url, $payload);
+                $response = Http::timeout(10)->withoutRedirecting()->post($url, $payload);
 
                 // Don't retry on client errors (4xx) — only on server errors (5xx) or rate limits (429)
                 if ($response->successful()

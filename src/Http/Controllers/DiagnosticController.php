@@ -2,6 +2,7 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\WebhookUrlPolicy;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
@@ -117,7 +118,8 @@ class DiagnosticController extends Controller
         ];
 
         // For Notification Testing tab
-        $webhooks = WebhookConfiguration::select('id', 'name', 'type', 'is_enabled', 'webhook_url')->get();
+        // The URL itself is not needed to list webhooks, and is not sent to the page.
+        $webhooks = WebhookConfiguration::select('id', 'name', 'type', 'is_enabled')->get();
 
         $seatCharacters = DB::table('character_infos')
             ->join('refresh_tokens', 'character_infos.character_id', '=', 'refresh_tokens.character_id')
@@ -4504,6 +4506,13 @@ class DiagnosticController extends Controller
         $webhookName = 'Custom URL';
 
         if ($customWebhookUrl) {
+            // Same rule as saved webhooks: this request is sent from inside
+            // the SeAT network, so it must go to a public HTTPS host.
+            if ($problem = WebhookUrlPolicy::problem($customWebhookUrl)) {
+                $this->addLog($logs, 'error', 'Custom webhook URL refused: ' . $problem);
+                $summary['failed']++;
+                return;
+            }
             $webhookUrl = $customWebhookUrl;
             $this->addLog($logs, 'info', 'Using custom webhook URL');
         } elseif ($webhookId) {
@@ -4799,6 +4808,12 @@ class DiagnosticController extends Controller
     protected function testSlackChannel(array &$logs, array &$summary, string $type, array $data, $customSlackUrl, array $settings): void
     {
         // Resolve webhook URL
+        if ($customSlackUrl && ($problem = WebhookUrlPolicy::problem($customSlackUrl))) {
+            $this->addLog($logs, 'error', 'Custom Slack URL refused: ' . $problem);
+            $summary['failed']++;
+            return;
+        }
+
         $webhookUrl = $customSlackUrl ?: ($settings['slack_webhook_url'] ?? '');
 
         if (!$webhookUrl) {

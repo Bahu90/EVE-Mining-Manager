@@ -2,6 +2,7 @@
 
 namespace MiningManager\Services\Notification;
 
+use MiningManager\Services\Security\WebhookUrlPolicy;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
@@ -1157,7 +1158,10 @@ class NotificationService
                     'timestamp' => Carbon::now()->toIso8601String(),
                 ];
 
-                $request = Http::timeout(10);
+                if ($problem = WebhookUrlPolicy::problem($webhook->webhook_url)) {
+                    return ['success' => false, 'error' => 'Webhook URL refused: ' . $problem];
+                }
+                $request = Http::timeout(10)->withoutRedirecting();
                 if ($webhook->custom_headers && is_array($webhook->custom_headers)) {
                     foreach ($webhook->custom_headers as $key => $value) {
                         $request = $request->withHeader($key, $value);
@@ -1897,7 +1901,10 @@ class NotificationService
                         $payload = $this->formatCustomPayload($type, $eventType, $data);
                     }
 
-                    $request = Http::timeout(10);
+                    if ($problem = WebhookUrlPolicy::problem($webhook->webhook_url)) {
+                        throw new \RuntimeException('Webhook URL refused: ' . $problem);
+                    }
+                    $request = Http::timeout(10)->withoutRedirecting();
                     if ($webhook->custom_headers && is_array($webhook->custom_headers)) {
                         foreach ($webhook->custom_headers as $key => $value) {
                             $request = $request->withHeader($key, $value);

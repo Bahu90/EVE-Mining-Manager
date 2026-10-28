@@ -3,6 +3,7 @@
 namespace MiningManager\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use MiningManager\Services\Security\SecretValue;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -158,6 +159,36 @@ class WebhookConfiguration extends Model
     protected $hidden = [
         'webhook_url', // Hide sensitive webhook URLs from general queries
     ];
+
+    /**
+     * Safe to send to the browser in place of the URL itself.
+     *
+     * @var array
+     */
+    protected $appends = ['webhook_url_hint'];
+
+    /**
+     * The URL is a credential (anyone holding it can post to the channel),
+     * so it is stored encrypted with SeAT's APP_KEY. Reading the attribute
+     * gives the plain URL; rows saved before encryption read as they are.
+     */
+    public function getWebhookUrlAttribute($value): ?string
+    {
+        return SecretValue::open($value);
+    }
+
+    public function setWebhookUrlAttribute($value): void
+    {
+        $this->attributes['webhook_url'] = SecretValue::seal($value === null ? null : trim((string) $value));
+    }
+
+    /**
+     * Host of the saved URL ("discord.com/…"), never the token.
+     */
+    public function getWebhookUrlHintAttribute(): ?string
+    {
+        return SecretValue::hint($this->webhook_url);
+    }
 
     /**
      * Scope to get only enabled webhooks
