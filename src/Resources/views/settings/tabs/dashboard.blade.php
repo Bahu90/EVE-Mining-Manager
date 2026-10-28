@@ -52,6 +52,31 @@
         </div>
     </div>
 
+    {{-- Who sees the corporation's figures --}}
+    <div class="card bg-dark mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-users"></i>
+                Corporation and Guest Miners tabs
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="custom-control custom-switch">
+                <input type="hidden" name="dashboard_members_see_corporation" value="0">
+                <input type="checkbox" class="custom-control-input" id="dashboard_members_see_corporation"
+                       name="dashboard_members_see_corporation" value="1"
+                       {{ old('dashboard_members_see_corporation', $settings['dashboard']['dashboard_members_see_corporation'] ?? false) ? 'checked' : '' }}>
+                <label class="custom-control-label" for="dashboard_members_see_corporation">
+                    <strong>All members see them</strong>
+                </label>
+            </div>
+            <small class="form-text text-muted">
+                On: every member's Dashboard has the Corporation Overview and Guest Miners tabs, with the
+                corporation's totals, charts, tax and guest miners. Off: only directors have them.
+            </small>
+        </div>
+    </div>
+
     {{-- Leaderboard Corporation Filter --}}
     <div class="card bg-dark mb-4">
         <div class="card-header">

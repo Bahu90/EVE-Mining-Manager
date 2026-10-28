@@ -50,13 +50,14 @@ Route::group([
         Route::get('/tab/corporation', [
             'as' => 'mining-manager.dashboard.tab.corporation',
             'uses' => 'DashboardController@getCorporationTabData',
-            'middleware' => 'can:mining-manager.director',
+            // Members too when Settings > Dashboard allows it; checked inside.
+            'middleware' => 'can:mining-manager.member',
         ]);
 
         Route::get('/tab/guest-miners', [
             'as' => 'mining-manager.dashboard.tab.guest-miners',
             'uses' => 'DashboardController@getGuestMinersTabData',
-            'middleware' => 'can:mining-manager.director',
+            'middleware' => 'can:mining-manager.member',
         ]);
     });
 

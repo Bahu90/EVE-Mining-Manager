@@ -2,6 +2,11 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [2.1.1] — 2026-10-29
+
+- **Settings > Dashboard: "All members see them"** opens the corporation's figures to every member: the Dashboard's Corporation Overview and Guest Miners tabs, every pilot's ISK on Moon Mining, and the corporation's belt and anomaly total there. Off by default, so only directors see them until it is switched on.
+- **calculate-taxes** bills a month asked for with `--month` (or `--period-start`, `--force`) even when Auto-Calculate Taxes is off; the setting stops only the scheduled run.
+
 ## [2.1.0] — 2026-10-28 — bahu90/mining-manager
 
 First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namespace, tables and permissions, so an existing install switches over and keeps its data.

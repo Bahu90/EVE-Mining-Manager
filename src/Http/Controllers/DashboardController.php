@@ -74,6 +74,9 @@ class DashboardController extends Controller
         $data = $metrics->forMonth($month, $trendMonths);
 
         $isDirector = $this->hasDirectorPermissions();
+        // Every pilot's ISK, for directors, and for members when Settings >
+        // Dashboard opens the corporation's figures to them.
+        $seesCorporation = $this->canSeeCorporation();
         $user = auth()->user();
         $own = array_map('intval', $this->getUserCharacterIds($user));
         if ($user->main_character_id) {
@@ -83,7 +86,7 @@ class DashboardController extends Controller
         if (!empty($data['players'])) {
             foreach ($data['players'] as &$player) {
                 $player['own'] = in_array((int) $player['character_id'], $own, true);
-                if (!$isDirector && !$player['own']) {
+                if (!$seesCorporation && !$player['own']) {
                     $player['isk'] = null;
                     $player['tax'] = null;
                 }
@@ -93,10 +96,10 @@ class DashboardController extends Controller
 
         // The page counts moon mining only, as the corporation's website does.
         // What was mined everywhere else that month is one figure beside it:
-        // the corporation's for directors, the user's own for members.
+        // the corporation's for those who see its figures, otherwise the user's own.
         $anomalies = null;
         if ($data['configured'] ?? false) {
-            $anomalyCharacters = $isDirector
+            $anomalyCharacters = $seesCorporation
                 ? app(\MiningManager\Services\Character\CorporationMembers::class)->characterIds((int) $data['corporation']['id'])
                 : array_values(array_unique($own));
             $anomalies = [
@@ -106,7 +109,7 @@ class DashboardController extends Controller
                     $month->copy()->endOfMonth()->format('Y-m-d'),
                     \MiningManager\Support\MiningSource::ANOMALIES
                 )['value'],
-                'scope' => $isDirector ? 'corporation' : 'own',
+                'scope' => $seesCorporation ? 'corporation' : 'own',
             ];
         }
 
@@ -115,7 +118,7 @@ class DashboardController extends Controller
             'anomalies' => $anomalies,
             'month' => $month,
             'isDirector' => $isDirector,
-            'canSeeIsk' => $isDirector,
+            'canSeeIsk' => $seesCorporation,
             'taxBanner' => $this->taxBanner($user),
         ]);
     }
@@ -132,10 +135,9 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        $isDirector = $this->hasDirectorPermissions();
-
-        if ($isDirector) {
-            // Directors get both personal and corporation data
+        // Directors get personal, corporation and guest tabs; so does everyone
+        // when Settings > Dashboard opens the corporation's figures to members.
+        if ($this->canSeeCorporation()) {
             return $this->combinedDirectorDashboard();
         }
 
@@ -308,6 +310,8 @@ class DashboardController extends Controller
      */
     public function getCorporationTabData()
     {
+        abort_unless($this->canSeeCorporation(), 403);
+
         $corporationId = $this->getUserCorporationId();
 
         $currentMonthStart = Carbon::now()->startOfMonth();
@@ -359,6 +363,8 @@ class DashboardController extends Controller
      */
     public function getGuestMinersTabData(Request $request)
     {
+        abort_unless($this->canSeeCorporation(), 403);
+
         $corporationId = $this->getUserCorporationId();
 
         // Parse requested month (defaults to current month)
@@ -1772,6 +1778,20 @@ class DashboardController extends Controller
     private function hasDirectorPermissions()
     {
         return auth()->user()->can('mining-manager.director');
+    }
+
+    /**
+     * Whether the person looking may see the corporation's and the guest
+     * miners' figures: directors always, members when Settings > Dashboard
+     * says so.
+     */
+    private function canSeeCorporation(): bool
+    {
+        if ($this->hasDirectorPermissions()) {
+            return true;
+        }
+
+        return (bool) ($this->settingsService->getDashboardSettings()['dashboard_members_see_corporation'] ?? false);
     }
 
     /**
