@@ -525,7 +525,11 @@ class VerifyWalletPaymentsCommand extends Command
 
             $why = null;
 
-            if ($own->contains(fn ($slice) => $slice->source === PaymentAllocation::SOURCE_MANUAL)) {
+            if (\MiningManager\Models\OreContract::isContractPaymentId($transactionId)) {
+                // An ore contract, not a wallet transfer: re-matching the
+                // wallet would never find it again.
+                $why = 'an ore contract';
+            } elseif ($own->contains(fn ($slice) => $slice->source === PaymentAllocation::SOURCE_MANUAL)) {
                 $why = 'assigned by hand';
             } elseif ($own->contains(fn ($slice) => !in_array((int) $slice->mining_tax_id, $taxIds, true))) {
                 $why = 'also paid an invoice outside this month';

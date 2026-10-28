@@ -378,6 +378,7 @@ return [
     'payment_source_manual' => 'Recorded by hand',
     'payment_source_cascade' => 'Rolled over from another payment',
     'payment_source_credit' => 'Drawn from held credit',
+    'payment_source_contract' => 'Ore handed in by contract',
 
     // Account balance (member-facing wording for held credit)
     'account_balance' => 'Account Balance',

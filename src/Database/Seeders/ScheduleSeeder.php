@@ -127,6 +127,17 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             ],
             // Send tax reminders - runs daily at 10 AM
             // (Command checks send_tax_reminders and tax_reminder_days settings to determine if reminders are needed)
+            // Ore tax contracts - hourly at :40. Credits item exchange
+            // contracts members made to a corporation that takes its tax in
+            // ore. Does nothing while every corporation takes ISK.
+            [
+                'command' => 'mining-manager:verify-ore-contracts',
+                'expression' => '40 * * * *',
+                'allow_overlap' => false,
+                'allow_maintenance' => false,
+                'ping_before' => null,
+                'ping_after' => null,
+            ],
             [
                 'command' => 'mining-manager:send-reminders',
                 'expression' => '0 10 * * *',

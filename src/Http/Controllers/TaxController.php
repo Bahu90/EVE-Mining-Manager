@@ -2941,6 +2941,7 @@ class TaxController extends Controller
                     PaymentAllocation::SOURCE_MANUAL => trans('mining-manager::taxes.payment_source_manual'),
                     PaymentAllocation::SOURCE_CASCADE => trans('mining-manager::taxes.payment_source_cascade'),
                     PaymentAllocation::SOURCE_CREDIT => trans('mining-manager::taxes.payment_source_credit'),
+                    PaymentAllocation::SOURCE_CONTRACT => trans('mining-manager::taxes.payment_source_contract'),
                     default => $allocation->source,
                 };
 

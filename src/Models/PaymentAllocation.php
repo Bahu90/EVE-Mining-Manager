@@ -59,6 +59,8 @@ class PaymentAllocation extends Model
     public const SOURCE_MANUAL = 'manual';
     public const SOURCE_CASCADE = 'cascade';
     public const SOURCE_CREDIT = 'credit';
+    /** Ore handed in by contract (OreContractService). */
+    public const SOURCE_CONTRACT = 'contract';
 
     /**
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
