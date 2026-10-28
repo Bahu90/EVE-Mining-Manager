@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.analytics'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .stat-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -48,6 +48,7 @@
     .rank-3 { background: linear-gradient(135deg, #CD7F32 0%, #8B4513 100%); }
     .rank-other { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

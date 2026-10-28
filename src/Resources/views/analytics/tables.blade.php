@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.analytics'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/vendor/dataTables.bootstrap4.min.css') }}">
 <style>
     .table-container {
@@ -27,6 +27,7 @@
         padding: 0.35rem 0.65rem;
     }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

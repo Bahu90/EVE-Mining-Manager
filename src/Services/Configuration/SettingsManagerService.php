@@ -1437,6 +1437,7 @@ class SettingsManagerService
         return array_merge($configDefaults, [
             'dashboard_leaderboard_corporation_filter' => $this->getSettingForCorporation('dashboard_leaderboard_corporation_filter', null, 'all'),
             'dashboard_leaderboard_corporation_ids' => $this->getSettingForCorporation('dashboard_leaderboard_corporation_ids', null, '[]'),
+            'display_theme' => \MiningManager\Support\Look::current(),
         ]);
     }
 

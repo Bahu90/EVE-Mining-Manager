@@ -4,7 +4,7 @@
 @section('page_header', 'Mining Manager - Configured Corporations')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .corp-card {
         background: linear-gradient(135deg, #1a1d2e 0%, #2d3748 100%);
@@ -134,6 +134,7 @@
         color: white;
     }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

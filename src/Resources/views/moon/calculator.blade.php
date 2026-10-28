@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.moon_extractions'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .moon-simulator-page .finder-section { margin-bottom: 12px; }
     .moon-simulator-page .finder-section-title {
@@ -127,6 +127,7 @@
     .moon-simulator-page .income-net.income-negative > span:last-child { color: #dc3545 !important; }
     .moon-simulator-page .income-per-day { font-size: 0.8rem; }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

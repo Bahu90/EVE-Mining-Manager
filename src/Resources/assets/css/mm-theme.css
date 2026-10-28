@@ -1,0 +1,724 @@
+/* ============================================
+   Mining Manager - EVE-RO look
+
+   The look of the corporation's own mining page (eve-ro.com/tools/mining)
+   and of Ratting Manager: a black ground, flat dark tiles with a clipped
+   corner, the Oxanium typeface, electric blue for ISK, green for tax, and
+   small spaced capitals over large numbers.
+
+   Loaded on every Mining Manager page after mining-manager-dashboard.css
+   (and each page's own inline styles), only while Settings > Dashboard >
+   Look is set to EVE-RO. The standard look is the plugin's original styling,
+   untouched. Every rule is scoped to the plugin's two page wrappers, so
+   SeAT's own pages and sidebar are never restyled.
+
+   Many pages carry inline "!important" overrides of the form
+   ".mining-dashboard .card-body"; rules here are prefixed with "body" so
+   they win on specificity as well as order.
+   ============================================ */
+
+/* Oxanium ships with the plugin (SIL Open Font License, fonts/Oxanium-OFL.txt),
+   so no page calls out to Google Fonts. One variable file covers every weight. */
+@font-face {
+    font-family: 'Oxanium';
+    src: url('../fonts/Oxanium-Variable.woff') format('woff');
+    font-weight: 200 800;
+    font-style: normal;
+    font-display: swap;
+}
+
+:root {
+    --mmx-ground: #050608;
+    --mmx-surface: #0d1016;
+    --mmx-surface-2: #12161d;
+    --mmx-surface-3: #181d26;
+    --mmx-line: #1b2029;
+    --mmx-line-soft: #161a22;
+    --mmx-text: #eef2f7;
+    --mmx-text-2: #c3cad5;
+    --mmx-label: #a7b0be;
+    --mmx-muted: #8b95a5;
+    --mmx-blue: #00aeff;
+    --mmx-blue-hover: #5cc9ff;
+    --mmx-blue-deep: #0a6fae;
+    --mmx-green: #3ddc84;
+    --mmx-amber: #f5a524;
+    --mmx-red: #ff5c5c;
+    --mmx-volume: #8a7a68;
+    --mmx-font: 'Oxanium', 'Source Sans Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --mmx-cut: 10px;
+
+    /* Moon ore tiers, as the corporation page colours them. */
+    --mmx-r4: #1fa14a;
+    --mmx-r8: #19a7f0;
+    --mmx-r16: #1d6fd0;
+    --mmx-r32: #f07c1d;
+    --mmx-r64: #c084fc;
+
+    /* The plugin's own palette, pointed at the EVE-RO colours so every
+       component already built on these variables follows along. */
+    --mm-primary-start: #0a6fae;
+    --mm-primary-end: #00aeff;
+    --mm-dark-bg: #0d1016;
+    --mm-dark-card: #12161d;
+    --mm-border: #1b2029;
+    --mm-text-light: #c3cad5;
+    --mm-text-muted: #8b95a5;
+    --mm-text-white: #eef2f7;
+    --mm-success: #3ddc84;
+    --mm-warning: #f5a524;
+    --mm-danger: #ff5c5c;
+    --mm-info: #00aeff;
+}
+
+/* ---------- Ground and type ---------- */
+/* The whole content area goes black on plugin pages, not just the wrapper. */
+body:has(.mining-manager-wrapper) .content-wrapper,
+body:has(.mining-dashboard) .content-wrapper {
+    background: var(--mmx-ground) !important;
+}
+
+body:has(.mining-manager-wrapper) .content-header h1,
+body:has(.mining-dashboard) .content-header h1 {
+    font-family: var(--mmx-font);
+    color: var(--mmx-text);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 400;
+}
+
+body .mining-manager-wrapper,
+body .mining-dashboard {
+    background: var(--mmx-ground) !important;
+    color: var(--mmx-text);
+    font-family: var(--mmx-font);
+    font-weight: 300;
+}
+
+body .mining-manager-wrapper h1, body .mining-manager-wrapper h2, body .mining-manager-wrapper h3,
+body .mining-manager-wrapper h4, body .mining-manager-wrapper h5, body .mining-manager-wrapper h6,
+body .mining-dashboard h1, body .mining-dashboard h2, body .mining-dashboard h3,
+body .mining-dashboard h4, body .mining-dashboard h5, body .mining-dashboard h6 {
+    font-family: var(--mmx-font);
+    color: var(--mmx-text);
+    font-weight: 500;
+}
+
+body .mining-manager-wrapper h4, body .mining-dashboard h4,
+body .mining-manager-wrapper h5, body .mining-dashboard h5 {
+    letter-spacing: 0.06em;
+}
+
+body .mining-manager-wrapper strong, body .mining-dashboard strong,
+body .mining-manager-wrapper b, body .mining-dashboard b {
+    font-weight: 600;
+}
+
+body .mining-manager-wrapper a:not(.btn):not(.nav-link):not(.page-link),
+body .mining-dashboard a:not(.btn):not(.nav-link):not(.page-link) {
+    color: var(--mmx-blue);
+}
+
+body .mining-manager-wrapper a:not(.btn):not(.nav-link):not(.page-link):hover,
+body .mining-dashboard a:not(.btn):not(.nav-link):not(.page-link):hover {
+    color: var(--mmx-blue-hover);
+    text-decoration: none;
+}
+
+body .mining-manager-wrapper hr, body .mining-dashboard hr {
+    border-color: var(--mmx-line);
+}
+
+/* Text colour helpers, in the theme's colours. */
+body .mining-manager-wrapper .text-muted, body .mining-dashboard .text-muted { color: var(--mmx-muted) !important; }
+body .mining-manager-wrapper .text-primary, body .mining-dashboard .text-primary,
+body .mining-manager-wrapper .text-info, body .mining-dashboard .text-info { color: var(--mmx-blue) !important; }
+body .mining-manager-wrapper .text-success, body .mining-dashboard .text-success { color: var(--mmx-green) !important; }
+body .mining-manager-wrapper .text-warning, body .mining-dashboard .text-warning { color: var(--mmx-amber) !important; }
+body .mining-manager-wrapper .text-danger, body .mining-dashboard .text-danger { color: var(--mmx-red) !important; }
+body .mining-manager-wrapper .text-white, body .mining-dashboard .text-white { color: var(--mmx-text) !important; }
+
+/* ---------- Cards ---------- */
+body .mining-manager-wrapper .card,
+body .mining-dashboard .card,
+body .mining-manager-wrapper .card.card-dark,
+body .mining-dashboard .card.card-dark,
+body .mining-manager-wrapper .card.bg-dark,
+body .mining-dashboard .card.bg-dark {
+    background: var(--mmx-surface) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: var(--mmx-text) !important;
+}
+
+body .mining-manager-wrapper .card:hover,
+body .mining-dashboard .card:hover {
+    transform: none !important;
+}
+
+/* Coloured AdminLTE outlines become a thin accent line on top. */
+body .mining-manager-wrapper .card.card-outline,
+body .mining-dashboard .card.card-outline {
+    border-top: 2px solid var(--mmx-blue) !important;
+}
+
+body .mining-manager-wrapper .card.card-outline.card-success,
+body .mining-dashboard .card.card-outline.card-success { border-top-color: var(--mmx-green) !important; }
+body .mining-manager-wrapper .card.card-outline.card-warning,
+body .mining-dashboard .card.card-outline.card-warning { border-top-color: var(--mmx-amber) !important; }
+body .mining-manager-wrapper .card.card-outline.card-danger,
+body .mining-dashboard .card.card-outline.card-danger { border-top-color: var(--mmx-red) !important; }
+body .mining-manager-wrapper .card.card-outline.card-secondary,
+body .mining-dashboard .card.card-outline.card-secondary { border-top-color: var(--mmx-line) !important; }
+
+body .mining-manager-wrapper .card .card-header,
+body .mining-dashboard .card .card-header,
+body .mining-manager-wrapper .card-dark .card-header,
+body .mining-dashboard .card-dark .card-header {
+    background: transparent !important;
+    border-bottom: 1px solid var(--mmx-line) !important;
+    color: var(--mmx-text) !important;
+}
+
+body .mining-manager-wrapper .card .card-title,
+body .mining-dashboard .card .card-title {
+    font-family: var(--mmx-font);
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mmx-text) !important;
+}
+
+body .mining-manager-wrapper .card .card-title i,
+body .mining-dashboard .card .card-title i,
+body .mining-manager-wrapper .card .card-header > i,
+body .mining-dashboard .card .card-header > i {
+    color: var(--mmx-blue);
+}
+
+body .mining-manager-wrapper .card .card-body,
+body .mining-dashboard .card .card-body,
+body .mining-manager-wrapper div.card-body,
+body .mining-dashboard div.card-body,
+body .mining-manager-wrapper .card .card-footer,
+body .mining-dashboard .card .card-footer {
+    background: var(--mmx-surface) !important;
+    color: var(--mmx-text) !important;
+    border-color: var(--mmx-line) !important;
+}
+
+/* A card inside a card is a step lighter, so it still reads as a box. */
+body .mining-manager-wrapper .card .card,
+body .mining-dashboard .card .card,
+body .mining-manager-wrapper .card .card .card-body,
+body .mining-dashboard .card .card .card-body {
+    background: var(--mmx-surface-2) !important;
+}
+
+/* Tab shells sit on the black ground. */
+body .mining-manager-wrapper .card.card-tabs,
+body .mining-dashboard .card.card-tabs,
+body .mining-manager-wrapper .card.card-tabs > .card-body,
+body .mining-dashboard .card.card-tabs > .card-body,
+body .mining-manager-wrapper .tab-content,
+body .mining-dashboard .tab-content {
+    background: transparent !important;
+}
+
+/* ---------- Tabs ---------- */
+body .mining-manager-wrapper .nav-tabs,
+body .mining-dashboard .nav-tabs {
+    border-bottom: 1px solid var(--mmx-line) !important;
+    background: transparent !important;
+}
+
+body .mining-manager-wrapper .nav-tabs .nav-link,
+body .mining-dashboard .nav-tabs .nav-link,
+body .mining-manager-wrapper .nav-pills .nav-link,
+body .mining-dashboard .nav-pills .nav-link {
+    font-family: var(--mmx-font);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 13px;
+    color: var(--mmx-label) !important;
+    background: transparent !important;
+    border: 0 !important;
+    border-bottom: 2px solid transparent !important;
+    border-radius: 0 !important;
+}
+
+body .mining-manager-wrapper .nav-tabs .nav-link:hover,
+body .mining-dashboard .nav-tabs .nav-link:hover,
+body .mining-manager-wrapper .nav-pills .nav-link:hover,
+body .mining-dashboard .nav-pills .nav-link:hover {
+    color: var(--mmx-text) !important;
+}
+
+body .mining-manager-wrapper .nav-tabs .nav-link.active,
+body .mining-dashboard .nav-tabs .nav-link.active,
+body .mining-manager-wrapper .nav-pills .nav-link.active,
+body .mining-dashboard .nav-pills .nav-link.active {
+    color: var(--mmx-blue) !important;
+    border-bottom-color: var(--mmx-blue) !important;
+}
+
+/* ---------- Tiles (info-box, small-box, stat boxes) ---------- */
+body .mining-manager-wrapper .info-box,
+body .mining-dashboard .info-box,
+body .mining-manager-wrapper .small-box,
+body .mining-dashboard .small-box,
+body .mining-manager-wrapper .stat-box,
+body .mining-dashboard .stat-box,
+body .mining-manager-wrapper .stat-card,
+body .mining-dashboard .stat-card,
+body .mining-manager-wrapper .stats-card,
+body .mining-dashboard .stats-card {
+    background: var(--mmx-surface) !important;
+    color: var(--mmx-text) !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--mmx-cut)), calc(100% - var(--mmx-cut)) 100%, 0 100%);
+}
+
+body .mining-manager-wrapper .info-box:hover,
+body .mining-dashboard .info-box:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* The icon square loses its fill and becomes a blue glyph. */
+body .mining-manager-wrapper .info-box .info-box-icon,
+body .mining-dashboard .info-box .info-box-icon {
+    background: transparent !important;
+    color: var(--mmx-blue) !important;
+    box-shadow: none !important;
+    width: 46px;
+    font-size: 1.5rem;
+}
+
+body .mining-manager-wrapper .info-box .info-box-text,
+body .mining-dashboard .info-box .info-box-text,
+body .mining-manager-wrapper .stat-label,
+body .mining-dashboard .stat-label {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mmx-label) !important;
+    font-weight: 400;
+}
+
+body .mining-manager-wrapper .info-box .info-box-number,
+body .mining-dashboard .info-box .info-box-number,
+body .mining-manager-wrapper .stat-number,
+body .mining-dashboard .stat-number,
+body .mining-manager-wrapper .stat-value,
+body .mining-dashboard .stat-value {
+    font-family: var(--mmx-font);
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--mmx-blue) !important;
+}
+
+/* Coloured tiles keep their meaning as a coloured number, not a fill. */
+body .mining-manager-wrapper .info-box[class*="bg-"],
+body .mining-dashboard .info-box[class*="bg-"],
+body .mining-manager-wrapper .small-box[class*="bg-"],
+body .mining-dashboard .small-box[class*="bg-"] {
+    background: var(--mmx-surface) !important;
+}
+
+body .mining-manager-wrapper .info-box[class*="success"] .info-box-number,
+body .mining-dashboard .info-box[class*="success"] .info-box-number,
+body .mining-manager-wrapper .info-box:has(.info-box-icon[class*="success"]) .info-box-number,
+body .mining-dashboard .info-box:has(.info-box-icon[class*="success"]) .info-box-number { color: var(--mmx-green) !important; }
+
+body .mining-manager-wrapper .info-box[class*="warning"] .info-box-number,
+body .mining-dashboard .info-box[class*="warning"] .info-box-number,
+body .mining-manager-wrapper .info-box:has(.info-box-icon[class*="warning"]) .info-box-number,
+body .mining-dashboard .info-box:has(.info-box-icon[class*="warning"]) .info-box-number { color: var(--mmx-amber) !important; }
+
+body .mining-manager-wrapper .info-box[class*="danger"] .info-box-number,
+body .mining-dashboard .info-box[class*="danger"] .info-box-number,
+body .mining-manager-wrapper .info-box:has(.info-box-icon[class*="danger"]) .info-box-number,
+body .mining-dashboard .info-box:has(.info-box-icon[class*="danger"]) .info-box-number { color: var(--mmx-red) !important; }
+
+body .mining-manager-wrapper .info-box .info-box-icon[class*="success"],
+body .mining-dashboard .info-box .info-box-icon[class*="success"] { color: var(--mmx-green) !important; }
+body .mining-manager-wrapper .info-box .info-box-icon[class*="warning"],
+body .mining-dashboard .info-box .info-box-icon[class*="warning"] { color: var(--mmx-amber) !important; }
+body .mining-manager-wrapper .info-box .info-box-icon[class*="danger"],
+body .mining-dashboard .info-box .info-box-icon[class*="danger"] { color: var(--mmx-red) !important; }
+
+body .mining-manager-wrapper .small-box .icon,
+body .mining-dashboard .small-box .icon {
+    color: var(--mmx-line) !important;
+}
+
+body .mining-manager-wrapper .small-box .inner h3,
+body .mining-dashboard .small-box .inner h3 {
+    color: var(--mmx-blue) !important;
+    font-weight: 600;
+}
+
+body .mining-manager-wrapper .small-box .small-box-footer,
+body .mining-dashboard .small-box .small-box-footer {
+    background: var(--mmx-surface-2) !important;
+    color: var(--mmx-label) !important;
+}
+
+/* Gradient headers and banners built on the purple gradient go flat. */
+body .mining-manager-wrapper [class*="bg-gradient-"],
+body .mining-dashboard [class*="bg-gradient-"] {
+    background-image: none !important;
+}
+
+body .mining-manager-wrapper .bg-gradient-primary:not(.info-box):not(.small-box),
+body .mining-dashboard .bg-gradient-primary:not(.info-box):not(.small-box),
+body .mining-manager-wrapper .bg-primary:not(.info-box):not(.small-box):not(.badge),
+body .mining-dashboard .bg-primary:not(.info-box):not(.small-box):not(.badge) {
+    background-color: var(--mmx-blue-deep) !important;
+}
+
+/* ---------- Tables ---------- */
+body .mining-manager-wrapper .table,
+body .mining-dashboard .table,
+body .mining-manager-wrapper .table-dark,
+body .mining-dashboard .table-dark {
+    background: transparent !important;
+    color: var(--mmx-text) !important;
+    font-size: 14px;
+}
+
+body .mining-manager-wrapper .table th,
+body .mining-dashboard .table th,
+body .mining-manager-wrapper .table td,
+body .mining-dashboard .table td {
+    border-color: var(--mmx-line-soft) !important;
+    background-color: transparent;
+}
+
+body .mining-manager-wrapper .table thead th,
+body .mining-dashboard .table thead th {
+    background: transparent !important;
+    color: var(--mmx-label) !important;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--mmx-line) !important;
+    border-top: 0 !important;
+}
+
+body .mining-manager-wrapper .table-striped tbody tr:nth-of-type(odd),
+body .mining-dashboard .table-striped tbody tr:nth-of-type(odd) {
+    background-color: rgba(255, 255, 255, 0.015) !important;
+}
+
+body .mining-manager-wrapper .table-hover tbody tr:hover,
+body .mining-dashboard .table-hover tbody tr:hover,
+body .mining-manager-wrapper .table tbody tr:hover,
+body .mining-dashboard .table tbody tr:hover {
+    background-color: rgba(0, 174, 255, 0.05) !important;
+    color: var(--mmx-text) !important;
+}
+
+/* DataTables controls. */
+body .mining-manager-wrapper .dataTables_wrapper .dataTables_length,
+body .mining-dashboard .dataTables_wrapper .dataTables_length,
+body .mining-manager-wrapper .dataTables_wrapper .dataTables_filter,
+body .mining-dashboard .dataTables_wrapper .dataTables_filter,
+body .mining-manager-wrapper .dataTables_wrapper .dataTables_info,
+body .mining-dashboard .dataTables_wrapper .dataTables_info {
+    color: var(--mmx-muted) !important;
+}
+
+body .mining-manager-wrapper .page-link,
+body .mining-dashboard .page-link {
+    background: var(--mmx-surface) !important;
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-label) !important;
+    border-radius: 0 !important;
+}
+
+body .mining-manager-wrapper .page-item.active .page-link,
+body .mining-dashboard .page-item.active .page-link {
+    background: var(--mmx-blue-deep) !important;
+    border-color: var(--mmx-blue-deep) !important;
+    color: #fff !important;
+}
+
+/* ---------- Buttons ---------- */
+body .mining-manager-wrapper .btn,
+body .mining-dashboard .btn {
+    font-family: var(--mmx-font);
+    border-radius: 0 !important;
+    letter-spacing: 0.04em;
+    box-shadow: none !important;
+    background-image: none !important;
+}
+
+body .mining-manager-wrapper .btn-primary,
+body .mining-dashboard .btn-primary,
+body .mining-manager-wrapper .btn-info,
+body .mining-dashboard .btn-info {
+    background: var(--mmx-blue-deep) !important;
+    border-color: var(--mmx-blue-deep) !important;
+    color: #fff !important;
+}
+
+body .mining-manager-wrapper .btn-primary:hover,
+body .mining-dashboard .btn-primary:hover,
+body .mining-manager-wrapper .btn-info:hover,
+body .mining-dashboard .btn-info:hover {
+    background: var(--mmx-blue) !important;
+    border-color: var(--mmx-blue) !important;
+}
+
+body .mining-manager-wrapper .btn-success,
+body .mining-dashboard .btn-success {
+    background: #1d8a4f !important;
+    border-color: #1d8a4f !important;
+    color: #fff !important;
+}
+
+body .mining-manager-wrapper .btn-secondary,
+body .mining-dashboard .btn-secondary,
+body .mining-manager-wrapper .btn-default,
+body .mining-dashboard .btn-default,
+body .mining-manager-wrapper .btn-dark,
+body .mining-dashboard .btn-dark {
+    background: var(--mmx-surface-3) !important;
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-text-2) !important;
+}
+
+body .mining-manager-wrapper [class*="btn-outline-"],
+body .mining-dashboard [class*="btn-outline-"] {
+    background: transparent !important;
+}
+
+body .mining-manager-wrapper .btn-outline-primary,
+body .mining-dashboard .btn-outline-primary,
+body .mining-manager-wrapper .btn-outline-info,
+body .mining-dashboard .btn-outline-info {
+    border-color: var(--mmx-blue) !important;
+    color: var(--mmx-blue) !important;
+}
+
+body .mining-manager-wrapper .btn-outline-secondary,
+body .mining-dashboard .btn-outline-secondary,
+body .mining-manager-wrapper .btn-outline-light,
+body .mining-dashboard .btn-outline-light {
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-label) !important;
+}
+
+body .mining-manager-wrapper [class*="btn-outline-"]:hover,
+body .mining-dashboard [class*="btn-outline-"]:hover,
+body .mining-manager-wrapper [class*="btn-outline-"].active,
+body .mining-dashboard [class*="btn-outline-"].active {
+    background: var(--mmx-surface-3) !important;
+    color: var(--mmx-text) !important;
+}
+
+/* ---------- Badges ---------- */
+body .mining-manager-wrapper .badge,
+body .mining-dashboard .badge {
+    font-family: var(--mmx-font);
+    border-radius: 0;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    background-image: none !important;
+}
+
+body .mining-manager-wrapper .badge-primary, body .mining-dashboard .badge-primary,
+body .mining-manager-wrapper .badge-info, body .mining-dashboard .badge-info {
+    background: rgba(0, 174, 255, 0.16) !important;
+    color: var(--mmx-blue) !important;
+}
+
+body .mining-manager-wrapper .badge-success, body .mining-dashboard .badge-success {
+    background: rgba(61, 220, 132, 0.15) !important;
+    color: var(--mmx-green) !important;
+}
+
+body .mining-manager-wrapper .badge-warning, body .mining-dashboard .badge-warning {
+    background: rgba(245, 165, 36, 0.16) !important;
+    color: var(--mmx-amber) !important;
+}
+
+body .mining-manager-wrapper .badge-danger, body .mining-dashboard .badge-danger {
+    background: rgba(255, 92, 92, 0.16) !important;
+    color: var(--mmx-red) !important;
+}
+
+body .mining-manager-wrapper .badge-secondary, body .mining-dashboard .badge-secondary,
+body .mining-manager-wrapper .badge-dark, body .mining-dashboard .badge-dark,
+body .mining-manager-wrapper .badge-light, body .mining-dashboard .badge-light {
+    background: var(--mmx-surface-3) !important;
+    color: var(--mmx-label) !important;
+}
+
+/* ---------- Forms ---------- */
+body .mining-manager-wrapper .form-control,
+body .mining-dashboard .form-control,
+body .mining-manager-wrapper .custom-select,
+body .mining-dashboard .custom-select,
+body .mining-manager-wrapper .input-group-text,
+body .mining-dashboard .input-group-text {
+    background-color: var(--mmx-surface-2) !important;
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-text) !important;
+    border-radius: 0 !important;
+    font-family: var(--mmx-font);
+}
+
+body .mining-manager-wrapper .form-control:focus,
+body .mining-dashboard .form-control:focus,
+body .mining-manager-wrapper .custom-select:focus,
+body .mining-dashboard .custom-select:focus {
+    border-color: var(--mmx-blue) !important;
+    box-shadow: 0 0 0 1px var(--mmx-blue) !important;
+}
+
+body .mining-manager-wrapper .form-control::placeholder,
+body .mining-dashboard .form-control::placeholder {
+    color: var(--mmx-muted) !important;
+}
+
+body .mining-manager-wrapper label,
+body .mining-dashboard label {
+    color: var(--mmx-text-2);
+    font-weight: 500;
+}
+
+body .mining-manager-wrapper .form-text,
+body .mining-dashboard .form-text {
+    color: var(--mmx-muted) !important;
+}
+
+/* ---------- Alerts and notices ---------- */
+body .mining-manager-wrapper .alert,
+body .mining-dashboard .alert,
+body .mining-manager-wrapper .info-banner,
+body .mining-dashboard .info-banner {
+    background: var(--mmx-surface-2) !important;
+    color: var(--mmx-text-2) !important;
+    border: 0 !important;
+    border-left: 3px solid var(--mmx-blue) !important;
+    border-radius: 0 !important;
+    background-image: none !important;
+}
+
+body .mining-manager-wrapper .alert-success, body .mining-dashboard .alert-success { border-left-color: var(--mmx-green) !important; }
+body .mining-manager-wrapper .alert-warning, body .mining-dashboard .alert-warning { border-left-color: var(--mmx-amber) !important; }
+body .mining-manager-wrapper .alert-danger, body .mining-dashboard .alert-danger { border-left-color: var(--mmx-red) !important; }
+body .mining-manager-wrapper .alert-secondary, body .mining-dashboard .alert-secondary { border-left-color: var(--mmx-line) !important; }
+
+/* ---------- Progress bars ---------- */
+body .mining-manager-wrapper .progress,
+body .mining-dashboard .progress {
+    background: var(--mmx-surface-3) !important;
+    border-radius: 0 !important;
+}
+
+body .mining-manager-wrapper .progress-bar,
+body .mining-dashboard .progress-bar {
+    background-color: var(--mmx-blue);
+    background-image: none !important;
+}
+
+body .mining-manager-wrapper .progress-bar.bg-success,
+body .mining-dashboard .progress-bar.bg-success { background-color: var(--mmx-green) !important; }
+body .mining-manager-wrapper .progress-bar.bg-warning,
+body .mining-dashboard .progress-bar.bg-warning { background-color: var(--mmx-amber) !important; }
+body .mining-manager-wrapper .progress-bar.bg-danger,
+body .mining-dashboard .progress-bar.bg-danger { background-color: var(--mmx-red) !important; }
+
+/* ---------- Lists, modals, dropdowns ---------- */
+body .mining-manager-wrapper .list-group-item,
+body .mining-dashboard .list-group-item {
+    background: var(--mmx-surface) !important;
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-text) !important;
+}
+
+body .mining-manager-wrapper .list-group-item.active,
+body .mining-dashboard .list-group-item.active {
+    background: var(--mmx-surface-3) !important;
+    border-left: 2px solid var(--mmx-blue) !important;
+}
+
+/* Modals are often moved to <body> (appendTo('body')), outside the
+   wrappers, so they are matched by the plugin's pages having loaded. */
+body:has(.mining-manager-wrapper) .modal-content,
+body:has(.mining-dashboard) .modal-content {
+    background: var(--mmx-surface) !important;
+    color: var(--mmx-text) !important;
+    border: 1px solid var(--mmx-line) !important;
+    border-radius: 0 !important;
+    font-family: var(--mmx-font);
+}
+
+body:has(.mining-manager-wrapper) .modal-header,
+body:has(.mining-dashboard) .modal-header,
+body:has(.mining-manager-wrapper) .modal-footer,
+body:has(.mining-dashboard) .modal-footer {
+    border-color: var(--mmx-line) !important;
+    background: transparent !important;
+}
+
+body .mining-manager-wrapper .dropdown-menu,
+body .mining-dashboard .dropdown-menu {
+    background: var(--mmx-surface-2) !important;
+    border-color: var(--mmx-line) !important;
+    border-radius: 0 !important;
+}
+
+body .mining-manager-wrapper .dropdown-item,
+body .mining-dashboard .dropdown-item {
+    color: var(--mmx-text-2) !important;
+}
+
+body .mining-manager-wrapper .dropdown-item:hover,
+body .mining-dashboard .dropdown-item:hover {
+    background: var(--mmx-surface-3) !important;
+    color: var(--mmx-text) !important;
+}
+
+/* ---------- Charts ---------- */
+body .mining-manager-wrapper canvas,
+body .mining-dashboard canvas {
+    background: transparent !important;
+}
+
+/* ---------- Calendars (FullCalendar) ---------- */
+body .mining-manager-wrapper .fc,
+body .mining-dashboard .fc {
+    --fc-border-color: var(--mmx-line);
+    --fc-page-bg-color: var(--mmx-surface);
+    --fc-neutral-bg-color: var(--mmx-surface-2);
+    --fc-today-bg-color: rgba(0, 174, 255, 0.08);
+    --fc-button-bg-color: var(--mmx-surface-3);
+    --fc-button-border-color: var(--mmx-line);
+    --fc-button-active-bg-color: var(--mmx-blue-deep);
+    --fc-button-active-border-color: var(--mmx-blue-deep);
+    --fc-event-bg-color: var(--mmx-blue-deep);
+    --fc-event-border-color: var(--mmx-blue-deep);
+    font-family: var(--mmx-font);
+}
+
+/* Scrollbars inside plugin panels. */
+body .mining-manager-wrapper ::-webkit-scrollbar,
+body .mining-dashboard ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body .mining-manager-wrapper ::-webkit-scrollbar-thumb,
+body .mining-dashboard ::-webkit-scrollbar-thumb {
+    background: var(--mmx-line);
+}

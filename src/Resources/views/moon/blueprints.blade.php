@@ -4,7 +4,7 @@
 @section('page_header', 'Moon Blueprints')
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     /* The grid is the blueprint: a row per week, a column per weekday. Cells
        set their own colours so a skin cannot wash the pattern out. */
@@ -112,6 +112,7 @@
     .moon-blueprints-page .mm-preview-skip { color: #9ca3af; }
     .moon-blueprints-page .mm-preview-clash { color: #fbbf24; }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

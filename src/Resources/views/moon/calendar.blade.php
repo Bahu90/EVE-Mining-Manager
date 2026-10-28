@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.moon_extractions'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/vendor/fullcalendar.min.css') }}">
 <style>
     /* One pull reads left to right as time, moon tier, refinery. Same badge
@@ -20,6 +20,7 @@
     .moon-calendar-page .mm-month-heading { display:flex; align-items:center; gap:8px; font-weight:600; color:#cfd6df; }
     .moon-calendar-page .mm-month-heading .mm-month-pill { font-size:0.65rem; background:rgba(255,255,255,0.06); color:#9aa4b2; padding:1px 8px; border-radius:10px; }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

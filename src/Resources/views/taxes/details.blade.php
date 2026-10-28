@@ -4,8 +4,9 @@
 @section('page_header', trans('mining-manager::taxes.tax_details') . ' - ' . ($tax->character_info['name'] ?? $tax->character_name))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 @include('mining-manager::taxes.partials.datatables-styles')
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

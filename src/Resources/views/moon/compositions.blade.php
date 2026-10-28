@@ -4,7 +4,8 @@
 @section('page_header', trans('mining-manager::menu.moon_extractions'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

@@ -1242,6 +1242,8 @@ class SettingsController extends Controller
             // Not exists:corporation_infos: a corporation known only from the
             // plugin's own lookups can be picked too.
             'dashboard_leaderboard_corporation_ids.*' => 'integer|min:1',
+            // Look of every plugin page: the EVE-RO look or the standard one.
+            'display_theme' => 'nullable|in:' . implode(',', \MiningManager\Support\Look::ALL),
         ]);
 
         if ($validator->fails()) {
@@ -1277,6 +1279,11 @@ class SettingsController extends Controller
                 json_encode($corpIds),
                 'json'
             );
+
+            if (!empty($data['display_theme'])) {
+                $this->settingsService->updateGlobalSetting(\MiningManager\Support\Look::KEY, $data['display_theme']);
+                \MiningManager\Support\Look::forget();
+            }
 
             // Clear all settings caches
             $this->clearSettingsCache();

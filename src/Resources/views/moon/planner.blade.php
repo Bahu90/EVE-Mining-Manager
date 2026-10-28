@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.moon_planner'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/vendor/fullcalendar.min.css') }}">
 <style>
     /* Event backgrounds must be set (not just a left border) or FullCalendar's
@@ -72,6 +72,7 @@
     .mm-refinery-card .mm-proj { font-weight: 600; }
     .mm-conflict-row { padding: 6px 10px; border-radius: 4px; background: rgba(255,193,7,0.12); margin-bottom: 6px; }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

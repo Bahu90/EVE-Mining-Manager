@@ -4,8 +4,9 @@
 @section('page_header', trans('mining-manager::menu.mining_events'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <script src="{{ asset('vendor/mining-manager/js/eve-time.js') }}?v=1" defer></script>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

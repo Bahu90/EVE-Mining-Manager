@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.reports'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .report-option-card { cursor: pointer; border: 2px solid transparent !important; transition: all 0.3s ease; position: relative; }
     .report-option-card:hover { border-color: rgba(102, 126, 234, 0.5) !important; transform: translateY(-2px); }
@@ -28,6 +28,7 @@
     .step.active .step-circle { background: #667eea; box-shadow: 0 0 10px rgba(102,126,234,0.5); }
     .step.completed .step-circle { background: #28a745; }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

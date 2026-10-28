@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::ledger.mining_ledger') . ' - ' . ($characterInfo['name'] ?? 'Character'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .sortable {
         cursor: pointer;
@@ -22,6 +22,7 @@
         opacity: 1;
     }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

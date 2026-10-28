@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.reports'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .report-type-badge {
         padding: 5px 12px;
@@ -71,6 +71,7 @@
         color: #f6c23e;
     }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

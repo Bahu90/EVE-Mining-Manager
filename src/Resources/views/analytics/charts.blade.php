@@ -4,7 +4,7 @@
 @section('page_header', trans('mining-manager::menu.analytics'))
 
 @push('head')
-<link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/mining-manager-dashboard.css') }}?v=8">
+@include('mining-manager::partials.head')
 <style>
     .chart-card {
         height: 100%;
@@ -18,6 +18,7 @@
         margin-bottom: 15px;
     }
 </style>
+@include('mining-manager::partials.theme')
 @endpush
 
 @section('full')

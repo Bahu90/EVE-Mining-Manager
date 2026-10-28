@@ -20,6 +20,38 @@
     <input type="hidden" name="selected_corporation_id" value="{{ $selectedCorporationId }}">
     @endif
 
+    {{-- Look of every Mining Manager page --}}
+    <div class="card bg-dark mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="fas fa-palette"></i>
+                Look
+            </h5>
+        </div>
+        <div class="card-body">
+            <p class="text-muted">
+                How every Mining Manager page looks, for everyone on this SeAT.
+            </p>
+            @php($currentLook = $settings['dashboard']['display_theme'] ?? \MiningManager\Support\Look::EVE_RO)
+            <div class="form-check mb-2">
+                <input class="form-check-input" type="radio" name="display_theme" id="display_theme_everoo"
+                       value="{{ \MiningManager\Support\Look::EVE_RO }}" {{ old('display_theme', $currentLook) === \MiningManager\Support\Look::EVE_RO ? 'checked' : '' }}>
+                <label class="form-check-label" for="display_theme_everoo">
+                    <strong>EVE-RO</strong>
+                    <span class="text-muted">: black background, Oxanium typeface, ISK in blue and tax in green, as on eve-ro.com.</span>
+                </label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="display_theme" id="display_theme_standard"
+                       value="{{ \MiningManager\Support\Look::STANDARD }}" {{ old('display_theme', $currentLook) === \MiningManager\Support\Look::STANDARD ? 'checked' : '' }}>
+                <label class="form-check-label" for="display_theme_standard">
+                    <strong>Standard</strong>
+                    <span class="text-muted">: the plugin's original dark styling, closer to SeAT's own pages.</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
     {{-- Leaderboard Corporation Filter --}}
     <div class="card bg-dark mb-4">
         <div class="card-header">
