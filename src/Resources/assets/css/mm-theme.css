@@ -802,3 +802,53 @@ body .tax-code-value {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;
 }
+
+/* Jackpot badges, buttons and banners. The theme drops gradient
+   backgrounds from badges, which left their black text on a dark
+   badge; they get a solid gold of their own. */
+body .mining-manager-wrapper .mm-jackpot-badge,
+body .mining-dashboard .mm-jackpot-badge,
+body .mining-manager-wrapper .mm-jackpot,
+body .mining-dashboard .mm-jackpot {
+    background: #ffd23f !important;
+    background-image: none !important;
+    color: #111 !important;
+    border: none !important;
+    font-weight: 600 !important;
+}
+
+body .mining-manager-wrapper .mm-jackpot-badge i,
+body .mining-dashboard .mm-jackpot-badge i,
+body .mining-manager-wrapper .mm-jackpot i,
+body .mining-dashboard .mm-jackpot i {
+    color: #111 !important;
+}
+
+body .mining-manager-wrapper .mm-jackpot:hover,
+body .mining-dashboard .mm-jackpot:hover {
+    background: #ffe27a !important;
+}
+
+body .mining-manager-wrapper .mm-jackpot-alert,
+body .mining-dashboard .mm-jackpot-alert {
+    background: rgba(255, 210, 63, 0.12) !important;
+    background-image: none !important;
+    color: var(--mmx-text) !important;
+    border: 1px solid #ffd23f !important;
+}
+
+body .mining-manager-wrapper .mm-jackpot-alert h5,
+body .mining-dashboard .mm-jackpot-alert h5,
+body .mining-manager-wrapper .mm-jackpot-alert i,
+body .mining-dashboard .mm-jackpot-alert i {
+    color: #ffd23f !important;
+}
+
+/* Badges painted with an inline gradient (moon quality "Exceptional")
+   lose the gradient in this theme; keep a solid colour under the text. */
+body .mining-manager-wrapper .badge[style*="linear-gradient"],
+body .mining-dashboard .badge[style*="linear-gradient"],
+body .moon-simulator-page .badge-quality-exceptional {
+    background-color: #8e44ad !important;
+    color: #fff !important;
+}

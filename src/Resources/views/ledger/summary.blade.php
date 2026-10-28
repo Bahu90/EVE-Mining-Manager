@@ -16,9 +16,31 @@
     .ore-icon {
         width: 24px;
         height: 24px;
-        margin: 0 2px;
         border-radius: 2px;
         vertical-align: middle;
+    }
+    /* A compact block of ore icons, two rows at most, instead of a column. */
+    .ore-icons {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 3px;
+        width: 140px;
+    }
+    .ore-icons .badge {
+        line-height: 18px;
+    }
+    .summary-table td.num {
+        white-space: nowrap;
+        text-align: right;
+    }
+    .summary-table td.num small {
+        display: block;
+        opacity: 0.6;
+        font-size: 0.72rem;
+    }
+    .summary-table td.system-cell {
+        white-space: nowrap;
     }
     .alt-badge {
         background-color: #17a2b8;
@@ -219,7 +241,7 @@
                                     <span class="info-box-text">{{ trans('mining-manager::ledger.total_tax') }}</span>
                                     <span class="info-box-number">{{ number_format($totals['total_tax'], 0) }}</span>
                                     <small>ISK</small>
-                                    <small class="mm-tax-note">{{ trans('mining-manager::ledger.source_tax_note') }}</small>
+                                    <small class="mm-tax-note" title="{{ trans('mining-manager::ledger.source_tax_note') }}">{{ trans('mining-manager::ledger.source_tax_short') }}</small>
                                     @if(!empty($totals['event_discount_total']) && $totals['event_discount_total'] > 0)
                                         <small class="d-block text-light" title="ISK waived this month due to active event modifiers. Already included in total_tax — shown here for transparency.">
                                             <i class="fas fa-gift"></i>
@@ -350,31 +372,41 @@
                                     </td>
                                     <td>
                                         @if(isset($summary->ore_type_ids) && count($summary->ore_type_ids) > 0)
-                                            @foreach(array_slice($summary->ore_type_ids, 0, 10) as $typeId)
-                                                <img src="https://images.evetech.net/types/{{ $typeId }}/icon?size=32"
-                                                     class="ore-icon"
-                                                     title="Type ID: {{ $typeId }}"
-                                                     alt="Ore">
-                                            @endforeach
-                                            @if(count($summary->ore_type_ids) > 10)
-                                                <span class="badge badge-secondary">+{{ count($summary->ore_type_ids) - 10 }}</span>
-                                            @endif
+                                            <div class="ore-icons">
+                                                @foreach(array_slice($summary->ore_type_ids, 0, 9) as $typeId)
+                                                    <img src="https://images.evetech.net/types/{{ $typeId }}/icon?size=32"
+                                                         class="ore-icon"
+                                                         alt="">
+                                                @endforeach
+                                                @if(count($summary->ore_type_ids) > 9)
+                                                    <span class="badge badge-secondary" title="{{ count($summary->ore_type_ids) }} ore types">+{{ count($summary->ore_type_ids) - 9 }}</span>
+                                                @endif
+                                            </div>
                                         @else
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
-                                    <td class="text-right">{{ number_format($summary->total_quantity, 0) }}</td>
-                                    <td class="text-right">{{ number_format($summary->total_volume_m3 ?? 0, 0) }} m³</td>
-                                    <td class="text-right"><strong>{{ number_format($summary->total_value, 0) }} ISK</strong></td>
+                                    <td class="num" title="{{ number_format($summary->total_quantity, 0) }}">{{ \MiningManager\Support\IskFormat::short($summary->total_quantity) }}</td>
+                                    <td class="num" title="{{ number_format($summary->total_volume_m3 ?? 0, 0) }} m³">{{ \MiningManager\Support\IskFormat::short($summary->total_volume_m3 ?? 0) }} m³</td>
+                                    <td class="num" title="{{ number_format($summary->total_value, 0) }} ISK"><strong>{{ \MiningManager\Support\IskFormat::short($summary->total_value) }}</strong> ISK</td>
                                     @if(($source ?? null) === \MiningManager\Support\MiningSource::ALL)
-                                        <td class="text-right">{{ number_format($summary->moon_value ?? 0, 0) }} ISK</td>
-                                        <td class="text-right">{{ number_format($summary->anomalies_value ?? 0, 0) }} ISK</td>
+                                        @php
+                                            $mmRowTotal = (float) ($summary->moon_value ?? 0) + (float) ($summary->anomalies_value ?? 0);
+                                        @endphp
+                                        <td class="num" title="{{ number_format($summary->moon_value ?? 0, 0) }} ISK">
+                                            {{ \MiningManager\Support\IskFormat::short($summary->moon_value ?? 0) }} ISK
+                                            <small>{{ $mmRowTotal > 0 ? round(($summary->moon_value ?? 0) / $mmRowTotal * 100) : 0 }}%</small>
+                                        </td>
+                                        <td class="num" title="{{ number_format($summary->anomalies_value ?? 0, 0) }} ISK">
+                                            {{ \MiningManager\Support\IskFormat::short($summary->anomalies_value ?? 0) }} ISK
+                                            <small>{{ $mmRowTotal > 0 ? round(($summary->anomalies_value ?? 0) / $mmRowTotal * 100) : 0 }}%</small>
+                                        </td>
                                     @endif
-                                    <td>
+                                    <td class="system-cell">
                                         @if(isset($summary->primary_system))
                                             {{ $summary->primary_system->solarSystem->name ?? 'Unknown' }}
                                             @if($summary->system_count > 1)
-                                                <span class="system-badge">+{{ $summary->system_count - 1 }} {{ trans('mining-manager::ledger.more') }}</span>
+                                                <span class="system-badge" title="{{ $summary->system_count }} systems">+{{ $summary->system_count - 1 }}</span>
                                             @endif
                                         @else
                                             <span class="text-muted">-</span>

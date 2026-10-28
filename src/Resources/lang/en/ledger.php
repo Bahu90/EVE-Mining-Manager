@@ -303,5 +303,6 @@ return [
     'source_col_anomalies' => 'Anomalies ISK',
     'source_tag_moon' => 'Moon',
     'source_tag_anomalies' => 'Anomaly',
+    'source_tax_short' => 'Covers all taxed mining',
     'source_tax_note' => 'Tax covers all your mining under the tax settings, whichever view is picked.',
 ];
