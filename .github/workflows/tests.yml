@@ -28,8 +28,13 @@ jobs:
       - name: Lint every PHP file
         run: find src tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
 
+      # SeAT 5 runs on Laravel 10, which Composer now refuses by default
+      # because of published advisories. SeAT's own install decides the
+      # Laravel version, so CI only needs it resolvable.
       - name: Install dependencies
-        run: composer update --no-interaction --no-progress --prefer-dist
+        run: |
+          composer config --global audit.block-insecure false
+          composer update --no-interaction --no-progress --prefer-dist
 
       - name: Run tests
         run: vendor/bin/phpunit
