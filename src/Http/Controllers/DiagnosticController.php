@@ -165,8 +165,6 @@ class DiagnosticController extends Controller
      *   - Migration 000020: moon_extraction_plan_audits table
      *   - Migration 000021: mismatch latch + webhook opt-in column
      *   - Moon Owner Corporation configured (the planner's scope)
-     *   - Manager Core fast-poll handler registration (the wiring that
-     *     silently breaks if the container key is mis-resolved)
      *   - Planner data sanity: refineries, coverage gaps, open mismatches
      */
     private function buildMoonPlannerValidation(): array
@@ -507,7 +505,7 @@ class DiagnosticController extends Controller
                 ? 'One or more critical checks failed — the Moon Extraction Planner will not work correctly until these are resolved.'
                 : ($hasWarning
                     ? 'Planner is functional but has configuration or coverage gaps. Review the warnings below.'
-                    : 'All planner checks passed. Scheduling, notifications and fast-poll detection should work normally.'),
+                    : 'All planner checks passed. Scheduling and notifications should work normally.'),
         ];
     }
 
@@ -967,18 +965,6 @@ class DiagnosticController extends Controller
                 }
             }
 
-            // Check if Manager Core is installed when testing it
-            if ($provider === 'manager-core') {
-                if (!\MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled()) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => 'Manager Core package is not installed. Install mattfalahe/manager-core to use this provider.',
-                        'provider' => $provider,
-                        'missing_config' => true
-                    ], 400);
-                }
-            }
-
             // Test with common ore types
             $testTypeIds = [
                 34,     // Tritanium
@@ -1145,18 +1131,6 @@ class DiagnosticController extends Controller
                     return response()->json([
                         'success' => false,
                         'error' => 'Janice API key not configured. Please set it in Settings or add MINING_MANAGER_JANICE_API_KEY to your .env file.',
-                        'provider' => $provider,
-                        'missing_config' => true
-                    ], 400);
-                }
-            }
-
-            // Check if Manager Core is installed when testing it
-            if ($provider === 'manager-core') {
-                if (!\MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled()) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => 'Manager Core package is not installed. Install mattfalahe/manager-core to use this provider.',
                         'provider' => $provider,
                         'missing_config' => true
                     ], 400);
@@ -1371,7 +1345,7 @@ class DiagnosticController extends Controller
         // SeAT's prices are CCP's averages, which can be far from what
         // anything sells for. Said rather than changed for the operator.
         $configured = $this->settingsService->getPricingSettings()['price_provider'] ?? 'seat';
-        if (!in_array($configured, [PriceProviderService::PROVIDER_FUZZWORK, PriceProviderService::PROVIDER_JANICE, PriceProviderService::PROVIDER_MANAGER_CORE], true)) {
+        if (!in_array($configured, [PriceProviderService::PROVIDER_FUZZWORK, PriceProviderService::PROVIDER_JANICE], true)) {
             $recommendations[] = [
                 'severity' => 'warning',
                 'message' => "The price provider is SeAT Database: CCP's average prices across New Eden, not what ore and materials sell for at a trade hub, so values priced from them can be well off.",
@@ -3622,7 +3596,6 @@ class DiagnosticController extends Controller
 
         $corpStats['corporation_details'] = $corpDetails;
         $corpStats['status'] = $allCorps->count() > 0 || $moonOwner ? 'healthy' : 'warning';
-        $corpStats['manager_core_installed'] = \MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled();
 
         return $corpStats;
     }
@@ -3643,26 +3616,6 @@ class DiagnosticController extends Controller
             'reasons' => $health['reasons'],
             'provider' => $pricingSettings['price_provider'] ?? 'seat',
         ];
-
-        if (($pricingSettings['price_provider'] ?? 'seat') === 'manager-core'
-            && \MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled()) {
-            try {
-                // Source of truth for MM's market is MC's per-plugin pricing
-                // preference. SettingsManagerService::getPricingSettings()
-                // already resolves this via the bridge — see
-                // SettingsManagerService::resolveMcMarket.
-                $mcMarket = $pricingSettings['manager_core_market'];
-                $result['manager_core'] = [
-                    'market' => $mcMarket,
-                    'total_prices' => DB::table('manager_core_market_prices')->where('market', $mcMarket)->count(),
-                    'last_updated_ago' => Carbon::parse(
-                        DB::table('manager_core_market_prices')->where('market', $mcMarket)->max('updated_at')
-                    )->diffForHumans(),
-                ];
-            } catch (\Exception $e) {
-                $result['manager_core'] = ['error' => $e->getMessage()];
-            }
-        }
 
         return $result;
     }

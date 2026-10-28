@@ -1081,26 +1081,16 @@ class SettingsController extends Controller
     {
         $validator = Validator::make($request->all(), [
             // Price provider settings
-            'price_provider' => 'required|in:seat,fuzzwork,janice,manager-core',
+            'price_provider' => 'required|in:seat,fuzzwork,janice',
             'price_type' => 'required|in:sell,buy,average',
             'cache_duration' => 'required|integer|min:1|max:1440',
             'fallback_to_jita' => 'nullable|boolean',
-            'fallback_provider' => 'nullable|in:none,fuzzwork,janice,manager-core',
+            'fallback_provider' => 'nullable|in:none,fuzzwork,janice',
             
             // Janice-specific settings
             'janice_api_key' => 'nullable|string|max:255',
             'janice_market' => 'nullable|in:jita,amarr',
             'janice_price_method' => 'nullable|in:buy,sell,split',
-
-            // Manager Core-specific settings: market + price_type are now
-            // configured centrally in MC's Pricing Preferences page, not
-            // duplicated here. The form panel shows a read-only status
-            // readout + deep-link instead. The local manager_core_market
-            // setting is kept for the auto-subscribe call below (it's just
-            // the bootstrap default — MC's preference wins on read).
-            // manager_core_variant dropped entirely; hardcoded to 'min' in
-            // CachePriceDataCommand because that's the only variant that
-            // makes sense for tax + payout (lowest sell = real buy price).
 
             // Refining settings
             'use_refined_value' => 'nullable|boolean',
@@ -1115,20 +1105,6 @@ class SettingsController extends Controller
 
         try {
             $data = $validator->validated();
-
-            // Check if switching away from Manager Core — unsubscribe if so
-            $previousProvider = $this->settingsService->getSetting('price_provider', 'seat');
-            $newProvider = $data['price_provider'] ?? 'seat';
-
-            if ($previousProvider === 'manager-core' && $newProvider !== 'manager-core') {
-                try {
-                    $priceProviderService = app(\MiningManager\Services\Pricing\PriceProviderService::class);
-                    $count = $priceProviderService->unsubscribeFromManagerCore();
-                    Log::info("Mining Manager: Unsubscribed {$count} types from Manager Core (switched to {$newProvider})");
-                } catch (\Exception $unsubEx) {
-                    Log::warning('Mining Manager: Failed to unsubscribe from Manager Core: ' . $unsubEx->getMessage());
-                }
-            }
 
             // Store price provider and Janice settings via settings service
             // These use top-level keys (not 'pricing.' prefix) to match getPricingSettings() reads
@@ -1145,61 +1121,7 @@ class SettingsController extends Controller
                 $this->settingsService->updateSetting('janice_price_method', $data['janice_price_method'], 'string');
             }
 
-            // Manager Core-specific settings are persisted via
-            // updatePricingSettings() below (under the `pricing.` prefix)
-            // — the canonical reader (SettingsManagerService::getPricingSettings)
-            // looks them up there. Do NOT also write them unprefixed
-            // (`manager_core_market` / `manager_core_variant`) — that creates
-            // orphan rows nothing reads. The prefixed write later is the
-            // single source of truth.
-
-            // Auto-subscribe type IDs to Manager Core when selected as
-            // provider, AND register MM's default preference into MC's
-            // Pricing Preferences table. The preference is what MC's
-            // pricing.priceForPlugin / pricesForPlugin reads back; without
-            // this seed call, the operator would have to manually create
-            // the row in MC's UI before MC could answer for MM.
-            //
-            // Both calls are idempotent on the MC side — subscribeToManagerCore
-            // uses updateOrInsert, registerPreference is registerDefault
-            // which respects admin_overridden=true so it never trampling
-            // operator edits.
-            if (($data['price_provider'] ?? '') === 'manager-core') {
-                try {
-                    $priceProviderService = app(\MiningManager\Services\Pricing\PriceProviderService::class);
-                    $market = 'jita'; // bootstrap default; MC's preference takes over after
-                    $count = $priceProviderService->subscribeToManagerCore($market);
-                    Log::info("Mining Manager: Auto-subscribed {$count} type IDs to Manager Core");
-
-                    // Seed MM's pricing preference in MC (idempotent — no-op if
-                    // admin has overridden it). market + price_type both reach
-                    // MC via the bridge so MC owns the source of truth.
-                    try {
-                        $bridge = app(\ManagerCore\Services\PluginBridge::class);
-                        $bridge->call(
-                            'ManagerCore',
-                            'pricing.registerPreference',
-                            'mining-manager',
-                            $market,
-                            $data['price_type'] ?? 'sell',
-                            'Mining Manager — tax + payout calculations'
-                        );
-                    } catch (\Throwable $prefEx) {
-                        Log::warning('Mining Manager: Failed to seed MC pricing preference: ' . $prefEx->getMessage());
-                    }
-                } catch (\Exception $subEx) {
-                    Log::warning('Mining Manager: Failed to subscribe to Manager Core: ' . $subEx->getMessage());
-                }
-            }
-
             // Update other pricing settings via service (these use 'pricing.' prefix).
-            //
-            // Note: the pricing.manager_core_market + pricing.manager_core_variant
-            // writes that used to live here are gone — those settings were
-            // dropped from the pricing tab UI in commit 583ea48 and the
-            // last remaining reader was switched to MC's getPreferenceForPlugin
-            // bridge call in commit d61e9e9. The forward-only migration
-            // 000018 cleans up the legacy rows on existing installs.
             $pricing = [
                 'price_type' => $data['price_type'],
                 'cache_duration' => $data['cache_duration'],

@@ -1071,86 +1071,10 @@ class SettingsManagerService
             'janice_market' => $this->getSetting('janice_market', 'jita'),
             'janice_price_method' => $this->getSetting('janice_price_method', 'buy'),
 
-            // Manager Core settings.
-            //
-            // manager_core_market: source of truth is MC's per-plugin
-            // pricing preference (manager_core_pricing_preferences table).
-            // We pull it via the pricing.getPreferenceForPlugin bridge
-            // capability so the operator's MC-side change in the Pricing
-            // Preferences UI immediately propagates to MM's reads — no
-            // restart, no double-config-write, no drift between MM's
-            // local copy and MC's authoritative row.
-            //
-            // Fallback chain (in order):
-            //   1. MC bridge call returns a pref row → use pref['market']
-            //   2. MC bridge call fails (older MC, bridge boot failure) →
-            //      'jita' as last-resort literal
-            //
-            // Note: the local 'pricing.manager_core_market' row was dropped
-            // from mining_manager_settings in migration 000018. Even on
-            // installs that hadn't run the migration yet, the row is
-            // unused — this method is the only reader and it now consults
-            // MC's pref first.
-            //
-            // manager_core_variant: hardcoded to 'min' because that's the
-            // only variant that produces meaningful tax + payout values
-            // (lowest sell = real buy price). Operator-selectable variant
-            // was removed from MM's UI in commit 583ea48.
-            'manager_core_market' => $this->resolveMcMarket(),
-            'manager_core_variant' => 'min',
-
             // Refining settings
             'use_refined_value' => $this->getSetting('pricing.use_refined_value', config('mining-manager.pricing.use_refined_value', true)),
             'refining_efficiency' => $this->getSetting('pricing.refining_efficiency', 87.5),
         ];
-    }
-
-    /**
-     * Resolve the market MM should read prices at, when the price provider
-     * is set to Manager Core.
-     *
-     * Single point of bridge integration so every consumer of
-     * getPricingSettings()['manager_core_market'] transparently sees the
-     * operator-configured market without each one calling the bridge
-     * independently.
-     *
-     * Cached for the request (one bridge call max per HTTP request) since
-     * getPricingSettings() can be invoked many times during a single page
-     * render (Dashboard / Diagnostic / Moon views all touch it). The
-     * pricing.preference_changed EventBus subscription flushes downstream
-     * caches when the operator saves a change in MC; this in-request
-     * memo is just to avoid hammering the bridge.
-     *
-     * @return string Market key (e.g. 'jita', 'c-j6mt'). Falls back to
-     *                'jita' if MC's bridge call fails for any reason
-     *                (older MC version without the capability, bridge
-     *                boot failure, no preference row registered yet).
-     */
-    protected function resolveMcMarket(): string
-    {
-        // Static cache for the request — avoids N bridge calls per page
-        static $cached = null;
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        $market = 'jita';
-
-        try {
-            if (class_exists('ManagerCore\\Services\\PluginBridge')) {
-                $bridge = app(\ManagerCore\Services\PluginBridge::class);
-                $pref = $bridge->call('ManagerCore', 'pricing.getPreferenceForPlugin', 'mining-manager');
-                if (is_array($pref) && !empty($pref['market'])) {
-                    $market = (string) $pref['market'];
-                }
-            }
-        } catch (\Throwable $e) {
-            // Bridge call failed — keep the 'jita' literal. No log spam;
-            // this is expected on older MC versions without the capability.
-        }
-
-        $cached = $market;
-        return $cached;
     }
 
     /**

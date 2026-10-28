@@ -354,22 +354,19 @@
             <div class="diag-tab-intro">
                 <p>
                     <strong>What this tab does:</strong> One-click read-only smoke chain. Runs
-                    checks across schema integrity, settings consistency, cross-plugin
-                    integration (MC pricing + SM event subscription), pricing path, notification
+                    checks across schema integrity, settings consistency, pricing path, notification
                     surface coverage, lifecycle, the personal mining import, moon notifications,
                     ore classification, the tax pipeline, upfront payments, balances and refunds,
                     and security hardening. Sub-30s runtime. No writes anywhere.
                 </p>
                 <p>
-                    <strong>When to use:</strong> After a deploy, after upgrading Manager Core
-                    or Structure Manager, after changing webhook routing, or when triaging
+                    <strong>When to use:</strong> After a deploy, after changing webhook routing, or when triaging
                     "something feels off". Use <code>Show only issues</code> to focus on the
                     warnings/failures.
                 </p>
                 <p>
                     <strong>Heads up:</strong> Master Test is read-only but the underlying checks
-                    DO query the database and external APIs (MC PricingService, SM availability
-                    probe). The moon notification check reads SeAT's whole notifications table,
+                    DO query the database and the price provider. The moon notification check reads SeAT's whole notifications table,
                     which has no index to help it, so expect it to be the slowest. Don't fire it in
                     a loop &mdash; once per investigation is plenty.
                 </p>
@@ -378,7 +375,7 @@
                 <div class="col-md-12">
                     <div class="alert alert-info">
                         <h5><i class="fas fa-rocket"></i> What this is</h5>
-                        <p class="mb-2">A comprehensive read-only smoke check of every major area of the plugin — schema, settings, cross-plugin integration, pricing, notifications, lifecycle, tax pipeline, and security hardening. Click <em>Run Master Test</em> below to execute the full chain.</p>
+                        <p class="mb-2">A comprehensive read-only smoke check of every major area of the plugin — schema, settings, pricing, notifications, lifecycle, tax pipeline, and security hardening. Click <em>Run Master Test</em> below to execute the full chain.</p>
                         <p class="mb-0"><strong>Idempotent:</strong> never mutates production data. Safe to run anytime — including in production. Each test takes &lt;1 second; the full chain typically completes in under 30 seconds.</p>
                     </div>
                 </div>
@@ -672,10 +669,6 @@
                                     <option value="seat">SeAT Database (Default)</option>
                                     <option value="janice">Janice API (Requires API Key)</option>
                                     <option value="fuzzwork">Fuzzwork Market</option>
-                                    <option value="manager-core"
-                                        {{ \MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled() ? '' : 'disabled' }}>
-                                        Manager Core {{ \MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled() ? '(Installed)' : '(Not Installed)' }}
-                                    </option>
                                 </select>
                             </div>
 
@@ -731,9 +724,6 @@
                                             <option value="seat">SeAT Database</option>
                                             <option value="janice">Janice API</option>
                                             <option value="fuzzwork">Fuzzwork Market</option>
-                                            @if(\MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled())
-                                            <option value="manager-core">Manager Core</option>
-                                            @endif
                                         </select>
                                     </div>
                                 </div>
@@ -861,17 +851,16 @@
                     the plugin are still valid. Distinct from Master Test (which checks runtime
                     state), this surface checks constants and dependencies: hardcoded type IDs
                     (ore variants, jackpot multipliers, fuel reagents), SDE table presence,
-                    required SeAT version, required Manager Core capability surface.
+                    and the required SeAT version.
                 </p>
                 <p>
                     <strong>When to use:</strong> After CCP renames a type ID, after a SeAT
-                    upgrade that might have dropped columns, or after Manager Core ships a
-                    capability change. Also during initial install troubleshooting.
+                    upgrade that might have dropped columns. Also during initial install troubleshooting.
                 </p>
                 <p>
                     <strong>Heads up:</strong> System Validation does NOT fire jobs &mdash; it's a
                     pure read pass. Safe to refresh as often as needed. Failed checks here
-                    usually indicate an upstream issue (SDE/SeAT/MC) rather than MM itself.
+                    usually indicate an upstream issue (SDE/SeAT) rather than MM itself.
                 </p>
             </div>
             <div class="row">
@@ -977,9 +966,7 @@
 
                     {{-- Moon Extraction Planner Validation ============================
                          Server-side rendered via buildMoonPlannerValidation().
-                         Covers planner schema, the Manager Core fast-poll handler
-                         registration (the wiring that fails silently), and planner
-                         coverage / mismatch state. ================================= --}}
+                         Covers planner schema and planner coverage / mismatch state. ================================= --}}
                     <div class="card card-dark">
                         <div class="card-header">
                             <h3 class="card-title">
@@ -997,8 +984,7 @@
                         </div>
                         <div class="card-body">
                             <p class="text-muted">
-                                Verifies the Moon Extraction Planner: schema, the Manager Core
-                                fast-poll handler registration, planner coverage (skipped moons),
+                                Verifies the Moon Extraction Planner: schema, planner coverage (skipped moons),
                                 open scheduling mismatches, and the flags Find Moons keeps on moons.
                                 Read-only — each check is a single
                                 <code>SELECT</code> or <code>Schema::hasX</code> probe.
@@ -2069,13 +2055,6 @@ function checkProviderRequirements() {
 
     if (provider === 'janice') {
         warningText.innerHTML = 'Janice API requires an API key. Make sure you have configured <code>janice_api_key</code> in Settings or set <code>MINING_MANAGER_JANICE_API_KEY</code> in your .env file. You can get a free API key from <a href="https://janice.e-351.com/" target="_blank">janice.e-351.com</a>.';
-        warningBox.style.display = 'block';
-    } else if (provider === 'manager-core') {
-        @if(\MiningManager\Services\Pricing\PriceProviderService::isManagerCoreInstalled())
-            warningText.innerHTML = '<i class="fas fa-check-circle text-success"></i> Manager Core is installed. This test will read prices from Manager Core\'s cached market data. Make sure Manager Core has been configured and has run at least one price update cycle.';
-        @else
-            warningText.innerHTML = '<i class="fas fa-times-circle text-danger"></i> <strong>Manager Core is not installed.</strong> Install the <code>mattfalahe/manager-core</code> package to use this provider. EvePraisal integration is available through Manager Core\'s price provider settings.';
-        @endif
         warningBox.style.display = 'block';
     } else {
         warningBox.style.display = 'none';
@@ -3199,7 +3178,6 @@ function renderMultiCorp(target, mc) {
         '<table class="table table-sm table-dark">' +
         '<tr><td>Configured corporations</td><td><strong>' + (mc.configured_corporations || 0) + '</strong></td></tr>' +
         '<tr><td>Moon owner corp ID</td><td>' + (mc.moon_owner_corporation_id || '<span class="text-warning">Not set</span>') + '</td></tr>' +
-        '<tr><td>Manager Core</td><td>' + (mc.manager_core_installed ? '<span class="text-success">Installed</span>' : '<span class="text-muted">Not installed</span>') + '</td></tr>' +
         '</table>';
     if (mc.corporation_details && mc.corporation_details.length > 0) {
         var ck = '<i class="fas fa-check text-success"></i>';

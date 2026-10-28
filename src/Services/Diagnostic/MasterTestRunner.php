@@ -50,7 +50,7 @@ use Throwable;
  * Performance budget:
  *   - Aim for <30s total for the whole chain on a typical install.
  *   - Heavy DB queries should use COUNT() not full row fetch.
- *   - Network calls (MC bridge, ESI, webhook POSTs) should NOT happen
+ *   - Network calls (ESI, webhook POSTs) should NOT happen
  *     during master tests; we verify configuration and reachability via
  *     in-process probes only. Webhook test buttons remain on the per-
  *     webhook diagnostic UI for explicit operator-driven smoke.
@@ -102,14 +102,6 @@ class MasterTestRunner
             'checkFeatureFlagsLoadable',
             'checkActiveCorporationConfigured',
             'checkValueShownMatchesTax',
-
-            // Cross-plugin detection + integration
-            'checkManagerCoreDetected',
-            'checkStructureManagerDetected',
-            'checkEventBusSubscriptionPresent',
-            'checkPluginBridgeCapabilitiesRegistered',
-            'checkMcPricingSubscriptionPresent',
-            'checkMcPriceFreshness',
 
             // Pricing path
             'checkConfiguredProviderValid',
@@ -426,7 +418,6 @@ class MasterTestRunner
         $expected = [
             'price_provider', 'price_type', 'cache_duration', 'fallback_to_jita',
             'janice_market', 'janice_price_method',
-            'manager_core_market', 'manager_core_variant',
             'use_refined_value', 'refining_efficiency',
         ];
 
@@ -449,7 +440,7 @@ class MasterTestRunner
         return $this->pass(
             'Pricing settings loadable',
             'settings',
-            "provider={$s['price_provider']}, MC market={$s['manager_core_market']}, variant={$s['manager_core_variant']}"
+            "provider={$s['price_provider']}, price type={$s['price_type']}"
         );
     }
 
@@ -501,157 +492,6 @@ class MasterTestRunner
     // CROSS-PLUGIN
     // =================================================================
 
-    protected function checkManagerCoreDetected(): array
-    {
-        if (!class_exists('ManagerCore\\Services\\PricingService')) {
-            return $this->skip('Manager Core detected', 'cross-plugin', 'MC not installed (optional)');
-        }
-        return $this->pass('Manager Core detected', 'cross-plugin', 'mattfalahe/manager-core loaded');
-    }
-
-    protected function checkStructureManagerDetected(): array
-    {
-        if (!class_exists('StructureManager\\Helpers\\FuelCalculator')) {
-            return $this->skip('Structure Manager detected', 'cross-plugin', 'SM not installed (extraction_at_risk/lost notifications disabled)');
-        }
-        return $this->pass('Structure Manager detected', 'cross-plugin', 'mattfalahe/structure-manager loaded');
-    }
-
-    protected function checkEventBusSubscriptionPresent(): array
-    {
-        if (!class_exists('ManagerCore\\Services\\EventBus')) {
-            return $this->skip('EventBus subscription', 'cross-plugin', 'MC EventBus not available');
-        }
-
-        if (!Schema::hasTable('manager_core_event_subscriptions')) {
-            return $this->fail('EventBus subscription', 'cross-plugin', 'manager_core_event_subscriptions table missing despite MC being loaded');
-        }
-
-        $row = DB::table('manager_core_event_subscriptions')
-            ->where('subscriber_plugin', 'mining-manager')
-            ->where('event_pattern', 'structure.alert.*')
-            ->first();
-
-        if (!$row) {
-            return $this->warn(
-                'EventBus subscription',
-                'cross-plugin',
-                'No structure.alert.* subscription registered for mining-manager — boot path did not run, or MC table was reset'
-            );
-        }
-
-        return $this->pass(
-            'EventBus subscription',
-            'cross-plugin',
-            "subscribed to '{$row->event_pattern}' → capability '" . ($row->handler_capability ?? '?') . "'"
-        );
-    }
-
-    protected function checkPluginBridgeCapabilitiesRegistered(): array
-    {
-        if (!class_exists('ManagerCore\\Services\\PluginBridge')) {
-            return $this->skip('PluginBridge capabilities', 'cross-plugin', 'MC PluginBridge not available');
-        }
-
-        try {
-            $bridge = app('ManagerCore\\Services\\PluginBridge');
-            // Probe the capability we publish back to MC so its EventBus
-            // can dispatch into us. Method names reverse-engineered from
-            // ManagerCore's PluginBridge::registerCapability/has.
-            $hasOurHandler = method_exists($bridge, 'hasCapability')
-                ? $bridge->hasCapability('mining-manager', 'structure.notify_alert')
-                : null;
-
-            if ($hasOurHandler === false) {
-                return $this->warn(
-                    'PluginBridge capabilities',
-                    'cross-plugin',
-                    'mining-manager.structure.notify_alert capability not registered — boot path did not run'
-                );
-            }
-
-            return $this->pass('PluginBridge capabilities', 'cross-plugin', 'mining-manager.structure.notify_alert registered');
-        } catch (Throwable $e) {
-            return $this->warn('PluginBridge capabilities', 'cross-plugin', 'PluginBridge probe threw: ' . $e->getMessage());
-        }
-    }
-
-    protected function checkMcPricingSubscriptionPresent(): array
-    {
-        if (!PriceProviderService::isManagerCoreInstalled()) {
-            return $this->skip('MC pricing subscription', 'cross-plugin', 'MC not installed');
-        }
-
-        $provider = $this->settingsService->getPricingSettings()['price_provider'] ?? '';
-        if ($provider !== PriceProviderService::PROVIDER_MANAGER_CORE) {
-            return $this->skip(
-                'MC pricing subscription',
-                'cross-plugin',
-                "Configured provider is '{$provider}' — MC subscription not required"
-            );
-        }
-
-        if (!Schema::hasTable('manager_core_type_subscriptions')) {
-            return $this->fail('MC pricing subscription', 'cross-plugin', 'manager_core_type_subscriptions table missing despite MC being loaded');
-        }
-
-        $count = DB::table('manager_core_type_subscriptions')
-            ->where('plugin_name', 'mining-manager')
-            ->count();
-
-        if ($count === 0) {
-            return $this->warn(
-                'MC pricing subscription',
-                'cross-plugin',
-                'Provider=manager-core but ZERO type subscriptions present — boot re-subscribe failed or MC table was reset',
-                ['hint' => 'Re-save the Pricing settings, or check service-provider boot logs for "[MM] Boot-time MC pricing subscription failed"']
-            );
-        }
-
-        return $this->pass('MC pricing subscription', 'cross-plugin', "{$count} type IDs subscribed");
-    }
-
-    protected function checkMcPriceFreshness(): array
-    {
-        if (!PriceProviderService::isManagerCoreInstalled()) {
-            return $this->skip('MC price freshness', 'pricing', 'MC not installed');
-        }
-
-        $provider = $this->settingsService->getPricingSettings()['price_provider'] ?? '';
-        if ($provider !== PriceProviderService::PROVIDER_MANAGER_CORE) {
-            return $this->skip('MC price freshness', 'pricing', "Provider is '{$provider}'");
-        }
-
-        if (!Schema::hasTable('manager_core_market_prices')) {
-            return $this->fail('MC price freshness', 'pricing', 'manager_core_market_prices table missing');
-        }
-
-        $market = $this->settingsService->getPricingSettings()['manager_core_market'] ?? 'jita';
-        $threshold = Carbon::now()->subHours(PriceProviderService::MC_PRICE_STALENESS_HOURS);
-
-        $stale = DB::table('manager_core_market_prices')
-            ->where('market', $market)
-            ->where('updated_at', '<', $threshold)
-            ->count();
-        $total = DB::table('manager_core_market_prices')->where('market', $market)->count();
-
-        if ($total === 0) {
-            return $this->warn('MC price freshness', 'pricing', "No price rows in market '{$market}' — MC update-prices cron has never run for this market");
-        }
-
-        if ($stale > 0) {
-            $pct = round($stale / $total * 100, 1);
-            return $this->warn(
-                'MC price freshness',
-                'pricing',
-                "{$stale}/{$total} prices ({$pct}%) older than " . PriceProviderService::MC_PRICE_STALENESS_HOURS . "h in market '{$market}'",
-                ['hint' => 'Check that manager-core:update-prices cron is running. Default schedule: every 4h.']
-            );
-        }
-
-        return $this->pass('MC price freshness', 'pricing', "{$total} prices in market '{$market}', all fresh (<" . PriceProviderService::MC_PRICE_STALENESS_HOURS . "h)");
-    }
-
     // =================================================================
     // PRICING PATH
     // =================================================================
@@ -666,7 +506,7 @@ class MasterTestRunner
                 'Configured provider valid',
                 'pricing',
                 "validateProviderConfig() returned false for provider '{$provider}'",
-                ['hint' => 'Provider missing API key, or selected MC as provider but MC not installed.']
+                ['hint' => 'Provider missing its API key.']
             );
         }
         return $this->pass('Configured provider valid', 'pricing', "provider '{$provider}' validates");
@@ -806,7 +646,7 @@ class MasterTestRunner
                 'Price provider roundtrip',
                 'pricing',
                 'getPrices(Tritanium) returned 0 — provider has no price data yet',
-                ['hint' => 'For MC: wait for the next manager-core:update-prices cron, or click "Refresh Prices" in MC. For Janice/Fuzzwork: check the API endpoint reachability.']
+                ['hint' => 'Run mining-manager:cache-prices, and check that the provider can be reached.']
             );
         }
 
@@ -1073,7 +913,7 @@ class MasterTestRunner
      * Several things lean on them. The Extraction Started alert names who
      * started the extraction from one, Fractured by comes from another, and a
      * chunk's real ore volumes come from the first. Without them, the alert
-     * without Manager Core waits its full six hours and goes out without a
+     * waits its full six hours and goes out without a
      * name, Fractured by stays empty, and volumes are estimated.
      */
     protected function checkMoonNotificationFeed(): array
