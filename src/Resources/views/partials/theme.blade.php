@@ -6,6 +6,8 @@
 --}}
 @if(\MiningManager\Support\Look::current() === \MiningManager\Support\Look::EVE_RO)
 <link rel="stylesheet" href="{{ \MiningManager\Support\Asset::url('css/mm-theme.css') }}">
+{{-- Generated from the pages' own styles by tools/build-theme-pages.php. --}}
+<link rel="stylesheet" href="{{ \MiningManager\Support\Asset::url('css/mm-theme-pages.css') }}">
 <script>
 // Charts drawn with Chart.js pick up the EVE-RO typeface and colours. Chart.js
 // is loaded further down each page, so the defaults are set the moment the

@@ -114,13 +114,15 @@ body .mining-manager-wrapper b, body .mining-dashboard b {
     font-weight: 600;
 }
 
-body .mining-manager-wrapper a:not(.btn):not(.nav-link):not(.page-link),
-body .mining-dashboard a:not(.btn):not(.nav-link):not(.page-link) {
+/* Plain links only: an anchor with a class of its own is a styled button or
+   tile, and keeps the text colour its page gave it. */
+body .mining-manager-wrapper a:not([class]),
+body .mining-dashboard a:not([class]) {
     color: var(--mmx-blue);
 }
 
-body .mining-manager-wrapper a:not(.btn):not(.nav-link):not(.page-link):hover,
-body .mining-dashboard a:not(.btn):not(.nav-link):not(.page-link):hover {
+body .mining-manager-wrapper a:not([class]):hover,
+body .mining-dashboard a:not([class]):hover {
     color: var(--mmx-blue-hover);
     text-decoration: none;
 }
@@ -257,10 +259,16 @@ body .mining-dashboard .nav-pills .nav-link:hover {
 }
 
 body .mining-manager-wrapper .nav-tabs .nav-link.active,
-body .mining-dashboard .nav-tabs .nav-link.active,
+body .mining-dashboard .nav-tabs .nav-link.active {
+    color: var(--mmx-blue) !important;
+    border-bottom-color: var(--mmx-blue) !important;
+}
+
+/* Pills are often filled when active (a page's own style, recoloured blue by
+   mm-theme-pages.css), so their text goes white to stay readable either way. */
 body .mining-manager-wrapper .nav-pills .nav-link.active,
 body .mining-dashboard .nav-pills .nav-link.active {
-    color: var(--mmx-blue) !important;
+    color: #fff !important;
     border-bottom-color: var(--mmx-blue) !important;
 }
 
