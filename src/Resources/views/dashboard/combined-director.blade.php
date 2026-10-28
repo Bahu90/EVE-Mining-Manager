@@ -803,10 +803,10 @@ $(document).ready(function() {
     new Chart(personalCtx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode($personalMiningPerformanceChart['labels']) !!},
+            labels: {!! json_encode($personalMiningPerformanceChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
                 label: 'Mining Value (ISK)',
-                data: {!! json_encode($personalMiningPerformanceChart['data']) !!},
+                data: {!! json_encode($personalMiningPerformanceChart['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 tension: 0.1
@@ -846,8 +846,8 @@ $(document).ready(function() {
 
     // Personal Mining by Group (Doughnut - ISK values)
     var personalVolumeCtx = document.getElementById('personalVolumeChart').getContext('2d');
-    var personalGroupLabels = {!! json_encode($personalMiningVolumeByGroupChart['labels']) !!};
-    var personalGroupData = {!! json_encode($personalMiningVolumeByGroupChart['data']) !!};
+    var personalGroupLabels = {!! json_encode($personalMiningVolumeByGroupChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
+    var personalGroupData = {!! json_encode($personalMiningVolumeByGroupChart['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
     var personalGroupColors = personalGroupLabels.map(function(label) {
         return groupColors[label] || 'rgba(201, 203, 207, 0.8)';
     });
@@ -889,11 +889,11 @@ $(document).ready(function() {
     new Chart(personalByTypeCtx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode($personalMiningByTypeChart['labels']) !!},
+            labels: {!! json_encode($personalMiningByTypeChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
                 label: 'Value (ISK)',
-                data: {!! json_encode($personalMiningByTypeChart['data']) !!},
-                backgroundColor: {!! json_encode($personalMiningByTypeChart['colors']) !!},
+                data: {!! json_encode($personalMiningByTypeChart['data'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
+                backgroundColor: {!! json_encode($personalMiningByTypeChart['colors'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 borderWidth: 1
             }]
         },
@@ -933,22 +933,22 @@ $(document).ready(function() {
     new Chart(personalIncomeCtx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode($personalMiningIncomeChart['labels']) !!},
+            labels: {!! json_encode($personalMiningIncomeChart['labels'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
                 label: 'Refined Value',
-                data: {!! json_encode($personalMiningIncomeChart['refined_value']) !!},
+                data: {!! json_encode($personalMiningIncomeChart['refined_value'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: 'rgba(75, 192, 192, 0.8)',
                 borderColor: 'rgb(75, 192, 192)',
                 borderWidth: 1
             }, {
                 label: 'Tax Paid',
-                data: {!! json_encode($personalMiningIncomeChart['tax_paid']) !!},
+                data: {!! json_encode($personalMiningIncomeChart['tax_paid'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: 'rgba(255, 99, 132, 0.8)',
                 borderColor: 'rgb(255, 99, 132)',
                 borderWidth: 1
             }, {
                 label: 'Event Bonus',
-                data: {!! json_encode($personalMiningIncomeChart['event_bonus']) !!},
+                data: {!! json_encode($personalMiningIncomeChart['event_bonus'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: 'rgba(255, 206, 86, 0.8)',
                 borderColor: 'rgb(255, 206, 86)',
                 borderWidth: 1

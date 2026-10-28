@@ -694,7 +694,7 @@ $(document).ready(function() {
             success: function(characters) {
                 $('#character_id').empty().append('<option value="">{{ trans("mining-manager::taxes.all_characters") }}</option>');
                 characters.forEach(function(char) {
-                    $('#character_id').append(`<option value="${char.character_id}">${char.name}</option>`);
+                    $('#character_id').append($('<option>').val(char.character_id).text(char.name));
                 });
             }
         });

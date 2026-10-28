@@ -320,10 +320,10 @@ $(document).ready(function() {
     new Chart(popCtx, {
         type: 'bar',
         data: {
-            labels: {!! json_encode($popularity->map(function($m) { return $m->structure_name ? $m->structure_name : $m->moon_name; })->values()->toArray()) !!},
+            labels: {!! json_encode($popularity->map(function($m) { return $m->structure_name ? $m->structure_name : $m->moon_name; })->values()->toArray(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
                 label: '{{ trans('mining-manager::analytics.unique_miners') }}',
-                data: {!! json_encode($popularity->pluck('unique_miners')->toArray()) !!},
+                data: {!! json_encode($popularity->pluck('unique_miners')->toArray(), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: 'rgba(28, 200, 138, 0.8)',
                 borderColor: 'rgba(28, 200, 138, 1)',
                 borderWidth: 1,
@@ -365,9 +365,9 @@ $(document).ready(function() {
     new Chart(document.getElementById('poolOreIskChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode($poolLabels) !!},
+            labels: {!! json_encode($poolLabels, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
-                data: {!! json_encode($poolIskValues) !!},
+                data: {!! json_encode($poolIskValues, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: oreColors.slice(0, {{ count($poolLabels) }}),
                 borderWidth: 1,
                 borderColor: '#1a1a2e',
@@ -396,9 +396,9 @@ $(document).ready(function() {
     new Chart(document.getElementById('poolOreVolChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode($poolLabels) !!},
+            labels: {!! json_encode($poolLabels, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
-                data: {!! json_encode($poolVolValues) !!},
+                data: {!! json_encode($poolVolValues, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: oreColors.slice(0, {{ count($poolLabels) }}),
                 borderWidth: 1,
                 borderColor: '#1a1a2e',
@@ -429,9 +429,9 @@ $(document).ready(function() {
     new Chart(document.getElementById('orePopularityChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode(array_keys($oreByCategoryIsk)) !!},
+            labels: {!! json_encode(array_keys($oreByCategoryIsk), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
-                data: {!! json_encode(array_values(array_map(fn($v) => round($v / 1000000, 1), $oreByCategoryIsk))) !!},
+                data: {!! json_encode(array_values(array_map(fn($v) => round($v / 1000000, 1), $oreByCategoryIsk)), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: oreColors.slice(0, {{ count($oreByCategoryIsk) }}),
                 borderWidth: 1,
                 borderColor: '#1a1a2e',
@@ -460,9 +460,9 @@ $(document).ready(function() {
     new Chart(document.getElementById('orePopularityQtyChart').getContext('2d'), {
         type: 'doughnut',
         data: {
-            labels: {!! json_encode(array_keys($oreByCategoryQty)) !!},
+            labels: {!! json_encode(array_keys($oreByCategoryQty), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
             datasets: [{
-                data: {!! json_encode(array_values($oreByCategoryQty)) !!},
+                data: {!! json_encode(array_values($oreByCategoryQty), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!},
                 backgroundColor: oreColors.slice(0, {{ count($oreByCategoryQty) }}),
                 borderWidth: 1,
                 borderColor: '#1a1a2e',

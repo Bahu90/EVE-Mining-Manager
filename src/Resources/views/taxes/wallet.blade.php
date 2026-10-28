@@ -261,7 +261,7 @@
 // side because matching a player's alts needs the SeAT account link.
 // Cast so an empty map serialises as {} rather than [], keeping the lookup
 // below an object access in every case.
-var payerInvoices = {!! json_encode((object) ($payerInvoiceMap ?? [])) !!};
+var payerInvoices = {!! json_encode((object) ($payerInvoiceMap ?? []), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 
 function mmError(xhr, fallback) {
     var message = (xhr && xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : fallback;

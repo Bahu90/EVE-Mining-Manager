@@ -2132,7 +2132,7 @@ function testProvider() {
                 const statusIcon = item.status === 'success' ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
                 html += `
                     <div class="price-item ${statusClass}">
-                        <span><i class="fas ${statusIcon}"></i> ${item.type_name} (${item.type_id})</span>
+                        <span><i class="fas ${statusIcon}"></i> ${escapeHtml(item.type_name)} (${item.type_id})</span>
                         <span><strong>${item.price} ISK</strong></span>
                     </div>
                 `;
@@ -2306,7 +2306,7 @@ function testBatchPricing() {
                 const statusIcon = item.price > 0 ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
                 html += `
                     <div class="price-item ${statusClass}">
-                        <span><i class="fas ${statusIcon}"></i> ${item.type_name} (${item.type_id})</span>
+                        <span><i class="fas ${statusIcon}"></i> ${escapeHtml(item.type_name)} (${item.type_id})</span>
                         <span><strong>${item.price_formatted} ISK</strong></span>
                     </div>
                 `;
@@ -2426,7 +2426,7 @@ function loadCacheHealth() {
             if (data.missing_essential && data.missing_essential.length > 0) {
                 html += '<hr><h6>Missing Essential Ores:</h6><ul>';
                 data.missing_essential.forEach(item => {
-                    html += `<li>${item.name} (${item.type_id})</li>`;
+                    html += `<li>${escapeHtml(item.name)} (${item.type_id})</li>`;
                 });
                 html += '</ul>';
             }
@@ -2591,7 +2591,7 @@ function loadSettingsHealth() {
             if (data.summary.corporation_overrides.length > 0) {
                 html += '<hr><h6><i class="fas fa-building"></i> Corporation Overrides</h6>';
                 data.summary.corporation_overrides.forEach(corp => {
-                    html += `<div class="price-item"><span>${corp.corporation_name} (${corp.corporation_id})</span><span><strong>${corp.setting_count} settings</strong></span></div>`;
+                    html += `<div class="price-item"><span>${escapeHtml(corp.corporation_name)} (${corp.corporation_id})</span><span><strong>${corp.setting_count} settings</strong></span></div>`;
                 });
             }
 
@@ -2661,7 +2661,7 @@ function runTaxTrace() {
             <h5><i class="fas fa-user"></i> Character & Account Info</h5>
             <div class="row mb-2">
                 <div class="col-md-4">
-                    <strong>Character:</strong> ${data.character.name} <small class="text-muted">(${data.character.id})</small>
+                    <strong>Character:</strong> ${escapeHtml(data.character.name)} <small class="text-muted">(${data.character.id})</small>
                 </div>
                 <div class="col-md-4">
                     <strong>Corporation:</strong> ${data.character.corporation_name || 'Unknown'}
@@ -2681,7 +2681,7 @@ function runTaxTrace() {
                     <strong>All Characters:</strong> `;
             if (acc.all_characters && acc.all_characters.length > 0) {
                 html += acc.all_characters.map(c =>
-                    `${c.name}${c.is_main ? ' <span class="badge badge-primary">MAIN</span>' : ''}`
+                    `${escapeHtml(c.name)}${c.is_main ? ' <span class="badge badge-primary">MAIN</span>' : ''}`
                 ).join(', ');
             } else {
                 html += '<span class="text-muted">None found</span>';
@@ -2880,7 +2880,7 @@ function runTaxTrace() {
                 const hasErr = e.pricing_error || e.unit_price == 0;
                 html += `<tr ${hasErr ? 'style="background: rgba(255,0,0,0.1);"' : ''}>
                     <td>${e.date}</td>
-                    <td><i class="fas ${oreIcon(e.category)}"></i> ${e.type_name} <small class="text-muted">[${e.category}${e.rarity ? '/' + e.rarity : ''}]</small>
+                    <td><i class="fas ${oreIcon(e.category)}"></i> ${escapeHtml(e.type_name)} <small class="text-muted">[${e.category}${e.rarity ? '/' + e.rarity : ''}]</small>
                         ${e.pricing_error ? '<br><small class="text-danger"><i class="fas fa-times-circle"></i> ' + e.pricing_error + '</small>' : ''}
                     </td>
                     <td class="text-right">${fmtNum(e.quantity)}</td>
@@ -3027,7 +3027,7 @@ function runValuationTest() {
 
         if (data.success) {
             let html = `<div class="provider-test-result success">
-                <h5><i class="fas fa-search-dollar"></i> Valuation: ${data.type.type_name} x${data.type.quantity.toLocaleString()}</h5>
+                <h5><i class="fas fa-search-dollar"></i> Valuation: ${escapeHtml(data.type.type_name)} x${data.type.quantity.toLocaleString()}</h5>
                 <div class="row mb-3">
                     <div class="col-md-3"><strong>Category:</strong> ${data.type.category}</div>
                     <div class="col-md-3"><strong>Unit Price:</strong> ${Number(data.final_result.unit_price).toLocaleString('en-US', {minimumFractionDigits: 2})} ISK</div>
@@ -3116,7 +3116,7 @@ function validateTypeIds() {
                 const statusIcon = item.status === 'success' ? 'fa-check-circle text-success' : 'fa-times-circle text-danger';
                 html += `
                     <div class="price-item ${statusClass}">
-                        <span><i class="fas ${statusIcon}"></i> ${item.name} (${item.type_id})</span>
+                        <span><i class="fas ${statusIcon}"></i> ${escapeHtml(item.name)} (${item.type_id})</span>
                         <span>${item.status === 'success' ? 'Valid' : 'MISSING'}</span>
                     </div>
                 `;

@@ -289,20 +289,28 @@ document.addEventListener('DOMContentLoaded', function() {
             right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth'
         },
         height: 'auto',
-        events: {!! json_encode($formattedEvents) !!},
+        events: @json($formattedEvents),
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             showEventDetails(info.event);
         },
         eventContent: function(arg) {
             return {
-                html: '<div class="fc-event-title fc-sticky">' + arg.event.title + '</div>'
+                html: '<div class="fc-event-title fc-sticky">' + escapeHtml(arg.event.title) + '</div>'
             };
         }
     });
     
     calendar.render();
     
+    // Event names, locations and descriptions are typed in by directors and
+    // shown to every member, so they are escaped before they become HTML.
+    function escapeHtml(value) {
+        return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (c) {
+            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+    }
+
     function showEventDetails(event) {
         const props = event.extendedProps;
         
@@ -312,25 +320,25 @@ document.addEventListener('DOMContentLoaded', function() {
         let html = '<div class="event-details">';
         html += '<p><strong>{{ trans("mining-manager::events.status") }}:</strong> <span class="badge badge-';
         html += props.status === 'planned' ? 'info' : (props.status === 'active' ? 'success' : (props.status === 'completed' ? 'secondary' : 'danger'));
-        html += '">' + props.status.charAt(0).toUpperCase() + props.status.slice(1) + '</span></p>';
+        html += '">' + escapeHtml(props.status.charAt(0).toUpperCase() + props.status.slice(1)) + '</span></p>';
         
-        html += '<p><strong>{{ trans("mining-manager::events.type") }}:</strong> ' + props.type + '</p>';
+        html += '<p><strong>{{ trans("mining-manager::events.type") }}:</strong> ' + escapeHtml(props.type) + '</p>';
         html += '<p><strong>{{ trans("mining-manager::events.start_time") }}:</strong> ' + new Date(event.start).toLocaleString() + '</p>';
         html += '<p><strong>{{ trans("mining-manager::events.end_time") }}:</strong> ' + new Date(event.end).toLocaleString() + '</p>';
         
         if (props.location) {
-            html += '<p><strong>{{ trans("mining-manager::events.location") }}:</strong> ' + props.location + '</p>';
+            html += '<p><strong>{{ trans("mining-manager::events.location") }}:</strong> ' + escapeHtml(props.location) + '</p>';
         }
         
-        html += '<p><strong>{{ trans("mining-manager::events.participants") }}:</strong> ' + props.participants + '</p>';
+        html += '<p><strong>{{ trans("mining-manager::events.participants") }}:</strong> ' + escapeHtml(props.participants) + '</p>';
         
         html += '<p><strong>{{ trans("mining-manager::events.tax_modifier") }}:</strong> ';
         html += '<span class="badge badge-' + (props.tax_modifier < 0 ? 'success' : (props.tax_modifier > 0 ? 'warning' : 'secondary')) + '">';
-        html += props.tax_modifier_label + '</span></p>';
+        html += escapeHtml(props.tax_modifier_label) + '</span></p>';
         
         if (props.description) {
             html += '<hr><p><strong>{{ trans("mining-manager::events.description") }}:</strong></p>';
-            html += '<p>' + props.description + '</p>';
+            html += '<p style="white-space: pre-line;">' + escapeHtml(props.description) + '</p>';
         }
         
         html += '</div>';

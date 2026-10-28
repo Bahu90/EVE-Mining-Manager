@@ -32,7 +32,7 @@
     $moonIcon = $taxCompat['moon_mode'] === 'none' ? 'fa-times' : 'fa-check';
 @endphp
 
-<div class="event-tax-compat-panel mt-3" data-tax-compat='{!! json_encode($taxCompat) !!}'>
+<div class="event-tax-compat-panel mt-3" data-tax-compat='{!! json_encode($taxCompat, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}'>
 
     {{-- Current tax settings summary --}}
     <div class="alert alert-secondary py-2 px-3 mb-2">

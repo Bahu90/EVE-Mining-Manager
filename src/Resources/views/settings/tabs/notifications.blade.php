@@ -1148,6 +1148,13 @@
 
 @push('javascript')
 <script>
+// Escape text before it is put into HTML (names come from ESI, Discord and settings).
+function mmEscape(value) {
+    return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
 $(document).ready(function() {
     // Toggle Slack options visibility
     $('#slack_enabled').on('change', function() {
@@ -1308,12 +1315,12 @@ $(document).ready(function() {
                 ? `<span class="badge badge-secondary" style="color:#fff; font-weight:600; font-size:0.65rem; padding:2px 6px; margin-left:2px;" title="Also in: ${alsoIn.map(s => sourceLabels[s]||s).join(', ')}">+${alsoIn.length}</span>`
                 : '';
             html += `<button type="button" class="btn btn-sm btn-outline-primary js-mm-role-pick-btn"
-                data-role-id="${r.id}"
-                data-role-name="${r.name}"
+                data-role-id="${mmEscape(r.id)}"
+                data-role-name="${mmEscape(r.name)}"
                 data-source="${primarySrc}"
                 style="text-align:left;">
-                ${dot}${r.name}
-                <small style="opacity:0.55; margin-left:4px;">#${r.id.slice(-6)}</small>
+                ${dot}${mmEscape(r.name)}
+                <small style="opacity:0.55; margin-left:4px;">#${mmEscape(r.id.slice(-6))}</small>
                 ${primaryBadge}${extraBadge}
             </button>`;
         });

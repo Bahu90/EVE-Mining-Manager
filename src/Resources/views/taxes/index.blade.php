@@ -657,6 +657,13 @@
 @push('javascript')
 <script src="{{ asset('vendor/mining-manager/js/vendor/jquery.dataTables.min.js') }}"></script>
 <script>
+// Escape text before it is put into HTML (names come from ESI, Discord and settings).
+function mmEscape(value) {
+    return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
 // Copy to clipboard helper
 function copyToClipboard(text, label) {
     navigator.clipboard.writeText(text).then(function() {
@@ -1047,7 +1054,7 @@ $(document).ready(function() {
                 '<div class="d-flex justify-content-between align-items-center">' +
                 '<div>' +
                 '<img src="https://images.evetech.net/characters/' + charId + '/portrait?size=32" class="img-circle mr-2" style="width: 32px; height: 32px;">' +
-                '<strong>' + g.name + '</strong>' +
+                '<strong>' + mmEscape(g.name) + '</strong>' +
                 '<small class="text-muted ml-2">(' + g.rows.length + ' {{ trans("mining-manager::taxes.entries") }})</small>' +
                 '</div>' +
                 '<div class="text-right">' +
