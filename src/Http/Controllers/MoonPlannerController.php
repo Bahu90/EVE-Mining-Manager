@@ -36,6 +36,17 @@ class MoonPlannerController extends Controller
         'mining-manager.director',
     ];
 
+    /**
+     * Pages someone who only reads the corporation's figures may open: the
+     * planner, its history and the blueprints, to look at. Every change
+     * still needs the Moon Manager or Director role.
+     */
+    public const READ_ONLY_ROUTES = [
+        'mining-manager.moon.planner',
+        'mining-manager.moon.planner.history',
+        'mining-manager.moon.blueprints',
+    ];
+
     protected MoonPlannerService $planner;
     protected \MiningManager\Services\Moon\MoonRotationService $rotations;
     protected SettingsManagerService $settings;
@@ -59,6 +70,10 @@ class MoonPlannerController extends Controller
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
             if ($user && $user->canAny(self::PLANNER_ABILITIES)) {
+                return $next($request);
+            }
+            if ($user && $request->isMethod('GET') && $request->routeIs(...self::READ_ONLY_ROUTES)
+                && \MiningManager\Support\Access::readsCorporation($user)) {
                 return $next($request);
             }
             if ($user && $request->isMethod('GET') && $request->routeIs('mining-manager.moon.planner')
@@ -160,6 +175,7 @@ class MoonPlannerController extends Controller
             'spacingLabel' => $this->planner->refinerySpacingLabel(),
             'minGapHours' => $minGapHours,
             'corporationId' => $corporationId,
+            'canEdit' => (bool) auth()->user()?->canAny(self::PLANNER_ABILITIES),
         ]);
     }
 

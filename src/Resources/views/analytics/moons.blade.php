@@ -44,7 +44,7 @@
         <ul class="nav nav-tabs">
             {{-- A moon manager can open this page and nothing else in Analytics,
                  so the other tabs are only offered to directors. --}}
-            @can('mining-manager.director')
+            @can('mining-manager.reads_corporation')
             <li class="nav-item">
                 <a class="nav-link {{ Request::is('*/analytics') && !Request::is('*/analytics/*') ? 'active' : '' }}" href="{{ route('mining-manager.analytics.index') }}">
                     <i class="fas fa-chart-area"></i> {{ trans('mining-manager::menu.analytics_overview') }}
@@ -61,7 +61,7 @@
                     <i class="fas fa-moon"></i> {{ trans('mining-manager::analytics.moon_analytics') }}
                 </a>
             </li>
-            @can('mining-manager.director')
+            @can('mining-manager.reads_corporation')
             <li class="nav-item">
                 <a class="nav-link {{ Request::is('*/analytics/tables') ? 'active' : '' }}" href="{{ route('mining-manager.analytics.tables') }}">
                     <i class="fas fa-table"></i> {{ trans('mining-manager::menu.data_tables') }}

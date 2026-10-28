@@ -66,6 +66,13 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
 
         $this->loadMigrationsFrom(__DIR__ . '/Database/migrations/');
 
+        // Reads the corporation's figures: directors, admins, and anyone given
+        // "See all data (read-only)". Used by routes and views as one ability.
+        \Illuminate\Support\Facades\Gate::define(
+            \MiningManager\Support\Access::READS,
+            fn ($user) => \MiningManager\Support\Access::readsCorporation($user)
+        );
+
         // Register Blade directives for consistent formatting
         \Illuminate\Support\Facades\Blade::directive('isk', function ($expression) {
             return "<?php

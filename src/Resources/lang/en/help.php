@@ -613,6 +613,8 @@ return [
     'perm_view_desc' => 'Basic access to the help page only. Grants no access to mining data or management features.',
     'perm_member' => 'mining-manager.member',
     'perm_member_desc' => 'Corp miner access. View personal mining data, tax status, My Mining page, and participate in mining events.',
+    'perm_view_all' => 'mining-manager.view_all',
+    'perm_view_all_desc' => 'See all data, read-only. Give it with Member to let pilots read what directors read and change nothing: the corporation and guest miners on the Dashboard, every pilot on Mining Summary and Moon Mining, Analytics, the Moon Planner and its blueprints, and Metenox Cargo. Other pilots\' taxes, theft incidents, reports and settings stay with directors and admins.',
     'perm_director' => 'mining-manager.director',
     'perm_director_desc' => 'Corp management access. View all member data, analytics, reports, tax management, moon mining, and theft detection.',
     'perm_admin' => 'mining-manager.admin',

@@ -50,14 +50,13 @@ Route::group([
         Route::get('/tab/corporation', [
             'as' => 'mining-manager.dashboard.tab.corporation',
             'uses' => 'DashboardController@getCorporationTabData',
-            // Members too when Settings > Dashboard allows it; checked inside.
-            'middleware' => 'can:mining-manager.member',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
 
         Route::get('/tab/guest-miners', [
             'as' => 'mining-manager.dashboard.tab.guest-miners',
             'uses' => 'DashboardController@getGuestMinersTabData',
-            'middleware' => 'can:mining-manager.member',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
     });
 
@@ -560,7 +559,7 @@ Route::group([
         Route::get('/metenox-cargo', [
             'as' => 'mining-manager.moon.metenox-cargo',
             'uses' => 'MoonController@metenoxCargo',
-            'middleware' => 'can:mining-manager.director',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
 
         // =================================================================
@@ -732,25 +731,25 @@ Route::group([
         Route::get('/charts', [
             'as' => 'mining-manager.analytics.charts',
             'uses' => 'AnalyticsController@charts',
-            'middleware' => 'can:mining-manager.director',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
 
         Route::get('/tables', [
             'as' => 'mining-manager.analytics.tables',
             'uses' => 'AnalyticsController@tables',
-            'middleware' => 'can:mining-manager.director',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
 
         Route::get('/data', [
             'as' => 'mining-manager.analytics.data',
             'uses' => 'AnalyticsController@data',
-            'middleware' => 'can:mining-manager.director',
+            'middleware' => 'can:mining-manager.reads_corporation',
         ]);
 
         Route::get('/compare', [
            'as' => 'mining-manager.analytics.compare',
            'uses' => 'AnalyticsController@compare',
-           'middleware' => 'can:mining-manager.director',
+           'middleware' => 'can:mining-manager.reads_corporation',
        ]);
 
         // Moon managers too: see the note on the overview route.

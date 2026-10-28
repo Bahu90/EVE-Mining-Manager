@@ -1357,12 +1357,6 @@ class SettingsManagerService
             'dashboard_leaderboard_corporation_filter' => $this->getSettingForCorporation('dashboard_leaderboard_corporation_filter', null, 'all'),
             'dashboard_leaderboard_corporation_ids' => $this->getSettingForCorporation('dashboard_leaderboard_corporation_ids', null, '[]'),
             'display_theme' => \MiningManager\Support\Look::current(),
-            // Members see the dashboard's Corporation and Guest Miners tabs,
-            // not only directors. Off unless switched on.
-            'dashboard_members_see_corporation' => filter_var(
-                $this->getSettingForCorporation('dashboard_members_see_corporation', null, false),
-                FILTER_VALIDATE_BOOLEAN
-            ),
         ]);
     }
 

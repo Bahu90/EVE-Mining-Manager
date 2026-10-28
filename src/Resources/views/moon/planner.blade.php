@@ -71,12 +71,38 @@
     .mm-refinery-card { font-size: 0.85rem; }
     .mm-refinery-card .mm-proj { font-weight: 600; }
     .mm-conflict-row { padding: 6px 10px; border-radius: 4px; background: rgba(255,193,7,0.12); margin-bottom: 6px; }
+
+    /* Read-only: everything that changes the plan is hidden. The server
+       refuses changes from read-only users whatever the page shows. */
+    .mm-read-only #btn-add-pull,
+    .mm-read-only #autofill-form,
+    .mm-read-only #btn-plan-blueprint,
+    .mm-read-only #btn-next-pull-notices,
+    .mm-read-only .btn-mismatch-action,
+    .mm-read-only .btn-plan-refinery,
+    .mm-read-only .btn-resume-refinery,
+    .mm-read-only .btn-mark-final,
+    .mm-read-only #btn-new-blueprint,
+    .mm-read-only #btn-delete-blueprint,
+    .mm-read-only #btn-apply-blueprint,
+    .mm-read-only #btn-save-blueprint,
+    .mm-read-only #btn-prune-missing,
+    .mm-read-only #btn-add-slot,
+    .mm-read-only #btn-remove-slot,
+    .mm-read-only .mm-bp-add { display: none !important; }
+    .mm-read-only #bp-name, .mm-read-only #bp-weeks { pointer-events: none; }
 </style>
 @include('mining-manager::partials.theme')
 @endpush
 
 @section('full')
-<div class="mining-manager-wrapper mining-dashboard moon-planner-page">
+<div class="mining-manager-wrapper mining-dashboard moon-planner-page {{ ($canEdit ?? true) ? '' : 'mm-read-only' }}">
+    @if(!($canEdit ?? true))
+        <div class="mm-note mm-note-info mb-3">
+            <i class="fas fa-eye mr-1"></i>
+            {{ trans('mining-manager::moons.planner_read_only') }}
+        </div>
+    @endif
 
 {{-- TAB NAVIGATION (the Moon Planner section) --}}
 <div class="card card-dark card-tabs">
@@ -624,6 +650,7 @@
 @push('javascript')
 <script src="{{ asset('vendor/mining-manager/js/vendor/fullcalendar.min.js') }}"></script>
 <script>
+const PLANNER_CAN_EDIT = {{ ($canEdit ?? true) ? 'true' : 'false' }};
 document.addEventListener('DOMContentLoaded', function () {
     const CSRF = $('meta[name="csrf-token"]').attr('content');
     const calendarData = @json($calendar ?? []);
@@ -792,6 +819,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function onEventClick(info) {
         info.jsEvent.preventDefault();
         const p = info.event.extendedProps;
+        // Read-only: no edit dialog. Set-in-game entries still explain themselves.
+        if (!PLANNER_CAN_EDIT && !(p.type === 'actual' || p.locked)) {
+            return;
+        }
         // Locked entries (live/completed extractions + reconciled plans) are
         // set in-game — explain why they can't be edited instead of doing nothing.
         if (p.type === 'actual' || p.locked) {

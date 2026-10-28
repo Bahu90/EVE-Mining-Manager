@@ -401,8 +401,8 @@ class LedgerController extends Controller
     {
         $user = auth()->user();
 
-        // Directors and admins can view all characters
-        if ($user->can('mining-manager.director') || $user->can('mining-manager.admin')) {
+        // Directors, admins and "See all data (read-only)" view all characters
+        if (\MiningManager\Support\Access::readsCorporation($user)) {
             return true;
         }
 
@@ -1088,7 +1088,7 @@ class LedgerController extends Controller
         }
 
         // Filter to user's own characters for non-directors (members see only their own)
-        $isDirector = auth()->user()->can('mining-manager.director');
+        $isDirector = \MiningManager\Support\Access::readsCorporation();
         if (!$isDirector) {
             $userCharacterIds = auth()->user()->characters->pluck('character_id')->toArray();
             $summaries = $summaries->filter(function ($summary) use ($userCharacterIds) {

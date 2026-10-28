@@ -449,4 +449,6 @@ return [
     'income_material' => 'Material',
     'income_quantity' => 'Quantity',
     'income_value' => 'Value',
+
+    'planner_read_only' => 'You are looking at the plan. Changing it needs the Moon Manager or Director role.',
 ];

@@ -24,6 +24,15 @@ return [
         'division' => 'financial',
     ],
 
+    // Standalone capability, not a tier: read everything a director reads,
+    // the corporation's mining, guests, analytics, the Moon Planner and
+    // Metenox Cargo, without being able to change any of it.
+    'view_all' => [
+        'label' => 'mining-manager::permissions.view_all_label',
+        'description' => 'mining-manager::permissions.view_all_description',
+        'division' => 'financial',
+    ],
+
     // Standalone capability (NOT a tier) — grants access to the Moon
     // Extraction Planner. Directors/admins reach the planner too (the routes
     // accept moon_manager OR director), but this ability lets a corp delegate

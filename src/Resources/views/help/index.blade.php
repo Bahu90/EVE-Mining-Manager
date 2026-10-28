@@ -4522,6 +4522,10 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                             <h5><span class="badge badge-info">{{ trans('mining-manager::help.perm_member') }}</span></h5>
                             <p>{{ trans('mining-manager::help.perm_member_desc') }}</p>
                         </div>
+                        <div class="feature-item" style="border-left: 4px solid #6f42c1;">
+                            <h5><span class="badge badge-secondary">{{ trans('mining-manager::help.perm_view_all') }}</span></h5>
+                            <p>{{ trans('mining-manager::help.perm_view_all_desc') }}</p>
+                        </div>
                         <div class="feature-item" style="border-left: 4px solid #f39c12;">
                             <h5><span class="badge badge-warning">{{ trans('mining-manager::help.perm_director') }}</span></h5>
                             <p>{{ trans('mining-manager::help.perm_director_desc') }}</p>

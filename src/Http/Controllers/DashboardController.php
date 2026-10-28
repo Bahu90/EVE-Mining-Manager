@@ -74,8 +74,7 @@ class DashboardController extends Controller
         $data = $metrics->forMonth($month, $trendMonths);
 
         $isDirector = $this->hasDirectorPermissions();
-        // Every pilot's ISK, for directors, and for members when Settings >
-        // Dashboard opens the corporation's figures to them.
+        // Every pilot's ISK for those who read the corporation's figures.
         $seesCorporation = $this->canSeeCorporation();
         $user = auth()->user();
         $own = array_map('intval', $this->getUserCharacterIds($user));
@@ -135,8 +134,8 @@ class DashboardController extends Controller
     public function index()
     {
         $user = auth()->user();
-        // Directors get personal, corporation and guest tabs; so does everyone
-        // when Settings > Dashboard opens the corporation's figures to members.
+        // Personal, corporation and guest tabs for those who read the
+        // corporation's figures; the personal dashboard for everyone else.
         if ($this->canSeeCorporation()) {
             return $this->combinedDirectorDashboard();
         }
@@ -1782,16 +1781,11 @@ class DashboardController extends Controller
 
     /**
      * Whether the person looking may see the corporation's and the guest
-     * miners' figures: directors always, members when Settings > Dashboard
-     * says so.
+     * miners' figures: directors, admins and "See all data (read-only)".
      */
     private function canSeeCorporation(): bool
     {
-        if ($this->hasDirectorPermissions()) {
-            return true;
-        }
-
-        return (bool) ($this->settingsService->getDashboardSettings()['dashboard_members_see_corporation'] ?? false);
+        return \MiningManager\Support\Access::readsCorporation();
     }
 
     /**

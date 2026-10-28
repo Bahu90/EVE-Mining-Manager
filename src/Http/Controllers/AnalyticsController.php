@@ -50,7 +50,7 @@ class AnalyticsController extends Controller
         $this->middleware(function ($request, $next) {
             $user = auth()->user();
 
-            if ($user && $user->can('mining-manager.director')) {
+            if ($user && \MiningManager\Support\Access::readsCorporation($user)) {
                 return $next($request);
             }
 

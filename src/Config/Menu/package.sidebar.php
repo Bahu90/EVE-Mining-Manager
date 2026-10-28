@@ -56,7 +56,7 @@ return [
                 'label'      => 'mining-manager::menu.metenox_cargo',
                 'icon'       => 'fas fa-box-open',
                 'route'      => 'mining-manager.moon.metenox-cargo',
-                'permission' => 'mining-manager.director',
+                'permission' => ['mining-manager.director', 'mining-manager.view_all', 'mining-manager.admin'],
             ],
             [
                 // The planner, its blueprints and the Extraction Simulator.
@@ -66,14 +66,14 @@ return [
                 'label'      => 'mining-manager::menu.moon_planner',
                 'icon'       => 'fas fa-calendar-alt',
                 'route'      => 'mining-manager.moon.planner',
-                'permission' => ['mining-manager.moon_manager', 'mining-manager.director', 'mining-manager.moon_finder', 'mining-manager.admin'],
+                'permission' => ['mining-manager.moon_manager', 'mining-manager.director', 'mining-manager.moon_finder', 'mining-manager.view_all', 'mining-manager.admin'],
             ],
             [
                 'name'       => 'Analytics',
                 'label'      => 'mining-manager::menu.analytics',
                 'icon'       => 'fas fa-chart-line',
                 'route'      => 'mining-manager.analytics.index',
-                'permission' => ['mining-manager.director', 'mining-manager.moon_manager'],
+                'permission' => ['mining-manager.director', 'mining-manager.moon_manager', 'mining-manager.view_all', 'mining-manager.admin'],
             ],
             [
                 'name'       => 'Reports',

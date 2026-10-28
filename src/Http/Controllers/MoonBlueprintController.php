@@ -53,7 +53,12 @@ class MoonBlueprintController extends Controller
             if ($user && $user->canAny(MoonPlannerController::PLANNER_ABILITIES)) {
                 return $next($request);
             }
-            abort(403, 'You need the Moon Manager or Director role to access blueprints.');
+            // Read-only: look at the blueprints, change nothing.
+            if ($user && $request->isMethod('GET') && $request->routeIs(...MoonPlannerController::READ_ONLY_ROUTES)
+                && \MiningManager\Support\Access::readsCorporation($user)) {
+                return $next($request);
+            }
+            abort(403, 'You need the Moon Manager or Director role to change blueprints.');
         });
     }
 
@@ -78,6 +83,7 @@ class MoonBlueprintController extends Controller
             'blueprintList' => $blueprintList,
             'refineries' => $refineries,
             'maxWeeks' => self::MAX_WEEKS,
+            'canEdit' => (bool) auth()->user()?->canAny(MoonPlannerController::PLANNER_ABILITIES),
         ]);
     }
 

@@ -20,7 +20,7 @@
             <i class="fas fa-calendar-alt"></i> {{ trans('mining-manager::menu.extraction_calendar') }}
         </a>
     </li>
-    @canany(\MiningManager\Http\Controllers\MoonPlannerController::PLANNER_ABILITIES)
+    @if(auth()->user()->canAny(\MiningManager\Http\Controllers\MoonPlannerController::PLANNER_ABILITIES) || \MiningManager\Support\Access::readsCorporation())
     <li class="nav-item">
         <a class="nav-link {{ $mmMoonTab('mining-manager.moon.planner') }}" href="{{ route('mining-manager.moon.planner') }}">
             <i class="fas fa-calendar-check"></i> {{ trans('mining-manager::menu.moon_planner') }}
@@ -31,7 +31,7 @@
             <i class="fas fa-drafting-compass"></i> {{ trans('mining-manager::menu.moon_blueprints') }}
         </a>
     </li>
-    @endcanany
+    @endif
     @canany(\MiningManager\Http\Controllers\MoonController::SIMULATOR_ABILITIES)
     <li class="nav-item">
         <a class="nav-link {{ $mmMoonTab('mining-manager.moon.calculator') }}" href="{{ route('mining-manager.moon.calculator') }}">
@@ -44,7 +44,7 @@
             <i class="fas fa-chart-bar"></i> {{ trans('mining-manager::menu.moon_compositions') }}
         </a>
     </li>
-    @can('mining-manager.director')
+    @can('mining-manager.reads_corporation')
     <li class="nav-item">
         <a class="nav-link {{ $mmMoonTab('mining-manager.moon.metenox-cargo') }}" href="{{ route('mining-manager.moon.metenox-cargo') }}">
             <i class="fas fa-box-open"></i> {{ trans('mining-manager::menu.metenox_cargo') }}

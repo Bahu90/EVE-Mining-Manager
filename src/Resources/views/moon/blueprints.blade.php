@@ -111,12 +111,38 @@
     }
     .moon-blueprints-page .mm-preview-skip { color: #9ca3af; }
     .moon-blueprints-page .mm-preview-clash { color: #fbbf24; }
+
+    /* Read-only: everything that changes the plan is hidden. The server
+       refuses changes from read-only users whatever the page shows. */
+    .mm-read-only #btn-add-pull,
+    .mm-read-only #autofill-form,
+    .mm-read-only #btn-plan-blueprint,
+    .mm-read-only #btn-next-pull-notices,
+    .mm-read-only .btn-mismatch-action,
+    .mm-read-only .btn-plan-refinery,
+    .mm-read-only .btn-resume-refinery,
+    .mm-read-only .btn-mark-final,
+    .mm-read-only #btn-new-blueprint,
+    .mm-read-only #btn-delete-blueprint,
+    .mm-read-only #btn-apply-blueprint,
+    .mm-read-only #btn-save-blueprint,
+    .mm-read-only #btn-prune-missing,
+    .mm-read-only #btn-add-slot,
+    .mm-read-only #btn-remove-slot,
+    .mm-read-only .mm-bp-add { display: none !important; }
+    .mm-read-only #bp-name, .mm-read-only #bp-weeks { pointer-events: none; }
 </style>
 @include('mining-manager::partials.theme')
 @endpush
 
 @section('full')
-<div class="mining-manager-wrapper mining-dashboard moon-blueprints-page">
+<div class="mining-manager-wrapper mining-dashboard moon-blueprints-page {{ ($canEdit ?? true) ? '' : 'mm-read-only' }}">
+    @if(!($canEdit ?? true))
+        <div class="mm-note mm-note-info mb-3">
+            <i class="fas fa-eye mr-1"></i>
+            {{ trans('mining-manager::moons.planner_read_only') }}
+        </div>
+    @endif
 
 {{-- TAB NAVIGATION (the Moon Planner section) --}}
 <div class="card card-dark card-tabs">

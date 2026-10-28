@@ -1168,7 +1168,6 @@ class SettingsController extends Controller
             'dashboard_leaderboard_corporation_ids.*' => 'integer|min:1',
             // Look of every plugin page: the EVE-RO look or the standard one.
             'display_theme' => 'nullable|in:' . implode(',', \MiningManager\Support\Look::ALL),
-            'dashboard_members_see_corporation' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -1203,12 +1202,6 @@ class SettingsController extends Controller
                 'dashboard_leaderboard_corporation_ids',
                 json_encode($corpIds),
                 'json'
-            );
-
-            $this->settingsService->updateGlobalSetting(
-                'dashboard_members_see_corporation',
-                $request->boolean('dashboard_members_see_corporation'),
-                'boolean'
             );
 
             if (!empty($data['display_theme'])) {

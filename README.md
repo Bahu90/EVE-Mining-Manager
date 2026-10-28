@@ -208,14 +208,15 @@ The tax selector under Settings > Tax Rates decides which of those categories ar
 
 ## Permissions
 
-4-tier permission model -- higher tiers inherit all lower tier access. Plus two standalone capabilities: `moon_manager` grants the planner, Moon Analytics and Find Moons without requiring full director, and `moon_finder` grants Find Moons on its own.
+4-tier permission model -- higher tiers inherit all lower tier access. Plus three standalone capabilities: `view_all` lets pilots read what directors read without changing anything; `moon_manager` grants the planner, Moon Analytics and Find Moons without requiring full director, and `moon_finder` grants Find Moons on its own.
 
 | Permission | Tier | Description |
 |---|---|---|
 | `mining-manager.view` | Base | Help page access |
-| `mining-manager.member` | Member | View own mining data, join events, view moon schedules, report jackpots, reprocessing calculator |
+| `mining-manager.member` | Member | View own mining data, join events, view moon schedules, report jackpots |
 | `mining-manager.director` | Director | View all corp data, manage operations, analytics, reports, theft detection |
 | `mining-manager.admin` | Admin | Full control: settings, tax management, delete actions, API, diagnostics |
+| `mining-manager.view_all` | Capability *(standalone)* | See all data, read-only: the corporation and guest miners on the Dashboard, every pilot on Mining Summary and Moon Mining, Analytics, the Moon Planner and blueprints (view only) and Metenox Cargo. Give it with Member. Other pilots' taxes, theft, reports and settings stay with directors and admins |
 | `mining-manager.moon_manager` | Capability *(standalone)* | Access the Moon Extraction Planner (assign / move / auto-fill planned moon pulls, realign or ignore an off-plan pull), Moon Analytics, and the Extraction Simulator with Find Moons. Directors and admins also have this access. |
 | `mining-manager.moon_finder` | Capability *(standalone)* | The Extraction Simulator and Find Moons on it: search every scanned moon by location, composition, value and quality. Directors, admins and moon managers also have this access. Moon Planner in the sidebar opens straight onto the simulator for them. |
 

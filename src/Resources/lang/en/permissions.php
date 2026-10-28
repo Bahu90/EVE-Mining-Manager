@@ -13,6 +13,10 @@ return [
     'director_label' => 'Director',
     'director_description' => 'All Member permissions plus: view all corporation data, process ledger, create/edit events, update moon data, view analytics/reports/theft incidents, verify wallet payments.',
 
+    // See all data, read-only (standalone, not a tier)
+    'view_all_label' => 'See all data (read-only)',
+    'view_all_description' => 'Read what directors read, change nothing: the corporation\'s mining and guest miners on the Dashboard, every pilot on Mining Summary and Moon Mining, Analytics, the Moon Planner and its blueprints, and Metenox Cargo. Taxes of others, theft incidents, reports and settings stay with directors and admins. Give it together with Member.',
+
     // Moon Manager capability (standalone, not a tier)
     'moon_manager_label' => 'Moon Manager',
     'moon_manager_description' => 'Access the Moon Extraction Planner (assign, move, and auto-fill planned moon pulls across refineries to stagger arrivals), Moon Analytics, and the Extraction Simulator with Find Moons. Directors and admins also have this access.',
