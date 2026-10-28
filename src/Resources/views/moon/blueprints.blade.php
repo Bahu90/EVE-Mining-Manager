@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
 @section('title', 'Moon Blueprints')
-@section('page_header', 'Moon Blueprints')
+@section('page_header', trans('mining-manager::menu.moon_planner'))
 
 @push('head')
 @include('mining-manager::partials.head')

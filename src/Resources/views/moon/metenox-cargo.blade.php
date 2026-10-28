@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
 @section('title', trans('mining-manager::menu.metenox_cargo'))
-@section('page_header', trans('mining-manager::menu.moon_extractions'))
+@section('page_header', trans('mining-manager::menu.metenox_cargo'))
 
 @push('head')
 @include('mining-manager::partials.head')
@@ -214,36 +214,7 @@
 {{-- TAB NAVIGATION (matches the rest of the moon section) --}}
 <div class="card card-dark card-tabs">
     <div class="card-header p-0 pt-1">
-        <ul class="nav nav-tabs">
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('mining-manager.moon.index') }}">
-                    <i class="fas fa-list"></i> {{ trans('mining-manager::menu.all_extractions') }}
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('mining-manager.moon.active') }}">
-                    <i class="fas fa-hourglass-half"></i> {{ trans('mining-manager::menu.active_extractions') }}
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('mining-manager.moon.calendar') }}">
-                    <i class="fas fa-calendar-alt"></i> {{ trans('mining-manager::menu.extraction_calendar') }}
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ route('mining-manager.moon.compositions') }}">
-                    <i class="fas fa-chart-bar"></i> {{ trans('mining-manager::menu.moon_compositions') }}
-                </a>
-            </li>
-            @can('mining-manager.director')
-            <li class="nav-item">
-                <a class="nav-link active" href="{{ route('mining-manager.moon.metenox-cargo') }}">
-                    <i class="fas fa-box-open"></i> {{ trans('mining-manager::menu.metenox_cargo') }}
-                    <span class="badge badge-info ml-1" style="font-size: 0.6em;">Director</span>
-                </a>
-            </li>
-            @endcan
-        </ul>
+        @include('mining-manager::moon.partials._moon_tabs')
     </div>
     <div class="card-body">
 

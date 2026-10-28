@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
 @section('title', trans('mining-manager::ledger.mining_summary'))
-@section('page_header', trans('mining-manager::ledger.mining_summary'))
+@section('page_header', trans('mining-manager::menu.mining_ledger'))
 
 @push('head')
 @include('mining-manager::partials.head')

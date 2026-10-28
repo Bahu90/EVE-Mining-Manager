@@ -1,7 +1,7 @@
 @extends('web::layouts.grids.12')
 
 @section('title', 'Theft Incident Details')
-@section('page_header', 'Theft Incident Details')
+@section('page_header', trans('mining-manager::menu.theft_detection'))
 
 @push('head')
 @include('mining-manager::partials.head')

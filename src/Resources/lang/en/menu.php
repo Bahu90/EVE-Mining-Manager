@@ -5,7 +5,7 @@ return [
     'mining_manager' => 'Mining Manager',
     
     // Dashboard
-    'dashboard' => 'Dashboard',
+    'dashboard' => 'Moon Mining',
     
     // Mining Ledger
     'mining_ledger' => 'Mining Ledger',
@@ -36,6 +36,7 @@ return [
     'active_extractions' => 'Active Extractions',
     'extraction_calendar' => 'Extraction Calendar',
     'moon_compositions' => 'Moon Compositions',
+    'moon_blueprints' => 'Blueprints',
     'moon_value_calculator' => 'Extraction Simulator',
     'metenox_cargo' => 'Metenox Cargo',
     'moon_planner' => 'Moon Planner',

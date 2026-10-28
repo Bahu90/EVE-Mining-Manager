@@ -18,6 +18,13 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 - **Removed the Reprocessing Calculator** tab.
 - **Fixed:** big figures in the EVE-RO look used a typewriter font; the picked period button looked like the others; `update-extractions` printed blank structure names.
 
+### Names that match the pages
+
+- The **Dashboard** menu item is now **Moon Mining**, which is what it shows; its **Details** button is now **Full Dashboard**, the all-ore dashboard.
+- Page headers match their menu items: Mining Ledger (both tabs), Moon Extractions, Moon Planner (planner, blueprints, simulator), Metenox Cargo, Theft Detection.
+- **One set of tabs on every moon page:** Extractions, Active, Calendar, Planner, Blueprints, Simulator, Compositions, Metenox Cargo, each shown only to who can open it.
+- **Moon Mining's refinery grid** shows the refineries mined at, most ISK first, with idle ones behind a button; it had shown every refinery as idle, because their 13-digit IDs were cut short when matched to the month's mining.
+
 ### Tax paid in ore
 
 - **Settings > Tax Rates: members pay their tax in ISK or in ore**, per corporation. In ore mode members see the ore their bill comes to, each ore at its own rate, on My Taxes, each bill and the dashboard banner, and pay with an item exchange contract to the corporation (compressed ore counts the same).

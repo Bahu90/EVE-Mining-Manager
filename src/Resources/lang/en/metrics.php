@@ -1,12 +1,12 @@
 <?php
 
 return [
-    'page_title' => 'Mining Metrics',
-    'eyebrow' => 'Mining metrics',
+    'page_title' => 'Moon Mining',
+    'eyebrow' => 'Moon mining',
     'subtitle' => 'Moon mining at :corp refineries',
     'anomalies_corporation' => 'Not counted here: :isk ISK mined in belts and anomalies this month',
     'anomalies_own' => 'Not counted here: :isk ISK you mined in belts and anomalies this month',
-    'details' => 'Details',
+    'details' => 'Full Dashboard',
     'my_mining' => 'My mining',
     'my_taxes' => 'My taxes',
 
@@ -56,6 +56,6 @@ return [
     'isk_hidden' => 'ISK and tax per player are shown to directors.',
 
     'nothing' => 'No moon mining was recorded at the corporation\'s refineries in this month.',
-    'not_configured' => 'Choose the Moon Owner Corporation under Settings > General to see Mining Metrics.',
+    'not_configured' => 'Choose the Moon Owner Corporation under Settings > General to see Moon Mining.',
     'open_settings' => 'Open settings',
 ];

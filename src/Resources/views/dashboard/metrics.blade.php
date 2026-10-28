@@ -1,5 +1,5 @@
 {{--
-    Mining Metrics: the corporation's moon mining for one month, laid out like
+    Moon Mining: the corporation's moon mining for one month, laid out like
     eve-ro.com/tools/mining. Data from MiningMetricsService, through
     DashboardController@metrics. Works in both looks; the EVE-RO look comes
     from partials.theme.
