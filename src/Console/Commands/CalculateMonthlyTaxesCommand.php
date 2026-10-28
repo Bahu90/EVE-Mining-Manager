@@ -60,10 +60,12 @@ class CalculateMonthlyTaxesCommand extends Command
             $this->warn("Failed to update overdue statuses: {$e->getMessage()}");
         }
 
-        // Check feature flag
+        // The setting switches off the scheduled run only. Somebody asking for
+        // a month, a period or a forced run means it, so that still runs.
         $features = $this->settingsService->getFeatureFlags();
-        if (!($features['auto_calculate_taxes'] ?? true)) {
-            $this->info('Feature disabled in settings. Skipping.');
+        $asked = $this->option('month') || $this->option('period-start') || $this->option('force');
+        if (!($features['auto_calculate_taxes'] ?? true) && !$asked) {
+            $this->info('Automatic tax calculation is switched off in Settings > Features. Skipping the scheduled run; pass --month to bill a month anyway.');
             return Command::SUCCESS;
         }
 
