@@ -46,6 +46,12 @@
             <h1 class="mmx-title">{{ strtoupper($month->format('M Y')) }}</h1>
             @if($data['configured'] ?? false)
                 <div class="mmx-subtitle">{{ trans('mining-manager::metrics.subtitle', ['corp' => $data['corporation']['name']]) }}</div>
+                @if(!empty($anomalies) && $anomalies['isk'] > 0)
+                    <a class="mmx-anomalies" href="{{ route('mining-manager.ledger.my-mining', ['source' => \MiningManager\Support\MiningSource::ALL]) }}">
+                        <i class="fas fa-meteor"></i>
+                        {{ trans('mining-manager::metrics.anomalies_' . $anomalies['scope'], ['isk' => $fmt($anomalies['isk'])]) }}
+                    </a>
+                @endif
             @endif
         </div>
         <div class="mmx-actions">

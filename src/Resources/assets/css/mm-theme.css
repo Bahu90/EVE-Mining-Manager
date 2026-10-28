@@ -730,3 +730,75 @@ body .mining-manager-wrapper ::-webkit-scrollbar-thumb,
 body .mining-dashboard ::-webkit-scrollbar-thumb {
     background: var(--mmx-line);
 }
+
+/* Moon / Anomalies / All switch in the EVE-RO look. */
+body .mm-source-switch .mm-source-btn {
+    font-family: var(--mmx-font);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-color: var(--mmx-line);
+    background: var(--mmx-surface-2);
+    color: var(--mmx-label);
+    border-radius: 0;
+}
+
+body .mm-source-switch .mm-source-btn:hover {
+    color: var(--mmx-text);
+    background: var(--mmx-surface-3);
+}
+
+body .mm-source-switch .mm-source-btn.active {
+    color: var(--mmx-ground);
+    background: var(--mmx-blue);
+    border-color: var(--mmx-blue);
+    font-weight: 600;
+}
+
+body .mm-source-switch .mm-source-hint {
+    color: var(--mmx-muted);
+}
+
+body .mm-source-tag.moon {
+    background: rgba(245, 165, 36, 0.15);
+    color: var(--mmx-amber);
+}
+
+body .mm-source-tag.anomalies {
+    background: rgba(0, 174, 255, 0.14);
+    color: var(--mmx-blue);
+}
+
+body .mm-source-split-bar { background: var(--mmx-surface-3); border-radius: 0; }
+body .mm-source-split-bar .moon { background: var(--mmx-amber); }
+body .mm-source-split-bar .anomalies { background: var(--mmx-blue); }
+body .mm-source-split-legend { color: var(--mmx-text-2); font-family: var(--mmx-font); }
+body .mm-source-split-legend .dot.moon { background: var(--mmx-amber); }
+body .mm-source-split-legend .dot.anomalies { background: var(--mmx-blue); }
+
+/* The picked period button is told apart from the others. */
+body .mm-period-switch .btn.active {
+    background: var(--mmx-blue) !important;
+    border-color: var(--mmx-blue) !important;
+    color: var(--mmx-ground) !important;
+    font-weight: 600;
+}
+
+body .mm-period-switch .btn:not(.active) {
+    background: var(--mmx-surface-2) !important;
+    border-color: var(--mmx-line) !important;
+    color: var(--mmx-label) !important;
+}
+
+/* Big figures in the theme's font, not the typewriter font the standard
+   look uses. Tabular figures keep columns of numbers lined up. */
+body .mining-dashboard .small-box h3,
+body .mining-manager-wrapper .small-box h3,
+body .mining-dashboard .info-box .info-box-number,
+body .mining-manager-wrapper .info-box .info-box-number,
+body .mining-dashboard .isk-value,
+body .mining-manager-wrapper .isk-value,
+body .tax-code-value {
+    font-family: var(--mmx-font) !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+}

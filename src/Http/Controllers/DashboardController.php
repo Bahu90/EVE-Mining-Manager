@@ -91,8 +91,28 @@ class DashboardController extends Controller
             unset($player);
         }
 
+        // The page counts moon mining only, as the corporation's website does.
+        // What was mined everywhere else that month is one figure beside it:
+        // the corporation's for directors, the user's own for members.
+        $anomalies = null;
+        if ($data['configured'] ?? false) {
+            $anomalyCharacters = $isDirector
+                ? app(\MiningManager\Services\Character\CorporationMembers::class)->characterIds((int) $data['corporation']['id'])
+                : array_values(array_unique($own));
+            $anomalies = [
+                'isk' => app(\MiningManager\Services\Ledger\SourceTotals::class)->totals(
+                    array_map('intval', $anomalyCharacters),
+                    $month->format('Y-m-d'),
+                    $month->copy()->endOfMonth()->format('Y-m-d'),
+                    \MiningManager\Support\MiningSource::ANOMALIES
+                )['value'],
+                'scope' => $isDirector ? 'corporation' : 'own',
+            ];
+        }
+
         return view('mining-manager::dashboard.metrics', [
             'data' => $data,
+            'anomalies' => $anomalies,
             'month' => $month,
             'isDirector' => $isDirector,
             'canSeeIsk' => $isDirector,

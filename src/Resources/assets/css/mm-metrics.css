@@ -600,3 +600,20 @@
     .mmx-search { width: 100%; }
     .mmx-years { border-right: 0; padding-right: 0; }
 }
+
+/* What the page leaves out: mining outside the corporation's refineries. */
+.mm-metrics .mmx-anomalies {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: var(--mmx-muted, #8b95a5);
+    text-decoration: none;
+}
+
+.mm-metrics .mmx-anomalies:hover {
+    color: var(--mmx-blue, #00aeff);
+}
+
+.mm-metrics .mmx-anomalies i {
+    margin-right: 4px;
+}

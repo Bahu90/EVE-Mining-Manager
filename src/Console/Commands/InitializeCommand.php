@@ -266,6 +266,9 @@ class InitializeCommand extends Command
             ['Cache market prices', 'mining-manager:cache-prices', ['--force' => true]],
             ['Process corporation observer mining data', 'mining-manager:process-ledger', ['--days' => 35]],
             ['Import character mining data', 'mining-manager:import-character-mining', ['--days' => 35]],
+            // Mining at our own refineries is in both logs. The daily cleanup only
+            // looks back a few days, so the 35 just imported are cleared here.
+            ['Remove mining counted twice', 'mining-manager:reconcile-personal-mining', ['--days' => 36]],
             ['Backfill ore type flags', 'mining-manager:backfill-ore-types', []],
             ['Update mining entry prices', 'mining-manager:update-ledger-prices', ['--days' => 35]],
             ['Generate daily summaries', 'mining-manager:update-daily-summaries', ['--month' => $currentMonth]],
@@ -362,6 +365,7 @@ class InitializeCommand extends Command
         $steps = [
             ['Process historical observer data', 'mining-manager:process-ledger', ['--days' => $days, '--recalculate' => true]],
             ['Import historical character mining', 'mining-manager:import-character-mining', ['--days' => $days]],
+            ['Remove historical mining counted twice', 'mining-manager:reconcile-personal-mining', ['--days' => $days + 1]],
             // --force because Artisan::call() runs non-interactively, so the
             // confirmation --all-unpriced now asks for would answer with its
             // default and quietly skip the whole step. The operator confirmed

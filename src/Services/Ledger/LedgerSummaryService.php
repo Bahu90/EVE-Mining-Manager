@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use MiningManager\Services\Tax\InvoiceCoverage;
 use MiningManager\Services\OreClassifier;
+use MiningManager\Support\MiningSource;
 
 class LedgerSummaryService
 {
@@ -969,9 +970,10 @@ class LedgerSummaryService
      *
      * @param string $month YYYY-MM format
      * @param int|null $corporationId
+     * @param string|null $source MiningSource to read what was mined for; null keeps the summaries' own totals
      * @return \Illuminate\Support\Collection
      */
-    public function getEnhancedMonthlySummaries(string $month, ?int $corporationId = null)
+    public function getEnhancedMonthlySummaries(string $month, ?int $corporationId = null, ?string $source = null)
     {
         $monthDate = Carbon::parse($month)->startOfMonth();
 
@@ -985,10 +987,51 @@ class LedgerSummaryService
         // Collect all character IDs once
         $characterIds = $summaries->pluck('character_id')->unique()->toArray();
 
+        // With a source picked, what was mined is read from the ledger for that
+        // source (Moon, Anomalies or both), split into Moon and Anomalies. Tax
+        // stays as the summaries have it: it covers all taxed mining.
+        if ($source !== null) {
+            $byCharacter = app(SourceTotals::class)->byCharacter(
+                array_map('intval', $characterIds),
+                $monthDate->format('Y-m-d'),
+                $monthDate->copy()->endOfMonth()->format('Y-m-d'),
+                $source
+            );
+
+            $summaries = $summaries->map(function ($summary) use ($byCharacter) {
+                $row = $byCharacter[(int) $summary->character_id] ?? null;
+
+                $summary->total_value = $row['value'] ?? 0.0;
+                $summary->total_quantity = $row['quantity'] ?? 0.0;
+                $summary->moon_value = $row['moon'] ?? 0.0;
+                $summary->anomalies_value = $row['anomalies'] ?? 0.0;
+                foreach (['moon_ore_value', 'ice_value', 'gas_value', 'abyssal_ore_value', 'triglavian_ore_value', 'regular_ore_value'] as $field) {
+                    $summary->{$field} = $row[$field] ?? 0.0;
+                }
+
+                return $summary;
+            });
+
+            if ($source !== MiningSource::ALL) {
+                $summaries = $summaries->filter(fn ($summary) => $summary->total_value > 0)->values();
+
+                if ($summaries->isEmpty()) {
+                    return $summaries;
+                }
+
+                $characterIds = $summaries->pluck('character_id')->unique()->toArray();
+            }
+        }
+
+        // The ore, volume and system lookups below follow the same source.
+        $scoped = function ($query) use ($source) {
+            return $source !== null ? MiningSource::scope($query, $source) : $query;
+        };
+
         // --- BATCH QUERY 1: Get all ore type_ids for all characters in one query ---
-        $allOreTypes = MiningLedger::whereIn('character_id', $characterIds)
+        $allOreTypes = $scoped(MiningLedger::whereIn('character_id', $characterIds)
             ->whereYear('date', $monthDate->year)
-            ->whereMonth('date', $monthDate->month)
+            ->whereMonth('date', $monthDate->month))
             ->select('character_id', 'type_id')
             ->distinct()
             ->get()
@@ -996,18 +1039,18 @@ class LedgerSummaryService
             ->map(fn($group) => $group->pluck('type_id')->toArray());
 
         // --- BATCH QUERY 2: Get total volume (m³) for all characters in one query ---
-        $allVolumes = MiningLedger::whereIn('character_id', $characterIds)
+        $allVolumes = $scoped(MiningLedger::whereIn('character_id', $characterIds)
             ->whereYear('date', $monthDate->year)
-            ->whereMonth('date', $monthDate->month)
+            ->whereMonth('date', $monthDate->month))
             ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
             ->selectRaw('character_id, SUM(mining_ledger.quantity * invTypes.volume) as total_volume_m3')
             ->groupBy('character_id')
             ->pluck('total_volume_m3', 'character_id');
 
         // --- BATCH QUERY 3: Get all system data for all characters in one query ---
-        $allSystemData = MiningLedger::whereIn('character_id', $characterIds)
+        $allSystemData = $scoped(MiningLedger::whereIn('character_id', $characterIds)
             ->whereYear('date', $monthDate->year)
-            ->whereMonth('date', $monthDate->month)
+            ->whereMonth('date', $monthDate->month))
             ->select('character_id', 'solar_system_id', DB::raw('SUM(total_value) as system_value'))
             ->groupBy('character_id', 'solar_system_id')
             ->get()
@@ -1174,6 +1217,8 @@ class LedgerSummaryService
                 $emptySummary->gas_value = 0;
                 $emptySummary->abyssal_ore_value = 0;
                 $emptySummary->triglavian_ore_value = 0;
+                $emptySummary->moon_value = 0;
+                $emptySummary->anomalies_value = 0;
                 $emptySummary->total_volume_m3 = 0;
                 $emptySummary->alt_characters = collect();
                 $emptySummary->alt_count = 0;
@@ -1218,6 +1263,8 @@ class LedgerSummaryService
             $mainSummary->gas_value = $userSummaries->sum('gas_value');
             $mainSummary->abyssal_ore_value = $userSummaries->sum('abyssal_ore_value');
             $mainSummary->triglavian_ore_value = $userSummaries->sum('triglavian_ore_value');
+            $mainSummary->moon_value = $userSummaries->sum('moon_value');
+            $mainSummary->anomalies_value = $userSummaries->sum('anomalies_value');
 
             // Merge ore types from all characters
             $allOreTypes = $userSummaries->pluck('ore_type_ids')->flatten()->unique()->values();

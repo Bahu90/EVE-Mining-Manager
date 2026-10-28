@@ -8,6 +8,16 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 
 **After updating**, run the migrations: `000038` encrypts the webhook URLs already saved, `000039` moves one schedule, `000040` adds the ore contract table, and `000041` moves price settings off Manager Core. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
 
+### Moon, anomalies or both
+
+- **A Moon / Anomalies / All switch** on My Mining, Mining Summary and each pilot's page. Moon counts ore mined at the corporation's refineries and is the default, so the figures match what the corporation website counts; Anomalies counts what pilots mined anywhere else; All adds both. Totals, best day, daily average, favourite ore, corp rank, charts, the per-pilot table and the activity list follow it, and it is remembered for the session.
+- **Moon and anomalies side by side:** a bar with both figures on each page, Moon ISK and Anomalies ISK columns per pilot under All, and a Moon or Anomaly tag on every ledger row.
+- **Tax does not change with the switch:** tax figures cover all taxed mining and say so.
+- **The Dashboard** names the month's anomaly mining beside its moon figures, linking to My Mining.
+- **`initialize` removes mining counted twice** (a pilot's own log repeating what the refinery reported) over everything it imported, not only the last 4 days.
+- **Removed the Reprocessing Calculator** tab.
+- **Fixed:** big figures in the EVE-RO look used a typewriter font; the picked period button looked like the others; `update-extractions` printed blank structure names.
+
 ### Tax paid in ore
 
 - **Settings > Tax Rates: members pay their tax in ISK or in ore**, per corporation. In ore mode members see the ore their bill comes to, each ore at its own rate, on My Taxes, each bill and the dashboard banner, and pay with an item exchange contract to the corporation (compressed ore counts the same).

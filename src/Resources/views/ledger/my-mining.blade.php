@@ -41,7 +41,7 @@
                     </h3>
                     <div class="card-tools">
                         @php $activePeriod = request('period', 'month'); @endphp
-                        <div class="btn-group">
+                        <div class="btn-group mm-period-switch">
                             <button type="button" class="btn btn-sm btn-primary {{ $activePeriod === 'week' ? 'active' : '' }}" onclick="changePeriod('week')">{{ trans('mining-manager::ledger.week') }}</button>
                             <button type="button" class="btn btn-sm btn-primary {{ $activePeriod === 'month' ? 'active' : '' }}" onclick="changePeriod('month')">{{ trans('mining-manager::ledger.month') }}</button>
                             <button type="button" class="btn btn-sm btn-primary {{ $activePeriod === 'year' ? 'active' : '' }}" onclick="changePeriod('year')">{{ trans('mining-manager::ledger.year') }}</button>
@@ -50,6 +50,10 @@
                     </div>
                 </div>
                 <div class="card-body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-2" style="gap: 8px;">
+                        @include('mining-manager::partials.source-switch', ['source' => $source ?? null])
+                    </div>
+                    @include('mining-manager::partials.source-split', ['split' => $split ?? []])
                     <div class="row">
                         {{-- Total Value Mined --}}
                         <div class="col-lg-3 col-md-6">
@@ -151,7 +155,8 @@
                             <div class="small-box bg-gradient-danger">
                                 <div class="inner">
                                     <h3>{{ number_format($stats['estimated_tax_this_month'] ?? 0, 0) }}</h3>
-                                    <p>{{ trans('mining-manager::ledger.estimated_tax_this_month') }} (ISK)</p>
+                                    <p>{{ trans('mining-manager::ledger.estimated_tax_this_month') }} (ISK)
+                                        <small class="mm-tax-note">{{ trans('mining-manager::ledger.source_tax_note') }}</small></p>
                                 </div>
                                 <div class="icon">
                                     <i class="fas fa-file-invoice-dollar"></i>
@@ -312,6 +317,10 @@
                                 <tr>
                                     <th>{{ trans('mining-manager::ledger.character') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::ledger.total_value') }}</th>
+                                    @if(($source ?? null) === \MiningManager\Support\MiningSource::ALL)
+                                        <th class="text-right">{{ trans('mining-manager::ledger.source_col_moon') }}</th>
+                                        <th class="text-right">{{ trans('mining-manager::ledger.source_col_anomalies') }}</th>
+                                    @endif
                                     <th class="text-right">{{ trans('mining-manager::ledger.quantity') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::ledger.volume') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::ledger.sessions') }}</th>
@@ -328,6 +337,10 @@
                                         {{ $charStat['name'] }}
                                     </td>
                                     <td class="text-right">{{ number_format($charStat['total_value'], 0) }} ISK</td>
+                                    @if(($source ?? null) === \MiningManager\Support\MiningSource::ALL)
+                                        <td class="text-right">{{ number_format($charStat['moon_value'] ?? 0, 0) }} ISK</td>
+                                        <td class="text-right">{{ number_format($charStat['anomalies_value'] ?? 0, 0) }} ISK</td>
+                                    @endif
                                     <td class="text-right">{{ number_format($charStat['quantity'], 0) }}</td>
                                     <td class="text-right">{{ number_format($charStat['total_volume_m3'] ?? 0, 0) }} m³</td>
                                     <td class="text-right">{{ $charStat['sessions'] }}</td>
@@ -418,6 +431,7 @@
                                                 <i class="fas fa-bolt"></i>
                                             </span>
                                         @endif
+                                        @include('mining-manager::partials.source-tag', ['row' => $activity])
                                     </td>
                                     <td class="text-right">{{ number_format($activity->quantity, 0) }}</td>
                                     <td class="text-right">{{ number_format($activity->quantity * ($activity->type->volume ?? 0), 2) }} m³</td>

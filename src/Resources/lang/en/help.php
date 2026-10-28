@@ -56,7 +56,7 @@ return [
     // Overview Section - Core Features
     'core_features' => 'Core Features',
     'feature_ledger' => 'Mining Ledger',
-    'feature_ledger_desc' => 'Track all mining activities with detailed volume, quantity, and ISK value breakdowns per character and corporation.',
+    'feature_ledger_desc' => 'Track all mining activities with detailed volume, quantity, and ISK value breakdowns per character and corporation. A Moon / Anomalies / All switch on My Mining, Mining Summary and each pilot\'s page shows ore mined at the corporation\'s refineries, ore from belts and anomalies, or both, with a bar splitting the two. Tax always covers all taxed mining, whichever is picked.',
     'feature_tax' => 'Tax Management',
     'feature_tax_desc' => 'Calculate and collect mining taxes with configurable rates, tax codes, wallet verification, and accumulated mode for alt grouping.',
     'feature_moon' => 'Moon Mining',

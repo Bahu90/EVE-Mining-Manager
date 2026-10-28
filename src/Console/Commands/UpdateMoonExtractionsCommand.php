@@ -95,7 +95,8 @@ class UpdateMoonExtractionsCommand extends Command
             $this->info("Updating structures for corporation ID: {$corporationId}");
         }
 
-        $structures = $query->get();
+        // The name lives on the universe structure, not the corporation one.
+        $structures = $query->with('info')->get();
 
         if ($structures->isEmpty()) {
             $this->warn('No refineries found');
@@ -110,7 +111,7 @@ class UpdateMoonExtractionsCommand extends Command
 
         foreach ($structures as $structure) {
             try {
-                $this->line("Processing structure: {$structure->name}");
+                $this->line('Processing structure: ' . $this->structureName($structure));
 
                 // The same import the Refresh button runs, so the two can never
                 // drift apart again.
@@ -126,7 +127,7 @@ class UpdateMoonExtractionsCommand extends Command
                 $created += $result['created'];
 
             } catch (\Exception $e) {
-                $this->error("Error processing structure {$structure->name}: {$e->getMessage()}");
+                $this->error('Error processing structure ' . $this->structureName($structure) . ": {$e->getMessage()}");
                 $errors++;
             }
         }
@@ -282,5 +283,11 @@ class UpdateMoonExtractionsCommand extends Command
         return Command::SUCCESS;
     }
 
-
+    /**
+     * The structure's name, or its ID when SeAT has not resolved the name.
+     */
+    private function structureName($structure): string
+    {
+        return $structure->info->name ?? ('Structure ' . $structure->structure_id);
+    }
 }

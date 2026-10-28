@@ -14,6 +14,8 @@ use MiningManager\Models\Setting;
 use Seat\Eveapi\Models\Industry\CharacterMining;
 use MiningManager\Services\Character\CharacterInfoService;
 use MiningManager\Services\Ledger\LedgerSummaryService;
+use MiningManager\Services\Ledger\SourceTotals;
+use MiningManager\Support\MiningSource;
 use MiningManager\Services\Pricing\OreValuationService;
 use MiningManager\Services\Configuration\SettingsManagerService;
 use MiningManager\Services\TypeIdRegistry;
@@ -251,6 +253,8 @@ class LedgerController extends Controller
                 'dateTo' => now()->format('Y-m-d'),
                 'characterId' => null,
                 'features' => $this->settingsService->getFeatureFlags(),
+                'source' => MiningSource::current(),
+                'split' => ['moon' => 0.0, 'anomalies' => 0.0],
                 'message' => trans('mining-manager::ledger.no_characters'),
             ]);
         }
@@ -260,6 +264,7 @@ class LedgerController extends Controller
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to', now()->format('Y-m-d'));
         $characterId = $request->get('character_id');
+        $source = MiningSource::current();
 
         // If no explicit date_from, calculate from period
         if (!$dateFrom) {
@@ -284,6 +289,7 @@ class LedgerController extends Controller
         $query = MiningLedger::with(['solarSystem', 'type'])
             ->whereIn('character_id', $userCharacters)
             ->whereBetween('date', [$dateFrom, $dateTo]);
+        MiningSource::scope($query, $source);
 
         // Filter by specific character if selected
         if ($characterId && $userCharacters->contains($characterId)) {
@@ -301,10 +307,17 @@ class LedgerController extends Controller
         );
 
         // Calculate personal statistics
-        $stats = $this->calculatePersonalStats($userCharacters, $dateFrom, $dateTo, $characterId);
+        $stats = $this->calculatePersonalStats($userCharacters, $dateFrom, $dateTo, $characterId, $source);
+
+        // Moon against anomalies for the same pilots and dates, whatever is picked.
+        $split = app(SourceTotals::class)->split(
+            $this->pickCharacters($userCharacters, $characterId),
+            $dateFrom,
+            $dateTo
+        );
 
         // Get chart data — map to variable names the view expects
-        $rawChartData = $this->getPersonalChartData($userCharacters, $dateFrom, $dateTo, $characterId);
+        $rawChartData = $this->getPersonalChartData($userCharacters, $dateFrom, $dateTo, $characterId, $source);
         $trendData = [
             'labels' => $rawChartData['daily']['labels'],
             'values' => $rawChartData['daily']['data'],
@@ -313,19 +326,22 @@ class LedgerController extends Controller
             'labels' => $rawChartData['topOres']['labels'],
             'values' => $rawChartData['topOres']['data'],
         ];
-        $monthlyComparison = $this->getMonthlyComparisonData($userCharacters, $characterId);
+        $monthlyComparison = $this->getMonthlyComparisonData($userCharacters, $characterId, $source);
 
         // Get recent activity for the table
-        $recentActivity = MiningLedger::with(['solarSystem', 'type'])
-            ->whereIn('character_id', $userCharacters)
-            ->whereBetween('date', [$dateFrom, $dateTo])
-            ->when($characterId && $userCharacters->contains($characterId), fn($q) => $q->where('character_id', $characterId))
+        $recentActivity = MiningSource::scope(
+            MiningLedger::with(['solarSystem', 'type'])
+                ->whereIn('character_id', $userCharacters)
+                ->whereBetween('date', [$dateFrom, $dateTo])
+                ->when($characterId && $userCharacters->contains($characterId), fn($q) => $q->where('character_id', $characterId)),
+            $source
+        )
             ->orderBy('date', 'desc')
             ->limit(20)
             ->get();
 
         // Per-character breakdown
-        $characterStats = $this->getCharacterBreakdown($userCharacters, $dateFrom, $dateTo);
+        $characterStats = $this->getCharacterBreakdown($userCharacters, $dateFrom, $dateTo, $source);
 
         // Get user's characters for filter - enrich with info
         $charactersInfo = $this->characterInfoService->getBatchCharacterInfo($userCharacters->toArray());
@@ -345,8 +361,27 @@ class LedgerController extends Controller
             'characters',
             'dateFrom',
             'dateTo',
-            'characterId'
+            'characterId',
+            'source',
+            'split'
         ));
+    }
+
+    /**
+     * The user's characters, or just the one picked when it is theirs.
+     *
+     * @param \Illuminate\Support\Collection|array $characterIds
+     * @return int[]
+     */
+    protected function pickCharacters($characterIds, $specificCharacterId = null): array
+    {
+        $ids = array_map('intval', is_array($characterIds) ? $characterIds : $characterIds->toArray());
+
+        if ($specificCharacterId && in_array((int) $specificCharacterId, $ids, true)) {
+            return [(int) $specificCharacterId];
+        }
+
+        return $ids;
     }
 
 
@@ -407,52 +442,36 @@ class LedgerController extends Controller
      * @param int|null $specificCharacterId
      * @return array
      */
-    protected function calculatePersonalStats($characterIds, $startDate, $endDate, $specificCharacterId = null)
+    protected function calculatePersonalStats($characterIds, $startDate, $endDate, $specificCharacterId = null, string $source = MiningSource::ALL)
     {
-        // Closure to build a fresh base query on raw table (for queries needing per-row data)
-        $baseQuery = fn() => MiningLedger::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId));
+        $picked = $this->pickCharacters($characterIds, $specificCharacterId);
 
-        // Single aggregation from pre-computed daily summaries
-        $agg = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
+        // What was mined, from the ledger, for the picked source.
+        $mined = app(SourceTotals::class)->totals($picked, $startDate, $endDate, $source);
+
+        // Tax and event discounts stay with the daily summaries: they cover all
+        // the mining the tax settings charge, whatever source is picked.
+        $agg = MiningLedgerDailySummary::whereIn('character_id', $picked)
             ->whereBetween('date', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
             ->selectRaw('
-                SUM(total_quantity) as total_quantity,
-                SUM(total_value) as total_value,
                 SUM(total_tax) as total_tax,
-                SUM(event_discount_total) as event_discount_total,
-                COUNT(DISTINCT date) as active_days,
-                MAX(total_value) as best_day_value
+                SUM(event_discount_total) as event_discount_total
             ')
             ->first();
 
-        $totalQuantity = (float) ($agg->total_quantity ?? 0);
-        $totalValue = (float) ($agg->total_value ?? 0);
-        $activeDays = (int) ($agg->active_days ?? 0);
-
-        // Total volume in m³ from raw ledger × invTypes.volume
-        $totalVolume = (float) $baseQuery()
-            ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
-            ->selectRaw('COALESCE(SUM(mining_ledger.quantity * invTypes.volume), 0) as total_volume')
-            ->value('total_volume');
-
-        // Best single day by value (from daily summaries)
-        $bestDayValue = (float) ($agg->best_day_value ?? 0);
+        $totalValue = $mined['value'];
+        $activeDays = $mined['active_days'];
 
         // Tax paid from mining_taxes (for selected date range): everything
         // paid, part payments included, on the same bills as the owed figure
         // below, so the outstanding figure compares like with like.
-        $paidTaxAmount = MiningTax::whereIn('character_id', $characterIds)
+        $paidTaxAmount = MiningTax::whereIn('character_id', $picked)
             ->whereBetween('month', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
             ->sum('amount_paid');
 
         // Tax owed from mining_taxes (authoritative, for selected date range)
-        $taxOwed = (float) MiningTax::whereIn('character_id', $characterIds)
+        $taxOwed = (float) MiningTax::whereIn('character_id', $picked)
             ->whereBetween('month', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
             ->sum('amount_owed');
 
         // Estimated tax: daily summaries first, then the raw ledger. When both
@@ -462,9 +481,8 @@ class LedgerController extends Controller
 
         if ($estimatedTax <= 0) {
             // Fallback: calculate from raw mining_ledger tax_amount
-            $estimatedTax = (float) MiningLedger::whereIn('character_id', $characterIds)
+            $estimatedTax = (float) MiningLedger::whereIn('character_id', $picked)
                 ->whereBetween('date', [$startDate, $endDate])
-                ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
                 ->sum('tax_amount');
         }
 
@@ -479,12 +497,12 @@ class LedgerController extends Controller
         );
 
         return [
-            'total_quantity' => $totalQuantity,
+            'total_quantity' => $mined['quantity'],
             'total_value' => $totalValue,
-            'total_volume' => $totalVolume,
+            'total_volume' => $mined['volume'],
             'total_sessions' => $activeDays,
             'active_days' => $activeDays,
-            'best_day_value' => $bestDayValue,
+            'best_day_value' => $mined['best_day'],
             'daily_average' => $activeDays > 0 ? round($totalValue / $activeDays, 0) : 0,
             'estimated_tax_this_month' => $estimatedTax,
             'total_tax_owed' => $effectiveTaxOwed,
@@ -493,8 +511,8 @@ class LedgerController extends Controller
             'event_discount_total' => (float) ($agg->event_discount_total ?? 0),
             'event_savings_all_time' => $eventSavingsAllTime,
             'mining_days' => $activeDays,
-            'favorite_ore' => $this->getFavoriteOre($characterIds, $startDate, $endDate, $specificCharacterId),
-            'corp_rank' => $this->calculateCorpRank($characterIds, $startDate, $endDate),
+            'favorite_ore' => $this->getFavoriteOre($characterIds, $startDate, $endDate, $specificCharacterId, $source),
+            'corp_rank' => $this->calculateCorpRank($characterIds, $startDate, $endDate, $source),
         ];
     }
 
@@ -507,39 +525,22 @@ class LedgerController extends Controller
      * @param int|null $specificCharacterId
      * @return array
      */
-    protected function getPersonalChartData($characterIds, $startDate, $endDate, $specificCharacterId = null)
+    protected function getPersonalChartData($characterIds, $startDate, $endDate, $specificCharacterId = null, string $source = MiningSource::ALL)
     {
-        // Use a closure to build a fresh query each time (avoids consumed builder bug)
-        $baseQuery = fn() => MiningLedger::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId));
+        $picked = $this->pickCharacters($characterIds, $specificCharacterId);
+        $totals = app(SourceTotals::class);
 
-        // Daily mining value from pre-computed daily summaries
-        $dailyData = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
-            ->selectRaw('date, SUM(total_value) as value')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        // Top ores by value (uses a fresh query builder)
-        $topOres = ($baseQuery())
-            ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
-            ->select('invTypes.typeName as name', DB::raw('SUM(total_value) as value'))
-            ->groupBy('invTypes.typeName')
-            ->orderByDesc('value')
-            ->limit(10)
-            ->get();
+        $daily = $totals->daily($picked, $startDate, $endDate, $source);
+        $topOres = $totals->topOres($picked, $startDate, $endDate, $source, 10);
 
         return [
             'daily' => [
-                'labels' => $dailyData->pluck('date')->map(fn($d) => Carbon::parse($d)->format('M d'))->toArray(),
-                'data' => $dailyData->pluck('value')->toArray(),
+                'labels' => array_map(fn ($d) => Carbon::parse($d)->format('M d'), array_keys($daily)),
+                'data' => array_values($daily),
             ],
             'topOres' => [
-                'labels' => $topOres->pluck('name')->toArray(),
-                'data' => $topOres->pluck('value')->toArray(),
+                'labels' => array_column($topOres, 'name'),
+                'data' => array_column($topOres, 'value'),
             ],
         ];
     }
@@ -553,25 +554,19 @@ class LedgerController extends Controller
      * @param int|null $specificCharacterId
      * @return array
      */
-    protected function getFavoriteOre($characterIds, $startDate, $endDate, $specificCharacterId = null)
+    protected function getFavoriteOre($characterIds, $startDate, $endDate, $specificCharacterId = null, string $source = MiningSource::ALL)
     {
-        $query = MiningLedger::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate]);
+        $top = app(SourceTotals::class)->topOres(
+            $this->pickCharacters($characterIds, $specificCharacterId),
+            $startDate,
+            $endDate,
+            $source,
+            1
+        );
 
-        if ($specificCharacterId) {
-            $query->where('character_id', $specificCharacterId);
-        }
-
-        $favorite = $query
-            ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
-            ->select('invTypes.typeName as name', DB::raw('SUM(total_value) as total'))
-            ->groupBy('invTypes.typeName', 'mining_ledger.type_id')
-            ->orderByDesc('total')
-            ->first();
-
-        return $favorite ? [
-            'name' => $favorite->name,
-            'value' => $favorite->total,
+        return $top ? [
+            'name' => $top[0]['name'],
+            'value' => $top[0]['value'],
         ] : [
             'name' => trans('mining-manager::ledger.no_data'),
             'value' => 0,
@@ -667,13 +662,12 @@ class LedgerController extends Controller
      * @param string $endDate
      * @return int|null
      */
-    protected function calculateCorpRank($characterIds, string $startDate, string $endDate): ?int
+    protected function calculateCorpRank($characterIds, string $startDate, string $endDate, string $source = MiningSource::ALL): ?int
     {
         $mine = array_map('intval', is_array($characterIds) ? $characterIds : $characterIds->toArray());
+        $sourceTotals = app(SourceTotals::class);
 
-        $myTotal = (float) MiningLedgerDailySummary::whereIn('character_id', $mine)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->sum('total_value');
+        $myTotal = $sourceTotals->totals($mine, $startDate, $endDate, $source)['value'];
 
         if ($myTotal <= 0) {
             return null;
@@ -697,11 +691,8 @@ class LedgerController extends Controller
             return 1;
         }
 
-        $totals = MiningLedgerDailySummary::whereIn('character_id', $others)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->select('character_id', DB::raw('SUM(total_value) as char_total'))
-            ->groupBy('character_id')
-            ->pluck('char_total', 'character_id');
+        $totals = collect($sourceTotals->byCharacter($others, $startDate, $endDate, $source))
+            ->map(fn ($row) => $row['value']);
 
         $accountOf = DB::table('refresh_tokens')
             ->whereIn('character_id', $others)
@@ -723,7 +714,7 @@ class LedgerController extends Controller
      * @param int|null $specificCharacterId
      * @return array
      */
-    protected function getMonthlyComparisonData($characterIds, ?int $specificCharacterId = null): array
+    protected function getMonthlyComparisonData($characterIds, ?int $specificCharacterId = null, string $source = MiningSource::ALL): array
     {
         $labels = [];
         $values = [];
@@ -733,18 +724,17 @@ class LedgerController extends Controller
         // over into the next month, showing one month twice and skipping
         // another.
         $sixMonthsAgo = now()->startOfMonth()->subMonths(5);
-        $monthlyData = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->where('date', '>=', $sixMonthsAgo)
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
-            ->selectRaw("DATE_FORMAT(date, '%Y-%m') as month_key, SUM(total_value) as total")
-            ->groupBy('month_key')
-            ->get()
-            ->keyBy('month_key');
+        $monthlyData = app(SourceTotals::class)->monthly(
+            $this->pickCharacters($characterIds, $specificCharacterId),
+            $sixMonthsAgo->format('Y-m-d'),
+            now()->endOfMonth()->format('Y-m-d'),
+            $source
+        );
 
         for ($i = 5; $i >= 0; $i--) {
             $month = now()->startOfMonth()->subMonths($i);
             $monthKey = $month->format('Y-m');
-            $value = $monthlyData->get($monthKey)->total ?? 0;
+            $value = $monthlyData[$monthKey] ?? 0;
 
             $labels[] = $month->format('M Y');
             $values[] = (float) $value;
@@ -761,40 +751,30 @@ class LedgerController extends Controller
      * @param string $endDate
      * @return array
      */
-    protected function getCharacterBreakdown($characterIds, string $startDate, string $endDate): array
+    protected function getCharacterBreakdown($characterIds, string $startDate, string $endDate, string $source = MiningSource::ALL): array
     {
-        $entries = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->selectRaw('
-                character_id,
-                SUM(total_value) as total_value,
-                SUM(total_quantity) as quantity,
-                COUNT(DISTINCT date) as sessions
-            ')
-            ->groupBy('character_id')
-            ->get();
+        $rows = app(SourceTotals::class)->byCharacter(
+            $this->pickCharacters($characterIds),
+            $startDate,
+            $endDate,
+            $source
+        );
 
-        // Get volume (m³) from raw ledger joined with invTypes
-        $volumes = MiningLedger::whereIn('mining_ledger.character_id', $characterIds)
-            ->whereBetween('mining_ledger.date', [$startDate, $endDate])
-            ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
-            ->selectRaw('mining_ledger.character_id, SUM(mining_ledger.quantity * invTypes.volume) as total_volume_m3')
-            ->groupBy('mining_ledger.character_id')
-            ->pluck('total_volume_m3', 'character_id');
+        $grandTotal = array_sum(array_column($rows, 'value'));
 
-        $grandTotal = $entries->sum('total_value');
+        $names = app(\MiningManager\Services\Character\CharacterNames::class)->many(array_keys($rows));
 
-        $names = app(\MiningManager\Services\Character\CharacterNames::class)->many($entries->pluck('character_id'));
-
-        return $entries->map(function ($entry) use ($grandTotal, $volumes, $names) {
+        return collect($rows)->map(function ($row, $characterId) use ($grandTotal, $names) {
             return [
-                'character_id' => $entry->character_id,
-                'name' => $names[(int) $entry->character_id]['name'] ?? "Character {$entry->character_id}",
-                'total_value' => (float) $entry->total_value,
-                'quantity' => (float) $entry->quantity,
-                'total_volume_m3' => (float) ($volumes->get($entry->character_id) ?? 0),
-                'sessions' => (int) $entry->sessions,
-                'percentage' => $grandTotal > 0 ? ($entry->total_value / $grandTotal) * 100 : 0,
+                'character_id' => $characterId,
+                'name' => $names[(int) $characterId]['name'] ?? "Character {$characterId}",
+                'total_value' => $row['value'],
+                'moon_value' => $row['moon'],
+                'anomalies_value' => $row['anomalies'],
+                'quantity' => $row['quantity'],
+                'total_volume_m3' => $row['volume'],
+                'sessions' => $row['days'],
+                'percentage' => $grandTotal > 0 ? ($row['value'] / $grandTotal) * 100 : 0,
             ];
         })->sortByDesc('total_value')->values()->toArray();
     }
@@ -1089,6 +1069,7 @@ class LedgerController extends Controller
         $groupByMain = $request->get('group_by_main', true); // Default to grouped view
         $sortBy = $request->get('sort_by', 'total_value'); // Default sort column
         $sortDir = $request->get('sort_dir', 'desc'); // Default sort direction
+        $source = MiningSource::current();
 
         // Validate month format
         try {
@@ -1099,7 +1080,7 @@ class LedgerController extends Controller
         }
 
         // Get enhanced monthly summaries (includes ore types and systems)
-        $summaries = $this->summaryService->getEnhancedMonthlySummaries($month, $corporationId);
+        $summaries = $this->summaryService->getEnhancedMonthlySummaries($month, $corporationId, $source);
 
         // Group by main character if requested
         if ($groupByMain) {
@@ -1140,6 +1121,8 @@ class LedgerController extends Controller
             'regular_ore_value' => $summaries->sum('regular_ore_value'),
             'ice_value' => $summaries->sum('ice_value'),
             'gas_value' => $summaries->sum('gas_value'),
+            'moon_value' => $summaries->sum('moon_value'),
+            'anomalies_value' => $summaries->sum('anomalies_value'),
         ];
 
         // Get corporations for filter dropdown
@@ -1168,6 +1151,7 @@ class LedgerController extends Controller
             'sortBy' => $sortBy,
             'sortDir' => $sortDir,
             'isDirector' => $isDirector,
+            'source' => $source,
         ]);
     }
 
@@ -1242,6 +1226,7 @@ class LedgerController extends Controller
         $includeAlts = $request->get('include_alts', false); // Option to include alt characters
         $sortBy = $request->get('sort_by', 'date'); // Default sort column
         $sortDir = $request->get('sort_dir', 'desc'); // Default sort direction
+        $source = MiningSource::current();
 
         try {
             $monthDate = Carbon::parse($month)->startOfMonth();
@@ -1299,10 +1284,13 @@ class LedgerController extends Controller
         }
 
         // Get all mining entries for these characters with pagination
-        $entries = MiningLedger::with(['solarSystem', 'type'])
-            ->whereIn('character_id', $characterIds)
-            ->whereYear('date', $monthDate->year)
-            ->whereMonth('date', $monthDate->month)
+        $entries = MiningSource::scope(
+            MiningLedger::with(['solarSystem', 'type'])
+                ->whereIn('character_id', $characterIds)
+                ->whereYear('date', $monthDate->year)
+                ->whereMonth('date', $monthDate->month),
+            $source
+        )
             ->orderBy($sortBy, $sortDir)
             ->orderBy('id', 'desc')
             ->paginate(50)
@@ -1311,12 +1299,16 @@ class LedgerController extends Controller
                 'include_alts' => $includeAlts ? '1' : '0',
                 'sort_by' => $sortBy,
                 'sort_dir' => $sortDir,
+                'source' => $source,
             ]);
 
         // Calculate totals for all included characters
-        $totals = MiningLedger::whereIn('mining_ledger.character_id', $characterIds)
-            ->whereYear('mining_ledger.date', $monthDate->year)
-            ->whereMonth('mining_ledger.date', $monthDate->month)
+        $totals = MiningSource::scope(
+            MiningLedger::whereIn('mining_ledger.character_id', $characterIds)
+                ->whereYear('mining_ledger.date', $monthDate->year)
+                ->whereMonth('mining_ledger.date', $monthDate->month),
+            $source
+        )
             ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
             ->selectRaw('
                 SUM(mining_ledger.quantity) as total_quantity,
@@ -1333,7 +1325,15 @@ class LedgerController extends Controller
             ->whereMonth('date', $monthDate->month)
             ->sum('total_tax');
 
+        $split = app(SourceTotals::class)->split(
+            array_map('intval', $characterIds),
+            $monthDate->format('Y-m-d'),
+            $monthDate->copy()->endOfMonth()->format('Y-m-d')
+        );
+
         return view('mining-manager::ledger.character-details', [
+            'source' => $source,
+            'split' => $split,
             'characterId' => $characterId,
             'characterInfo' => $characterInfo,
             'entries' => $entries,

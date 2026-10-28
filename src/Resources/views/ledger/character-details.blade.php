@@ -85,6 +85,12 @@
         </div>
     </div>
 
+    {{-- WHERE IT WAS MINED --}}
+    <div class="mb-2">
+        @include('mining-manager::partials.source-switch', ['source' => $source ?? null])
+    </div>
+    @include('mining-manager::partials.source-split', ['split' => $split ?? []])
+
     {{-- SUMMARY STATISTICS --}}
     <div class="row mb-3">
         <div class="col-lg col-md-6">
@@ -224,6 +230,7 @@
                                         @else
                                             <span class="badge badge-secondary">{{ trans('mining-manager::ledger.regular_ore') }}</span>
                                         @endif
+                                        @include('mining-manager::partials.source-tag', ['row' => $entry])
                                     </td>
                                     <td class="text-right">{{ number_format($entry->quantity, 0) }}</td>
                                     <td class="text-right">{{ number_format($entry->quantity * ($entry->type->volume ?? 0), 2) }} m³</td>

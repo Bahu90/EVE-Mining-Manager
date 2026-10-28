@@ -4122,3 +4122,95 @@ div.mining-manager-wrapper div[class*="col-"] div.card-body {
 .recent-changes-box a {
     color: #a5b4fc !important;
 }
+
+/* Moon / Anomalies / All switch, shared by the mining pages. */
+.mm-source-switch {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+}
+
+.mm-source-switch .mm-source-btn {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #c9d1d9;
+    background: transparent;
+}
+
+.mm-source-switch .mm-source-btn:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mm-source-switch .mm-source-btn.active {
+    color: #fff;
+    background: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.mm-source-switch .mm-source-hint {
+    color: #8b949e;
+}
+
+.mm-source-tag {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.mm-source-tag.moon {
+    background: rgba(255, 193, 7, 0.18);
+    color: #ffc107;
+}
+
+.mm-source-tag.anomalies {
+    background: rgba(23, 162, 184, 0.18);
+    color: #5bc0de;
+}
+
+/* Moon against anomalies, as one bar with its two figures. */
+.mm-source-split {
+    margin: 4px 0 16px;
+}
+
+.mm-source-split-bar {
+    display: flex;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mm-source-split-bar .moon { background: #ffc107; }
+.mm-source-split-bar .anomalies { background: #17a2b8; }
+
+.mm-source-split-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin-top: 6px;
+    font-size: 0.85rem;
+    color: #c9d1d9;
+}
+
+.mm-source-split-legend .dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.mm-source-split-legend .dot.moon { background: #ffc107; }
+.mm-source-split-legend .dot.anomalies { background: #17a2b8; }
+
+.mm-tax-note {
+    display: block;
+    margin-top: 2px;
+    font-size: 0.75rem;
+    opacity: 0.75;
+}

@@ -289,4 +289,19 @@ return [
     // Reprocessing: names invTypes could not place
 
     'not_taxed' => 'Not taxed',
+
+    // Where the mining happened: the Moon / Anomalies / All switch
+    'source_label' => 'Where it was mined',
+    'source_moon' => 'Moon',
+    'source_anomalies' => 'Anomalies',
+    'source_all' => 'All',
+    'source_hint_moon' => 'Ore mined at the corporation\'s refineries.',
+    'source_hint_anomalies' => 'Ore from belts, anomalies and other corporations\' moons.',
+    'source_hint_all' => 'Moon and anomalies together.',
+    'source_split' => 'Moon :moon · Anomalies :anomalies',
+    'source_col_moon' => 'Moon ISK',
+    'source_col_anomalies' => 'Anomalies ISK',
+    'source_tag_moon' => 'Moon',
+    'source_tag_anomalies' => 'Anomaly',
+    'source_tax_note' => 'Tax covers all your mining under the tax settings, whichever view is picked.',
 ];

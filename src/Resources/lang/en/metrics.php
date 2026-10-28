@@ -4,6 +4,8 @@ return [
     'page_title' => 'Mining Metrics',
     'eyebrow' => 'Mining metrics',
     'subtitle' => 'Moon mining at :corp refineries',
+    'anomalies_corporation' => 'Not counted here: :isk ISK mined in belts and anomalies this month',
+    'anomalies_own' => 'Not counted here: :isk ISK you mined in belts and anomalies this month',
     'details' => 'Details',
     'my_mining' => 'My mining',
     'my_taxes' => 'My taxes',

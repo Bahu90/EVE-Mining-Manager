@@ -118,6 +118,7 @@
                 </div>
                 <div class="card-body">
                     <form method="GET" action="{{ route('mining-manager.ledger.summary') }}" id="filterForm">
+                        <input type="hidden" name="source" value="{{ $source ?? \MiningManager\Support\MiningSource::DEFAULT }}">
                         <div class="row">
                             {{-- Month Selector --}}
                             <div class="col-md-3">
@@ -189,6 +190,10 @@
                     </h3>
                 </div>
                 <div class="card-body">
+                    <div class="mb-2">
+                        @include('mining-manager::partials.source-switch', ['source' => $source ?? null])
+                    </div>
+                    @include('mining-manager::partials.source-split', ['split' => ['moon' => $totals['moon_value'] ?? 0, 'anomalies' => $totals['anomalies_value'] ?? 0]])
                     <div class="row">
                         {{-- Total Value --}}
                         <div class="col-lg col-md-6">
@@ -214,6 +219,7 @@
                                     <span class="info-box-text">{{ trans('mining-manager::ledger.total_tax') }}</span>
                                     <span class="info-box-number">{{ number_format($totals['total_tax'], 0) }}</span>
                                     <small>ISK</small>
+                                    <small class="mm-tax-note">{{ trans('mining-manager::ledger.source_tax_note') }}</small>
                                     @if(!empty($totals['event_discount_total']) && $totals['event_discount_total'] > 0)
                                         <small class="d-block text-light" title="ISK waived this month due to active event modifiers. Already included in total_tax — shown here for transparency.">
                                             <i class="fas fa-gift"></i>
@@ -302,6 +308,10 @@
                                     {{ trans('mining-manager::ledger.total_value') }}
                                     <i class="fas fa-sort{{ $sortBy === 'total_value' ? ($sortDir === 'asc' ? '-up active' : '-down active') : '' }} sort-icon{{ $sortBy === 'total_value' ? ' active' : '' }}"></i>
                                 </th>
+                                @if(($source ?? null) === \MiningManager\Support\MiningSource::ALL)
+                                    <th class="text-right">{{ trans('mining-manager::ledger.source_col_moon') }}</th>
+                                    <th class="text-right">{{ trans('mining-manager::ledger.source_col_anomalies') }}</th>
+                                @endif
                                 <th>{{ trans('mining-manager::ledger.primary_system') }}</th>
                                 <th class="text-center" style="width: 120px;">{{ trans('mining-manager::ledger.actions') }}</th>
                             </tr>
@@ -356,6 +366,10 @@
                                     <td class="text-right">{{ number_format($summary->total_quantity, 0) }}</td>
                                     <td class="text-right">{{ number_format($summary->total_volume_m3 ?? 0, 0) }} m³</td>
                                     <td class="text-right"><strong>{{ number_format($summary->total_value, 0) }} ISK</strong></td>
+                                    @if(($source ?? null) === \MiningManager\Support\MiningSource::ALL)
+                                        <td class="text-right">{{ number_format($summary->moon_value ?? 0, 0) }} ISK</td>
+                                        <td class="text-right">{{ number_format($summary->anomalies_value ?? 0, 0) }} ISK</td>
+                                    @endif
                                     <td>
                                         @if(isset($summary->primary_system))
                                             {{ $summary->primary_system->solarSystem->name ?? 'Unknown' }}
@@ -379,7 +393,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="text-center">
+                                    <td colspan="{{ ($source ?? null) === \MiningManager\Support\MiningSource::ALL ? 9 : 7 }}" class="text-center">
                                         <em>{{ trans('mining-manager::ledger.no_mining_data') }}</em>
                                     </td>
                                 </tr>
