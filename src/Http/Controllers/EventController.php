@@ -2,6 +2,7 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Seat\Web\Http\Controllers\Controller;
@@ -204,7 +205,7 @@ class EventController extends Controller
             
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error creating event: ' . $e->getMessage());
+                ->with('error', 'Error creating event: ' . PublicError::message($e));
         }
     }
 
@@ -243,7 +244,7 @@ class EventController extends Controller
             ]);
             
             return redirect()->route('mining-manager.events.index')
-                ->with('error', 'Error loading event: ' . $e->getMessage());
+                ->with('error', 'Error loading event: ' . PublicError::message($e));
         }
     }
 
@@ -375,7 +376,7 @@ class EventController extends Controller
             
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating event: ' . $e->getMessage());
+                ->with('error', 'Error updating event: ' . PublicError::message($e));
         }
     }
 
@@ -400,7 +401,7 @@ class EventController extends Controller
             ]);
             
             return redirect()->back()
-                ->with('error', 'Error deleting event: ' . $e->getMessage());
+                ->with('error', 'Error deleting event: ' . PublicError::message($e));
         }
     }
 
@@ -459,7 +460,7 @@ class EventController extends Controller
             ]);
 
             return redirect()->back()
-                ->with('error', 'Error starting event: ' . $e->getMessage());
+                ->with('error', 'Error starting event: ' . PublicError::message($e));
         }
     }
 
@@ -518,7 +519,7 @@ class EventController extends Controller
             ]);
 
             return redirect()->back()
-                ->with('error', 'Error completing event: ' . $e->getMessage());
+                ->with('error', 'Error completing event: ' . PublicError::message($e));
         }
     }
 
@@ -692,7 +693,7 @@ class EventController extends Controller
             ]);
             
             return redirect()->back()
-                ->with('error', 'Error updating event data: ' . $e->getMessage());
+                ->with('error', 'Error updating event data: ' . PublicError::message($e));
         }
     }
 

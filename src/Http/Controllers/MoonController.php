@@ -2,6 +2,8 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Http\Controllers\Concerns\GuardsDataExport;
@@ -616,7 +618,7 @@ class MoonController extends Controller
                 ->with('success', 'Extraction data updated successfully');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error updating extraction: ' . $e->getMessage());
+                ->with('error', 'Error updating extraction: ' . PublicError::message($e));
         }
     }
 
@@ -634,7 +636,7 @@ class MoonController extends Controller
                 ->with('success', "Updated {$result['updated']} extractions, created {$result['created']} new extractions");
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error refreshing extractions: ' . $e->getMessage());
+                ->with('error', 'Error refreshing extractions: ' . PublicError::message($e));
         }
     }
 
@@ -1014,7 +1016,7 @@ class MoonController extends Controller
         $callback = function () use ($result, $qualityLabels) {
             $file = fopen('php://output', 'w');
 
-            fputcsv($file, [
+            CsvSafe::put($file, [
                 'Moon', 'Moon ID', 'System', 'Security', 'Constellation', 'Region',
                 'Class', 'Moon ore %', 'R4 %', 'R8 %', 'R16 %', 'R32 %', 'R64 %', 'Ores',
                 'Days', 'Ore value (ISK)', 'Refined value (ISK)', 'Quality', 'Top % of class',
@@ -1031,7 +1033,7 @@ class MoonController extends Controller
                     $ores[] = $ore['name'] . ' ' . $ore['percent'] . '%';
                 }
 
-                fputcsv($file, [
+                CsvSafe::put($file, [
                     $row['name'],
                     $row['moon_id'],
                     $row['system'],
@@ -1453,8 +1455,31 @@ class MoonController extends Controller
                     ->with('error', 'Cannot report jackpot — the chunk has not arrived yet.');
             }
 
-            // Get the reporting character
-            $characterId = auth()->user()->main_character_id ?? auth()->user()->id;
+            // Only the corporation's own moons, and only while the chunk could
+            // still be on the field. Reporting fires a Discord ping, so any
+            // member could otherwise mark any extraction SeAT knows about,
+            // from any corporation or from months ago.
+            $moonOwnerCorpId = app(\MiningManager\Services\Configuration\SettingsManagerService::class)
+                ->getTaxProgramCorporationId();
+            if ($moonOwnerCorpId && (int) $extraction->corporation_id !== (int) $moonOwnerCorpId) {
+                return redirect()->route('mining-manager.moon.show', $extraction->id)
+                    ->with('error', 'Jackpots can only be reported for your corporation\'s own moons.');
+            }
+            if ($extraction->chunk_arrival_time->lt(now()->subDays(7))) {
+                return redirect()->route('mining-manager.moon.show', $extraction->id)
+                    ->with('error', 'This chunk arrived more than 7 days ago, so it can no longer be reported as a jackpot.');
+            }
+
+            // Get the reporting character: the user's main, or failing that
+            // their first linked character. (This used to fall back to the
+            // SeAT user ID, which is not a character ID at all.)
+            $user = auth()->user();
+            $characterId = $user->main_character_id
+                ?? optional($user->characters->first())->character_id;
+            if (!$characterId) {
+                return redirect()->route('mining-manager.moon.show', $extraction->id)
+                    ->with('error', 'Link a character to your SeAT account to report a jackpot.');
+            }
             $characterName = DB::table('character_infos')
                 ->where('character_id', $characterId)
                 ->value('name') ?? 'Unknown';
@@ -1539,7 +1564,7 @@ class MoonController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error reporting jackpot: ' . $e->getMessage());
+                ->with('error', 'Error reporting jackpot: ' . PublicError::message($e));
         }
     }
 

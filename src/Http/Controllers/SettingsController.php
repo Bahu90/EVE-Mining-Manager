@@ -2,6 +2,7 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\PublicError;
 use MiningManager\Services\Security\WebhookUrlPolicy;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
@@ -667,7 +668,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating settings: ' . $e->getMessage());
+                ->with('error', 'Error updating settings: ' . PublicError::message($e));
         }
     }
 
@@ -916,7 +917,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating notification settings: ' . $e->getMessage());
+                ->with('error', 'Error updating notification settings: ' . PublicError::message($e));
         }
     }
 
@@ -1062,7 +1063,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating tax rates: ' . $e->getMessage());
+                ->with('error', 'Error updating tax rates: ' . PublicError::message($e));
         }
     }
 
@@ -1223,7 +1224,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating pricing settings: ' . $e->getMessage());
+                ->with('error', 'Error updating pricing settings: ' . PublicError::message($e));
         }
     }
 
@@ -1295,7 +1296,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating dashboard settings: ' . $e->getMessage());
+                ->with('error', 'Error updating dashboard settings: ' . PublicError::message($e));
         }
     }
 
@@ -1384,7 +1385,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error updating feature settings: ' . $e->getMessage());
+                ->with('error', 'Error updating feature settings: ' . PublicError::message($e));
         }
     }
 
@@ -1402,7 +1403,7 @@ class SettingsController extends Controller
                 ->with('success', 'All settings reset to defaults successfully');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error resetting settings: ' . $e->getMessage());
+                ->with('error', 'Error resetting settings: ' . PublicError::message($e));
         }
     }
 
@@ -1426,7 +1427,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error exporting settings: ' . $e->getMessage(),
+                'message' => 'Error exporting settings: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1475,7 +1476,7 @@ class SettingsController extends Controller
                 ->with('success', $message);
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error importing settings: ' . $e->getMessage());
+                ->with('error', 'Error importing settings: ' . PublicError::message($e));
         }
     }
 
@@ -1497,7 +1498,7 @@ class SettingsController extends Controller
                 ->with('success', 'All caches cleared successfully');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error clearing cache: ' . $e->getMessage());
+                ->with('error', 'Error clearing cache: ' . PublicError::message($e));
         }
     }
 
@@ -1541,7 +1542,7 @@ class SettingsController extends Controller
             return response()->json($corporations);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Failed to search corporations: ' . $e->getMessage()
+                'error' => 'Failed to search corporations: ' . PublicError::message($e)
             ], 500);
         }
     }
@@ -1662,7 +1663,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error creating webhook: ' . $e->getMessage(),
+                'message' => 'Error creating webhook: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1745,7 +1746,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error updating webhook: ' . $e->getMessage(),
+                'message' => 'Error updating webhook: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1773,7 +1774,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error toggling webhook: ' . $e->getMessage(),
+                'message' => 'Error toggling webhook: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1808,7 +1809,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error testing webhook: ' . $e->getMessage(),
+                'message' => 'Error testing webhook: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1832,7 +1833,7 @@ class SettingsController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error deleting webhook: ' . $e->getMessage(),
+                'message' => 'Error deleting webhook: ' . PublicError::message($e),
             ], 500);
         }
     }

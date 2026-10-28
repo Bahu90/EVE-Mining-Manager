@@ -1781,15 +1781,24 @@ function exportJSON() {
     link.click();
 }
 
+// Quote a CSV cell, and neutralise a leading = + - @ so spreadsheets read it as text.
+function csvCell(value) {
+    let text = String(value === null || value === undefined ? '' : value);
+    if (/^[=+\-@\t\r]/.test(text) && isNaN(Number(text))) {
+        text = "'" + text;
+    }
+    return '"' + text.replace(/"/g, '""') + '"';
+}
+
 function exportCSV() {
     if (!simulationResults) return;
 
     let csv = 'Ore Name,Percentage,Volume (m3),Unit Price (ISK),Ore Value (ISK),Refined Value (ISK)\n';
     simulationResults.composition.forEach(ore => {
-        csv += `"${ore.ore_name}",${ore.percentage},${ore.volume},${ore.unit_price},${ore.value},${ore.refined_value}\n`;
+        csv += `${csvCell(ore.ore_name)},${ore.percentage},${ore.volume},${ore.unit_price},${ore.value},${ore.refined_value}\n`;
     });
     csv += `\nTotal,,${simulationResults.total_volume_m3},,${simulationResults.total_value},${simulationResults.total_refined_value}\n`;
-    csv += `Moon Name,${simulationResults.moon_name}\n`;
+    csv += `Moon Name,${csvCell(simulationResults.moon_name)}\n`;
     csv += `Extraction Days,${simulationResults.extraction_days}\n`;
 
     const blob = new Blob([csv], { type: 'text/csv' });

@@ -2,6 +2,7 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Services\Analytics\MiningAnalyticsService;
@@ -881,9 +882,9 @@ class AnalyticsController extends Controller
                 $out = fopen('php://output', 'w');
                 // fputcsv handles RFC 4180 quoting / escaping for us;
                 // safer than the manual str_replace approach below.
-                fputcsv($out, $headers);
+                CsvSafe::put($out, $headers);
                 foreach ($data as $row) {
-                    fputcsv($out, $row);
+                    CsvSafe::put($out, $row);
                 }
                 fclose($out);
             }, $filename, [

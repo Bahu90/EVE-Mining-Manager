@@ -2,6 +2,8 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Seat\Web\Http\Controllers\Controller;
@@ -967,7 +969,7 @@ class LedgerController extends Controller
             $handle = fopen('php://output', 'w');
 
             // CSV Headers
-            fputcsv($handle, [
+            CsvSafe::put($handle, [
                 'Date',
                 'Character',
                 'Ore Type',
@@ -982,7 +984,7 @@ class LedgerController extends Controller
             $names = app(\MiningManager\Services\Character\CharacterNames::class);
             $query->chunkByIdDesc(500, function ($entries) use ($handle, $names) {
                 foreach ($entries as $entry) {
-                    fputcsv($handle, [
+                    CsvSafe::put($handle, [
                         Carbon::parse($entry->date)->format('Y-m-d H:i:s'),
                         $names->nameOrId($entry->character_id),
                         $entry->type->name ?? 'Unknown',
@@ -1037,7 +1039,7 @@ class LedgerController extends Controller
             $handle = fopen('php://output', 'w');
 
             // CSV Headers
-            fputcsv($handle, [
+            CsvSafe::put($handle, [
                 'Date',
                 'Character',
                 'Ore Type',
@@ -1052,7 +1054,7 @@ class LedgerController extends Controller
             $names = app(\MiningManager\Services\Character\CharacterNames::class);
             $query->chunkByIdDesc(500, function ($entries) use ($handle, $names) {
                 foreach ($entries as $entry) {
-                    fputcsv($handle, [
+                    CsvSafe::put($handle, [
                         Carbon::parse($entry->date)->format('Y-m-d H:i:s'),
                         $names->nameOrId($entry->character_id),
                         $entry->type->name ?? 'Unknown',
@@ -1413,7 +1415,7 @@ class LedgerController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load daily summaries: ' . $e->getMessage(),
+                'message' => 'Failed to load daily summaries: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1466,7 +1468,7 @@ class LedgerController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load detailed entries: ' . $e->getMessage(),
+                'message' => 'Failed to load detailed entries: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -1514,7 +1516,7 @@ class LedgerController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to load system details: ' . $e->getMessage(),
+                'message' => 'Failed to load system details: ' . PublicError::message($e),
             ], 500);
         }
     }

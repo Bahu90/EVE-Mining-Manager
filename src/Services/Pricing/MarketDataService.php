@@ -2,6 +2,7 @@
 
 namespace MiningManager\Services\Pricing;
 
+use MiningManager\Services\Security\CsvSafe;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -538,11 +539,11 @@ class MarketDataService
             $file = fopen($filepath, 'w');
             
             // Write header
-            fputcsv($file, ['Type ID', 'Price', 'Last Updated']);
+            CsvSafe::put($file, ['Type ID', 'Price', 'Last Updated']);
             
             // Write data
             foreach ($prices as $typeId => $price) {
-                fputcsv($file, [
+                CsvSafe::put($file, [
                     $typeId,
                     $price,
                     Carbon::now()->toDateTimeString()

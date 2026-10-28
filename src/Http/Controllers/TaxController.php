@@ -2,6 +2,8 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Seat\Web\Http\Controllers\Controller;
@@ -876,7 +878,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.calculation_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1158,7 +1160,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.verification_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1200,7 +1202,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.auto_match_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1320,7 +1322,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.error_marking_paid'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1385,7 +1387,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.manual_entry_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1447,7 +1449,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.error_sending_reminder'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1538,7 +1540,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.error_bulk_marking'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -1623,7 +1625,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.error_bulk_reminders'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -2085,7 +2087,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.code_generation_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -2180,7 +2182,7 @@ class TaxController extends Controller
                     $results['failed']++;
                     $results['errors'][] = [
                         'transaction_id' => $transactionId,
-                        'error' => $e->getMessage(),
+                        'error' => PublicError::message($e),
                     ];
                 }
             }
@@ -2208,7 +2210,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.verification_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -2327,7 +2329,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.assign_payment_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -2373,7 +2375,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.unassign_failed'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -2446,7 +2448,7 @@ class TaxController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to dismiss transaction: ' . $e->getMessage(),
+                'message' => 'Failed to dismiss transaction: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -2969,7 +2971,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.code_creation_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3084,7 +3086,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.code_deletion_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3167,7 +3169,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.status_update_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3219,7 +3221,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.deletion_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3296,11 +3298,11 @@ class TaxController extends Controller
                 $file = fopen('php://output', 'w');
 
                 // Headers
-                fputcsv($file, ['Character', 'Period', 'Period Type', 'Month', 'Amount Owed', 'Amount Paid', 'Status', 'Due Date', 'Paid At']);
+                CsvSafe::put($file, ['Character', 'Period', 'Period Type', 'Month', 'Amount Owed', 'Amount Paid', 'Status', 'Due Date', 'Paid At']);
 
                 // Data rows
                 foreach ($taxes as $tax) {
-                    fputcsv($file, [
+                    CsvSafe::put($file, [
                         app(\MiningManager\Services\Character\CharacterNames::class)->nameOrId($tax->character_id),
                         $tax->formatted_period ?? Carbon::parse($tax->month)->format('F Y'),
                         $tax->period_type ?? 'monthly',
@@ -3324,7 +3326,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.export_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3386,10 +3388,10 @@ class TaxController extends Controller
             $callback = function() use ($taxes) {
                 $file = fopen('php://output', 'w');
 
-                fputcsv($file, ['Character', 'Period', 'Period Type', 'Month', 'Amount Owed', 'Amount Paid', 'Status', 'Due Date', 'Paid At']);
+                CsvSafe::put($file, ['Character', 'Period', 'Period Type', 'Month', 'Amount Owed', 'Amount Paid', 'Status', 'Due Date', 'Paid At']);
 
                 foreach ($taxes as $tax) {
-                    fputcsv($file, [
+                    CsvSafe::put($file, [
                         app(\MiningManager\Services\Character\CharacterNames::class)->nameOrId($tax->character_id),
                         $tax->formatted_period ?? Carbon::parse($tax->month)->format('F Y'),
                         $tax->period_type ?? 'monthly',
@@ -3413,7 +3415,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.export_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }
@@ -3466,7 +3468,7 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.receipt_error'),
-                'error' => $e->getMessage(),
+                'error' => PublicError::message($e),
             ], 500);
         }
     }

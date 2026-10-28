@@ -2,6 +2,7 @@
 
 namespace MiningManager\Services\Analytics;
 
+use MiningManager\Services\Security\CsvSafe;
 use MiningManager\Models\MiningReport;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Models\MiningLedgerDailySummary;
@@ -289,23 +290,23 @@ class ReportGenerationService
         $csv = fopen('php://temp', 'r+');
 
         // Write miners data
-        fputcsv($csv, ['Top Miners']);
-        fputcsv($csv, ['Name', 'Quantity', 'Value (ISK)']);
+        CsvSafe::put($csv, ['Top Miners']);
+        CsvSafe::put($csv, ['Name', 'Quantity', 'Value (ISK)']);
         foreach ($data['miners']['top_miners'] as $miner) {
-            fputcsv($csv, [
+            CsvSafe::put($csv, [
                 $miner['name'],
                 $miner['quantity'],
                 number_format($miner['value'], 2),
             ]);
         }
 
-        fputcsv($csv, []); // Empty line
+        CsvSafe::put($csv, []); // Empty line
 
         // Write ore types data
-        fputcsv($csv, ['Ore Types']);
-        fputcsv($csv, ['Ore Name', 'Quantity', 'Value (ISK)']);
+        CsvSafe::put($csv, ['Ore Types']);
+        CsvSafe::put($csv, ['Ore Name', 'Quantity', 'Value (ISK)']);
         foreach ($data['ore_types'] as $ore) {
-            fputcsv($csv, [
+            CsvSafe::put($csv, [
                 $ore['name'],
                 $ore['quantity'],
                 number_format($ore['value'], 2),
@@ -550,7 +551,7 @@ class ReportGenerationService
         $csv = fopen('php://temp', 'r+');
 
         if (empty($rows)) {
-            fputcsv($csv, ['No data found for the selected period']);
+            CsvSafe::put($csv, ['No data found for the selected period']);
             rewind($csv);
             Storage::put($path, stream_get_contents($csv));
             fclose($csv);
@@ -558,11 +559,11 @@ class ReportGenerationService
         }
 
         // Write header row from the first record's keys
-        fputcsv($csv, array_keys($rows[0]));
+        CsvSafe::put($csv, array_keys($rows[0]));
 
         // Write data rows
         foreach ($rows as $row) {
-            fputcsv($csv, array_values($row));
+            CsvSafe::put($csv, array_values($row));
         }
 
         rewind($csv);

@@ -2,6 +2,8 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Services\Analytics\ReportGenerationService;
@@ -134,7 +136,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->withInput()
-                ->with('error', 'Error generating report: ' . $e->getMessage());
+                ->with('error', 'Error generating report: ' . PublicError::message($e));
         }
     }
 
@@ -194,7 +196,7 @@ class ReportController extends Controller
                 'message' => "Report sent to {$sentCount} subscribed webhook(s)",
             ]);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Failed to send: ' . $e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Failed to send: ' . PublicError::message($e)], 500);
         }
     }
 
@@ -250,7 +252,7 @@ class ReportController extends Controller
                 ->with('success', 'Report deleted successfully');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error deleting report: ' . $e->getMessage());
+                ->with('error', 'Error deleting report: ' . PublicError::message($e));
         }
     }
 
@@ -284,7 +286,7 @@ class ReportController extends Controller
                 ->with('info', 'Report retention is disabled');
         } catch (\Exception $e) {
             return redirect()->back()
-                ->with('error', 'Error cleaning up reports: ' . $e->getMessage());
+                ->with('error', 'Error cleaning up reports: ' . PublicError::message($e));
         }
     }
 
@@ -357,9 +359,9 @@ class ReportController extends Controller
             
             // Write headers based on data structure
             if (!empty($data['miners'])) {
-                fputcsv($file, ['Character', 'Quantity Mined', 'Value (ISK)', 'Tax Owed']);
+                CsvSafe::put($file, ['Character', 'Quantity Mined', 'Value (ISK)', 'Tax Owed']);
                 foreach ($data['miners'] as $miner) {
-                    fputcsv($file, $miner);
+                    CsvSafe::put($file, $miner);
                 }
             }
             
@@ -472,7 +474,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error creating schedule: ' . $e->getMessage(),
+                'message' => 'Error creating schedule: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -509,7 +511,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error toggling schedule: ' . $e->getMessage(),
+                'message' => 'Error toggling schedule: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -555,7 +557,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error running schedule: ' . $e->getMessage(),
+                'message' => 'Error running schedule: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -581,7 +583,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error deleting schedule: ' . $e->getMessage(),
+                'message' => 'Error deleting schedule: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -654,7 +656,7 @@ class ReportController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Error processing export: ' . $e->getMessage(),
+                'message' => 'Error processing export: ' . PublicError::message($e),
             ], 500);
         }
     }
@@ -684,7 +686,7 @@ class ReportController extends Controller
             return $this->download($id);
 
         } catch (\Exception $e) {
-            abort(404, 'Export file not found: ' . $e->getMessage());
+            abort(404, 'Export file not found: ' . PublicError::message($e));
         }
     }
 }

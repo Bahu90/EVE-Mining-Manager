@@ -2,6 +2,8 @@
 
 namespace MiningManager\Http\Controllers;
 
+use MiningManager\Services\Security\CsvSafe;
+use MiningManager\Services\Security\PublicError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -205,7 +207,7 @@ class TheftIncidentController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->back()->with('error', 'Failed to update incident status: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update incident status: ' . PublicError::message($e));
         }
     }
 
@@ -262,7 +264,7 @@ class TheftIncidentController extends Controller
                 'error' => $e->getMessage()
             ]);
 
-            return redirect()->back()->with('error', 'Failed to resolve incident: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to resolve incident: ' . PublicError::message($e));
         }
     }
 
@@ -325,7 +327,7 @@ class TheftIncidentController extends Controller
             $file = fopen('php://output', 'w');
 
             // CSV headers
-            fputcsv($file, [
+            CsvSafe::put($file, [
                 'Incident ID',
                 'Character ID',
                 'Character Name',
@@ -346,7 +348,7 @@ class TheftIncidentController extends Controller
 
             // Data rows
             foreach ($incidents as $incident) {
-                fputcsv($file, [
+                CsvSafe::put($file, [
                     $incident->id,
                     $incident->character_id,
                     $incident->getCharacterName(),

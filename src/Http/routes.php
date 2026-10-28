@@ -699,7 +699,8 @@ Route::group([
         Route::post('/{id}/report-jackpot', [
             'as' => 'mining-manager.moon.report-jackpot',
             'uses' => 'MoonController@reportJackpot',
-            'middleware' => 'can:mining-manager.member',
+            // Each report pings Discord; a few per member per 10 minutes is plenty.
+            'middleware' => ['can:mining-manager.member', 'throttle:5,10'],
         ]);
 
         // Director - update
