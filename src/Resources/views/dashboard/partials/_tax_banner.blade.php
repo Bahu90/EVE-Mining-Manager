@@ -22,6 +22,11 @@
                 {{ trans('mining-manager::taxes.banner_many_bills', ['amount' => $bannerLeft, 'count' => $taxBanner['count'], 'period' => $bannerPeriod, 'due' => $bannerDue]) }}
             @endif
         </div>
+        @if(!empty($taxBanner['ore']))
+            <small class="d-block">
+                {{ trans('mining-manager::taxes.banner_ore', ['ores' => collect($taxBanner['ore'])->take(4)->map(fn ($l) => number_format($l['hand_in']) . ' ' . $l['name'])->implode(', ') . (count($taxBanner['ore']) > 4 ? ', ...' : '')]) }}
+            </small>
+        @endif
         @if($taxBanner['paid'] > 0)
             <small class="d-block">
                 {{ trans('mining-manager::taxes.banner_part_paid', ['paid' => number_format($taxBanner['paid'], 0), 'owed' => number_format($taxBanner['billed'], 0)]) }}

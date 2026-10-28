@@ -1792,9 +1792,21 @@ class DashboardController extends Controller
                 return null;
             }
 
+            // In ore mode, the ore the most urgent bill comes to.
+            $ore = [];
+            try {
+                $oreTax = app(\MiningManager\Services\Tax\Ore\OreTaxService::class);
+                if ($oreTax->formForCharacter((int) $bills->first()->character_id) === \MiningManager\Services\Tax\Ore\OreTaxService::FORM_ORE) {
+                    $ore = array_values($oreTax->linesForBill($bills->first()));
+                }
+            } catch (\Throwable $e) {
+                $ore = [];
+            }
+
             return [
                 // The first to fall due sets the countdown; any late bill turns it red.
                 'first' => $bills->first(),
+                'ore' => $ore,
                 'late' => $bills->contains(fn ($bill) => $bill->isOverdue()),
                 'count' => $bills->count(),
                 'remaining' => round($bills->sum(fn ($bill) => $bill->getRemainingBalance()), 2),

@@ -938,6 +938,7 @@ class TaxController extends Controller
                 'heldCredits' => collect(),
                 'showLegacy' => false,
                 'hiddenLegacy' => 0,
+                'oreContractList' => $this->oreContractList(),
             ]);
         }
 
@@ -1058,7 +1059,10 @@ class TaxController extends Controller
                 ->get();
         }
 
+        $oreContractList = $this->oreContractList();
+
         return view('mining-manager::taxes.wallet', compact(
+            'oreContractList',
             'transactions',
             'stats',
             'status',
@@ -1661,6 +1665,37 @@ class TaxController extends Controller
      * @param Request $request
      * @return \Illuminate\Contracts\View\View
      */
+    /**
+     * What My Taxes needs for paying in ore: whether the member pays in ore,
+     * the ore each open bill comes to, and their recent ore contracts.
+     *
+     * @return array{0: bool, 1: array<int, array>, 2: \Illuminate\Support\Collection}
+     */
+    private function oreTaxView(array $characterIds, ?int $mainCharacterId, $bills): array
+    {
+        $oreTax = app(\MiningManager\Services\Tax\Ore\OreTaxService::class);
+        $oreMode = $oreTax->formForCharacter($mainCharacterId) === \MiningManager\Services\Tax\Ore\OreTaxService::FORM_ORE;
+
+        $lines = [];
+        if ($oreMode) {
+            foreach ($bills->filter()->unique('id') as $bill) {
+                try {
+                    $lines[$bill->id] = $oreTax->linesForBill($bill);
+                } catch (\Throwable $e) {
+                    Log::warning('Mining Manager: could not work out the ore for a bill: ' . $e->getMessage(), ['tax_id' => $bill->id]);
+                    $lines[$bill->id] = [];
+                }
+            }
+        }
+
+        $contracts = \MiningManager\Models\OreContract::whereIn('issuer_id', $characterIds ?: [0])
+            ->orderByDesc('date_issued')
+            ->limit(20)
+            ->get();
+
+        return [$oreMode, $lines, $contracts];
+    }
+
     public function myTaxes(Request $request)
     {
         $user = auth()->user();
@@ -1867,6 +1902,15 @@ class TaxController extends Controller
                 ->get()
             : collect();
 
+        // Ore tax: in ore mode the bills are shown as the ore they come to,
+        // with the contracts the member has made to pay them.
+        [$oreMode, $oreLines, $oreContracts] = $this->oreTaxView($characterIds, $mainCharacterId, collect([$currentTax])->merge($unpaidTaxes));
+        if ($oreMode) {
+            // Ore contracts go to the corporation that checks them.
+            $oreTax = app(\MiningManager\Services\Tax\Ore\OreTaxService::class);
+            $corpName = $oreTax->corporationName($oreTax->corporationFor($mainCharacterId)) ?? $corpName;
+        }
+
         return view('mining-manager::taxes.my-taxes', compact(
             'creditBalance',
             'creditRecords',
@@ -1895,7 +1939,10 @@ class TaxController extends Controller
             'walletDivisionName',
             'walletDivision',
             'corpName',
-            'acceptsAlts'
+            'acceptsAlts',
+            'oreMode',
+            'oreLines',
+            'oreContracts'
         ));
     }
 
@@ -2569,6 +2616,28 @@ class TaxController extends Controller
 
         $features = $this->getFeatureFlags();
 
+        // Ore tax: the ore this bill comes to, and contracts that paid it.
+        $oreTax = app(\MiningManager\Services\Tax\Ore\OreTaxService::class);
+        $oreMode = $oreTax->formForCharacter((int) $tax->character_id) === \MiningManager\Services\Tax\Ore\OreTaxService::FORM_ORE;
+        $oreLines = [];
+        if ($oreMode && in_array($tax->status, MiningTax::OUTSTANDING_STATUSES, true)) {
+            try {
+                $oreLines = $oreTax->linesForBill($tax);
+            } catch (\Throwable $e) {
+                Log::warning('Mining Manager: could not work out the ore for a bill: ' . $e->getMessage(), ['tax_id' => $tax->id]);
+            }
+        }
+        $contractIds = PaymentAllocation::where('mining_tax_id', $tax->id)
+            ->where('transaction_id', '>=', \MiningManager\Models\OreContract::PAYMENT_ID_BASE)
+            ->pluck('transaction_id')
+            ->map(fn ($id) => (int) $id - \MiningManager\Models\OreContract::PAYMENT_ID_BASE)
+            ->all();
+        $oreContracts = \MiningManager\Models\OreContract::where('mining_tax_id', $tax->id)
+            ->orWhereIn('contract_id', $contractIds ?: [0])
+            ->orderByDesc('date_issued')
+            ->get();
+        $corpName = $oreTax->corporationName($oreTax->corporationFor((int) $tax->character_id));
+
         return view('mining-manager::taxes.details', compact(
             'tax',
             'miningBreakdown',
@@ -2579,7 +2648,11 @@ class TaxController extends Controller
             'viewAll',
             'features',
             'paymentHistory',
-            'creditApplied'
+            'creditApplied',
+            'oreMode',
+            'oreLines',
+            'oreContracts',
+            'corpName'
         ));
     }
 
@@ -2783,6 +2856,22 @@ class TaxController extends Controller
      * Null when no moon owner corporation is configured, or SeAT has not pulled
      * its details yet. The payment steps fall back to generic wording.
      */
+    /**
+     * Ore tax contracts for directors: those waiting to be accepted first,
+     * then the most recent others. Empty while no corporation takes ore.
+     */
+    private function oreContractList()
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasTable('mining_manager_ore_contracts')) {
+            return collect();
+        }
+
+        return \MiningManager\Models\OreContract::orderByRaw("status = 'waiting' DESC")
+            ->orderByDesc('date_issued')
+            ->limit(30)
+            ->get();
+    }
+
     private function payingCorporationName(): ?string
     {
         $corporationId = $this->settingsService->getSetting('general.moon_owner_corporation_id');

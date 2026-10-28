@@ -44,6 +44,12 @@ class OreContractService
     /** How long an accepted contract may wait for SeAT to fetch its items. */
     private const ITEMS_GRACE_DAYS = 3;
 
+    /**
+     * How long an accepted contract with no tax code waits for its issuer to
+     * have a bill before it is set aside as not tax.
+     */
+    private const NO_BILL_GRACE_DAYS = 35;
+
     public function __construct(
         private OreTaxService $ore,
         private PaymentAllocationService $allocations,
@@ -55,11 +61,11 @@ class OreContractService
     /**
      * Check every corporation that takes tax in ore.
      *
-     * @return array{corporations:int, seen:int, waiting:int, credited:int, refused:int, empty:int, isk:float}
+     * @return array{corporations:int, seen:int, waiting:int, credited:int, refused:int, empty:int, ignored:int, isk:float}
      */
     public function check(bool $dryRun = false): array
     {
-        $summary = ['corporations' => 0, 'seen' => 0, 'waiting' => 0, 'credited' => 0, 'refused' => 0, 'empty' => 0, 'isk' => 0.0];
+        $summary = ['corporations' => 0, 'seen' => 0, 'waiting' => 0, 'credited' => 0, 'refused' => 0, 'empty' => 0, 'ignored' => 0, 'isk' => 0.0];
 
         foreach ($this->ore->oreCorporations() as $corporationId => $since) {
             $summary['corporations']++;
@@ -82,7 +88,7 @@ class OreContractService
     private function openContracts(int $corporationId, Carbon $since)
     {
         $settled = OreContract::where('corporation_id', $corporationId)
-            ->whereIn('status', [OreContract::CREDITED, OreContract::REFUSED, OreContract::EMPTY])
+            ->whereIn('status', [OreContract::CREDITED, OreContract::REFUSED, OreContract::EMPTY, OreContract::IGNORED])
             ->pluck('contract_id')
             ->all();
 
@@ -92,6 +98,9 @@ class OreContractService
             ->where('d.assignee_id', $corporationId)
             ->where('d.type', 'item_exchange')
             ->where('d.issuer_id', '!=', $corporationId)
+            // The corporation pays nothing for tax. A contract with a price
+            // is a sale to the corporation (a buyback), not tax.
+            ->where(fn ($q) => $q->whereNull('d.price')->orWhere('d.price', '<=', 0))
             ->where('d.date_issued', '>=', $since)
             ->when($settled, fn ($q) => $q->whereNotIn('d.contract_id', $settled))
             ->orderBy('d.date_issued')
@@ -166,6 +175,23 @@ class OreContractService
             $this->save($contractId, $base + ['status' => OreContract::EMPTY, 'notes' => 'Accepted, but nothing in it could be valued.'], $dryRun);
 
             return ['status' => 'empty'];
+        }
+
+        // Without a tax code, a contract is only tax if its issuer has a bill
+        // to pay. Ore handed over for anything else (hauling, a gift) would
+        // otherwise turn into balance. Bills are raised after the period
+        // closes, so it waits a while for one before being set aside.
+        if (!$primaryTaxId && !$this->hasOpenBill($issuerId)) {
+            $completed = $contract->date_completed ? Carbon::parse($contract->date_completed) : Carbon::now();
+            if ($completed->diffInDays(Carbon::now()) < self::NO_BILL_GRACE_DAYS) {
+                $this->save($contractId, $base + ['status' => OreContract::WAITING, 'notes' => 'Accepted; no tax code and no open bill yet.'], $dryRun);
+
+                return ['status' => 'waiting'];
+            }
+
+            $this->save($contractId, $base + ['status' => OreContract::IGNORED, 'notes' => 'No tax code, and its pilot had no bill to pay, so it was not treated as tax.'], $dryRun);
+
+            return ['status' => 'ignored'];
         }
 
         if ($dryRun) {
@@ -272,6 +298,13 @@ class OreContractService
         unset($line);
 
         return $priced;
+    }
+
+    private function hasOpenBill(int $characterId): bool
+    {
+        return \MiningManager\Models\MiningTax::whereIn('character_id', $this->ore->accountCharacterIds($characterId))
+            ->outstanding()
+            ->exists();
     }
 
     private function describe(array $lines): string

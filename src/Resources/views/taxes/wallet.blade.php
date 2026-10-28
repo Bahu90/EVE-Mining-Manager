@@ -152,6 +152,30 @@
     @endif
 
     {{-- Transactions Table --}}
+    {{-- Ore tax contracts, for corporations that take their tax in ore --}}
+    @if(isset($oreContractList) && $oreContractList->isNotEmpty())
+    @php $oreWaitingCount = $oreContractList->where('status', \MiningManager\Models\OreContract::WAITING)->count(); @endphp
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-file-contract mr-1"></i>
+                        {{ trans('mining-manager::taxes.ore_contracts_all') }}
+                        @if($oreWaitingCount > 0)
+                            <span class="badge badge-warning ml-2">{{ $oreWaitingCount }} {{ trans('mining-manager::taxes.ore_status_waiting') }}</span>
+                        @endif
+                    </h3>
+                </div>
+                <div class="card-body p-0">
+                    <p class="text-muted small px-3 pt-3 mb-2">{{ trans('mining-manager::taxes.ore_waiting_text') }}</p>
+                    @include('mining-manager::taxes.partials.ore-contracts', ['contracts' => $oreContractList, 'showIssuer' => true])
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <div class="card card-dark">

@@ -14,6 +14,7 @@ class OreContract extends Model
     public const CREDITED = 'credited'; // accepted, and its value put towards bills
     public const REFUSED = 'refused';   // expired, rejected, deleted or cancelled
     public const EMPTY = 'empty';       // accepted, but nothing in it could be valued
+    public const IGNORED = 'ignored';   // no tax code and no bill to pay: not treated as tax
 
     /**
      * Payments enter the payment ledger with a transaction id. Contract ids

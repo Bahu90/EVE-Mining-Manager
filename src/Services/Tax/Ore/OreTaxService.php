@@ -46,13 +46,30 @@ class OreTaxService
      */
     public function formForCharacter(?int $characterId): string
     {
+        return $this->formForCorporation($this->corporationFor($characterId));
+    }
+
+    /**
+     * The corporation whose choice applies to a character, and which their
+     * ore contracts go to: their own corporation when it has its own
+     * setting, otherwise the Moon Owner Corporation.
+     */
+    public function corporationFor(?int $characterId): ?int
+    {
         $corporationId = $characterId ? $this->corporationOf($characterId) : null;
 
         if ($corporationId && $this->hasOwnSetting($corporationId)) {
-            return $this->formForCorporation($corporationId);
+            return $corporationId;
         }
 
-        return $this->formForCorporation($this->settings->getTaxProgramCorporationId());
+        return $this->settings->getTaxProgramCorporationId();
+    }
+
+    public function corporationName(?int $corporationId): ?string
+    {
+        return $corporationId
+            ? DB::table('corporation_infos')->where('corporation_id', $corporationId)->value('name')
+            : null;
     }
 
     /** When contract checking started for a corporation (contracts before it are left alone). */

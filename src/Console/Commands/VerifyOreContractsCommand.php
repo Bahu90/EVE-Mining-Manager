@@ -36,7 +36,7 @@ class VerifyOreContractsCommand extends Command
             }
 
             $this->info(sprintf(
-                '%s %d contract(s) across %d corporation(s): %d credited (%s ISK), %d waiting, %d expired or refused, %d with nothing to credit.',
+                '%s %d contract(s) across %d corporation(s): %d credited (%s ISK), %d waiting, %d expired or refused, %d with nothing to credit, %d not tax.',
                 $this->option('dry-run') ? 'Would process' : 'Processed',
                 $summary['seen'],
                 $summary['corporations'],
@@ -44,7 +44,8 @@ class VerifyOreContractsCommand extends Command
                 number_format($summary['isk'], 0),
                 $summary['waiting'],
                 $summary['refused'],
-                $summary['empty']
+                $summary['empty'],
+                $summary['ignored']
             ));
 
             return self::SUCCESS;

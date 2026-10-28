@@ -212,6 +212,35 @@
         </div>
     </div>
 
+    {{-- Paying in ore: what this bill comes to, and the contracts behind it. --}}
+    @if(!empty($oreMode) && !empty($oreLines))
+    <div class="row">
+        <div class="col-12">
+            @include('mining-manager::taxes.partials.ore-payment', [
+                'bill' => $tax,
+                'lines' => $oreLines,
+                'corpName' => $corpName ?? null,
+                'taxCode' => $tax->taxCodes->where('status', 'active')->first(),
+            ])
+        </div>
+    </div>
+    @endif
+
+    @if(isset($oreContracts) && $oreContracts->isNotEmpty())
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title"><i class="fas fa-file-contract mr-1"></i> {{ trans('mining-manager::taxes.ore_contracts_all') }}</h3>
+                </div>
+                <div class="card-body p-0">
+                    @include('mining-manager::taxes.partials.ore-contracts', ['contracts' => $oreContracts, 'showIssuer' => true])
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- Payments received. An invoice can be settled in several instalments,
          and the invoice row itself only remembers the most recent one. --}}
     <div class="row">

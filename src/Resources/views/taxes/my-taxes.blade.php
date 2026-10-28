@@ -184,6 +184,14 @@
                                     $activeTaxCode = $currentTax->taxCodes->where('status', 'active')->first();
                                 @endphp
 
+                                @if(!empty($oreMode))
+                                    @include('mining-manager::taxes.partials.ore-payment', [
+                                        'bill' => $currentTax,
+                                        'lines' => $oreLines[$currentTax->id] ?? [],
+                                        'corpName' => $corpName ?? null,
+                                        'taxCode' => $activeTaxCode,
+                                    ])
+                                @else
                                 <div class="card bg-dark border-info mt-2 mb-2">
                                     <div class="card-header bg-dark border-info">
                                         <h6 class="mb-0"><i class="fas fa-list-ol"></i> How to Pay Your Mining Tax</h6>
@@ -225,6 +233,7 @@
                                         @endif
                                     </div>
                                 </div>
+                                @endif
 
                                 <div class="mt-2">
                                     <a href="{{ route('mining-manager.taxes.details', $currentTax->id) }}" class="btn btn-sm btn-info">
@@ -253,6 +262,29 @@
                                 @if(($periodType ?? 'monthly') !== 'monthly' && isset($currentPeriodLabel))
                                     &mdash; <span class="text-muted">{{ $currentPeriodLabel }}</span>
                                 @endif
+                            </div>
+                        </div>
+                    </div>
+                    @endif
+
+                    {{-- Ore tax contracts this member has made --}}
+                    @if(!empty($oreMode) || (isset($oreContracts) && $oreContracts->isNotEmpty()))
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="card card-outline card-info">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-file-contract"></i>
+                                        {{ trans('mining-manager::taxes.ore_contracts_title') }}
+                                    </h5>
+                                </div>
+                                <div class="card-body {{ isset($oreContracts) && $oreContracts->isNotEmpty() ? 'p-0' : '' }}">
+                                    @if(isset($oreContracts) && $oreContracts->isNotEmpty())
+                                        @include('mining-manager::taxes.partials.ore-contracts', ['contracts' => $oreContracts])
+                                    @else
+                                        <span class="text-muted">{{ trans('mining-manager::taxes.ore_contracts_none') }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -292,6 +324,11 @@
                                                     {{ number_format($unpaidTax->getRemainingBalance(), 0) }} ISK
                                                     @if((float) $unpaidTax->amount_paid > 0)
                                                         <br><small class="text-muted">of {{ number_format($unpaidTax->amount_owed, 0) }}</small>
+                                                    @endif
+                                                    @if(!empty($oreMode) && !empty($oreLines[$unpaidTax->id]))
+                                                        <br><small class="text-info">{{ trans('mining-manager::taxes.ore_owed_short') }}
+                                                            {{ collect($oreLines[$unpaidTax->id])->take(3)->map(fn ($l) => number_format($l['hand_in']) . ' ' . $l['name'])->implode(', ') }}{{ count($oreLines[$unpaidTax->id]) > 3 ? ', ...' : '' }}
+                                                        </small>
                                                     @endif
                                                 </td>
                                                 <td>
@@ -403,6 +440,9 @@
                                     <th class="text-right">Value (ISK)</th>
                                     <th class="text-right">Tax Rate</th>
                                     <th class="text-right">Tax (ISK)</th>
+                                    @if(!empty($oreMode))
+                                        <th class="text-right">{{ trans('mining-manager::taxes.ore_owed_short') }}</th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -438,6 +478,12 @@
                                             </small>
                                         @endif
                                     </td>
+                                    @if(!empty($oreMode))
+                                        {{-- The units this tax comes to, at this ore's own rate. --}}
+                                        <td class="text-right text-info">
+                                            {{ ($ore['value'] ?? 0) > 0 ? number_format(\MiningManager\Services\Tax\Ore\OreMath::unitsToHandIn($ore['quantity'] * $ore['tax'] / $ore['value'])) : 0 }}
+                                        </td>
+                                    @endif
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -447,6 +493,7 @@
                                     <td class="text-right"><strong>{{ number_format($charBreakdown['total_value'], 0) }} ISK</strong></td>
                                     <td></td>
                                     <td class="text-right"><strong>{{ number_format($charBreakdown['total_tax'], 0) }} ISK</strong></td>
+                                    @if(!empty($oreMode))<td></td>@endif
                                 </tr>
                             </tfoot>
                         </table>
