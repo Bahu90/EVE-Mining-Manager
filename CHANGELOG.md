@@ -2,6 +2,38 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [Unreleased] — bahu90/mining-manager
+
+First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namespace, tables and permissions, so an existing install switches over and keeps its data.
+
+**After updating**, run the migrations: `000038` encrypts the webhook URLs already saved and `000039` moves one schedule. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
+
+### Security
+
+- **Events calendar:** an event's name, location and description went into the calendar and its popup as raw HTML, so a director could save an event that ran script for every member who opened the calendar. All event text is now escaped.
+- **Text in page scripts:** JSON written into pages now escapes `<`, `>`, `&` and quotes, so a structure, moon or event name cannot break out of a script. Character names in the tax tables, Discord role names in Settings and names in Diagnostics are escaped as well.
+- **Webhook URLs are encrypted** in the database with SeAT's APP_KEY, including the Slack URL, and are never sent back to the browser. The edit form shows the host only.
+- **Webhooks must point at a public HTTPS host.** Private, loopback and internal addresses and Docker service names are refused when saving, when importing a settings file, in Diagnostics' custom test URL (which accepted anything before), and again when sending. Webhook requests no longer follow redirects.
+- **Internal errors are no longer shown.** Database and PHP errors used to reach the page in full; they are now logged under a short reference, and the page shows that reference. The plugin's own messages are unchanged.
+- **CSV exports** put an apostrophe before any cell starting with `=`, `+`, `-` or `@`, so spreadsheets do not run it as a formula.
+- **Jackpot reports** are limited to the Moon Owner Corporation's extractions from the last 7 days, and to 5 per member per 10 minutes. They no longer record the SeAT user ID as the reporter when a user has no main character.
+
+### Performance
+
+- **process-ledger** skips observer rows that have not changed before pricing them, and rebuilds daily summaries only for days that changed. It used to do the full work for 30 days of rows every 30 minutes.
+- **Every-minute jobs** run in one process (`mining-manager:every-minute`) instead of three.
+- **calculate-monthly-stats** for the current month runs at :25/:55 instead of colliding with the personal mining import at :20/:50.
+- **Wallet page:** two queries for the whole payer list instead of two per payer.
+
+### Fixed
+
+- **PHP 8.1:** a constant declared in a trait (PHP 8.2+) stopped the notification code from loading on PHP 8.1.
+- **Settings export:** "include webhooks" exported them without their URLs, so the file could not be imported.
+
+### Development
+
+- Unit tests and GitHub Actions on PHP 8.1 to 8.4.
+
 ## [2.0.5] — 2026-10-19 — The Ecosystem Era: Rotations and Rigs
 
 Moon pulls, planned rather than placed one at a time. A blueprint lays a whole rotation over the planner, the planner warns when two pulls on one refinery are too close, marks a refinery's final pull before it moves, and says when a drill has been left idle or a moon has nothing planned. A refinery's moon rigs now set its chunks' mining window and yield wherever the plugin times or values a chunk, and a chunk's value is settled when it fractures. Around that: a banner on the Mining Dashboard for tax still owed, part-paid bills that keep their payment steps, a fallback price provider, miners SeAT does not know named and counted on every page, and a run of notification switches that now save.
