@@ -10,17 +10,17 @@ return [
         'permission'    => 'mining-manager.member',
         'entries'       => [
             [
-                'name'       => 'Moon Mining',
-                'label'      => 'mining-manager::menu.dashboard',
-                'icon'       => 'fas fa-moon',
-                'route'      => 'mining-manager.dashboard',
-                'permission' => 'mining-manager.member',
-            ],
-            [
                 'name'       => 'Dashboard',
                 'label'      => 'mining-manager::menu.full_dashboard',
                 'icon'       => 'fas fa-chart-bar',
                 'route'      => 'mining-manager.dashboard.details',
+                'permission' => 'mining-manager.member',
+            ],
+            [
+                'name'       => 'Moon Mining',
+                'label'      => 'mining-manager::menu.dashboard',
+                'icon'       => 'fas fa-moon',
+                'route'      => 'mining-manager.dashboard',
                 'permission' => 'mining-manager.member',
             ],
             [

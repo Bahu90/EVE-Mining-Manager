@@ -21,8 +21,8 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 ### Names that match the pages
 
 - **Pages no longer link to other pages; the left menu is the way around.** Gone: My Mining / My Taxes / Details buttons on Moon Mining, the Pay now button on the tax banner, Back to … buttons, links from tips to Settings, Help, Events, the Planner, tax details and SeAT's Moons Reporter. Tabs inside a section and opening an entry's details stay.
-- The all-ore **Dashboard** has its own menu item under Moon Mining. Its tabs lost the Personal / Corporation / Guests badges that repeated the tab names.
-- The **Dashboard** menu item is now **Moon Mining**, which is what it shows; the all-ore dashboard, reached before by its **Details** button, is the **Dashboard** menu item.
+- The all-ore **Dashboard** has its own menu item, first in the menu, above Moon Mining. Its tabs lost the Personal / Corporation / Guests badges that repeated the tab names.
+- The **Dashboard** menu item is now **Moon Mining**, which is what it shows; the all-ore dashboard, reached before by its **Details** button, is the **Dashboard** menu item, first in the menu.
 - Page headers match their menu items: Mining Ledger (both tabs), Moon Extractions, Moon Planner (planner, blueprints, simulator), Metenox Cargo, Theft Detection.
 - **One set of tabs on every moon page:** Extractions, Active, Calendar, Planner, Blueprints, Simulator, Compositions, Metenox Cargo, each shown only to who can open it.
 - **Moon Mining's refinery grid** shows the refineries mined at, most ISK first, with idle ones behind a button; it had shown every refinery as idle, because their 13-digit IDs were cut short when matched to the month's mining.
