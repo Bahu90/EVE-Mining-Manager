@@ -1107,6 +1107,10 @@ class LedgerController extends Controller
         // Enrich with character information (names, corporations for unregistered characters)
         $summaries = $this->enrichWithCharacterInfo($summaries, $this->characterInfoService);
 
+        // Only pilots who mined something from the picked source. Grouping by
+        // main adds every registered main of the corporation, mining or not.
+        $summaries = $summaries->filter(fn ($summary) => (float) ($summary->total_value ?? 0) > 0)->values();
+
         // Apply sorting
         $summaries = $this->sortSummaries($summaries, $sortBy, $sortDir);
 

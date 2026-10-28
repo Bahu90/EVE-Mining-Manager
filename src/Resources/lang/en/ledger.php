@@ -301,6 +301,8 @@ return [
     'source_split' => 'Moon :moon · Anomalies :anomalies',
     'source_col_moon' => 'Moon ISK',
     'source_col_anomalies' => 'Anomalies ISK',
+    'show_all_pilots' => 'Show all :count pilots',
+    'show_top_pilots' => 'Show the top 25',
     'source_tax_short' => 'Covers all taxed mining',
     'source_tax_note' => 'Tax covers all your mining under the tax settings, whichever view is picked.',
 ];

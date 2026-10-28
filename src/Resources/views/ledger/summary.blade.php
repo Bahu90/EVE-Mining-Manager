@@ -22,10 +22,35 @@
     /* A compact block of ore icons, two rows at most, instead of a column. */
     .ore-icons {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         align-items: center;
         gap: 3px;
-        width: 140px;
+    }
+    .ore-icons .ore-icon {
+        width: 20px;
+        height: 20px;
+    }
+    /* One line per pilot: a smaller portrait, the corporation under the name. */
+    #summaryTable td {
+        padding-top: 6px;
+        padding-bottom: 6px;
+        vertical-align: middle;
+    }
+    #summaryTable .character-portrait {
+        width: 26px;
+        height: 26px;
+        margin-right: 6px;
+    }
+    #summaryTable .summary-corp {
+        display: block;
+        margin-left: 32px;
+        opacity: 0.6;
+        font-size: 0.75rem;
+        line-height: 1.1;
+    }
+    #summaryTable .btn-sm {
+        padding: 2px 8px;
+        white-space: nowrap;
     }
     .ore-icons .badge {
         line-height: 18px;
@@ -340,23 +365,21 @@
                         </thead>
                         <tbody>
                             @forelse($summaries as $summary)
-                                <tr>
+                                <tr class="{{ $loop->index >= 25 ? 'summary-more d-none' : '' }}">
                                     <td>
                                         <img src="https://images.evetech.net/characters/{{ $summary->character_id }}/portrait?size=32"
                                              class="character-portrait"
                                              alt="{{ $summary->character_info['name'] ?? $summary->character_name }}">
                                         <strong>{{ $summary->character_info['name'] ?? $summary->character_name }}</strong>
 
-                                        {{-- Corporation Badge --}}
-                                        @if(isset($summary->character_info['corporation_name']))
-                                            <br>
-                                            <span class="badge badge-secondary" style="font-size: 85%;">
-                                                <img src="https://images.evetech.net/corporations/{{ $summary->character_info['corporation_id'] }}/logo?size=32"
-                                                     style="width: 16px; height: 16px; vertical-align: middle; margin-right: 3px;"
-                                                     alt="">
-                                                {{ $summary->character_info['corporation_name'] }}
-                                            </span>
-                                        @endif
+                                        {{-- Corporation, as a small line under the name --}}
+                                        <small class="summary-corp">
+                                            {{ $summary->character_info['corporation_name'] ?? '' }}
+                                            @if(isset($summary->alt_count) && $summary->alt_count > 0)
+                                                @if(isset($summary->character_info['corporation_name'])) &middot; @endif
+                                                +{{ $summary->alt_count }} {{ trans('mining-manager::ledger.alts') }}
+                                            @endif
+                                        </small>
 
                                         {{-- Unregistered Badge --}}
                                         @if(isset($summary->character_info['is_registered']) && !$summary->character_info['is_registered'])
@@ -365,21 +388,17 @@
                                             </span>
                                         @endif
 
-                                        {{-- Alt Count Badge --}}
-                                        @if(isset($summary->alt_count) && $summary->alt_count > 0)
-                                            <span class="alt-badge">+{{ $summary->alt_count }} {{ trans('mining-manager::ledger.alts') }}</span>
-                                        @endif
                                     </td>
                                     <td>
                                         @if(isset($summary->ore_type_ids) && count($summary->ore_type_ids) > 0)
                                             <div class="ore-icons">
-                                                @foreach(array_slice($summary->ore_type_ids, 0, 9) as $typeId)
+                                                @foreach(array_slice($summary->ore_type_ids, 0, 5) as $typeId)
                                                     <img src="https://images.evetech.net/types/{{ $typeId }}/icon?size=32"
                                                          class="ore-icon"
                                                          alt="">
                                                 @endforeach
-                                                @if(count($summary->ore_type_ids) > 9)
-                                                    <span class="badge badge-secondary" title="{{ count($summary->ore_type_ids) }} ore types">+{{ count($summary->ore_type_ids) - 9 }}</span>
+                                                @if(count($summary->ore_type_ids) > 5)
+                                                    <span class="badge badge-secondary" title="{{ count($summary->ore_type_ids) }} ore types">+{{ count($summary->ore_type_ids) - 5 }}</span>
                                                 @endif
                                             </div>
                                         @else
@@ -432,6 +451,15 @@
                             @endforelse
                         </tbody>
                     </table>
+                    @if($summaries->count() > 25)
+                        <div class="text-center p-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="summaryShowAll"
+                                    data-show="{{ trans('mining-manager::ledger.show_all_pilots', ['count' => $summaries->count()]) }}"
+                                    data-hide="{{ trans('mining-manager::ledger.show_top_pilots') }}">
+                                {{ trans('mining-manager::ledger.show_all_pilots', ['count' => $summaries->count()]) }}
+                            </button>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -451,6 +479,20 @@
 
 @push('javascript')
 <script>
+// The first 25 pilots show; the button shows the rest, or hides them again.
+(function () {
+    var button = document.getElementById('summaryShowAll');
+    if (!button) { return; }
+    var open = false;
+    button.addEventListener('click', function () {
+        open = !open;
+        document.querySelectorAll('#summaryTable tr.summary-more').forEach(function (row) {
+            row.classList.toggle('d-none', !open);
+        });
+        button.textContent = button.getAttribute(open ? 'data-hide' : 'data-show');
+    });
+})();
+
 function sortTable(column) {
     const currentSort = '{{ $sortBy }}';
     const currentDir = '{{ $sortDir }}';
