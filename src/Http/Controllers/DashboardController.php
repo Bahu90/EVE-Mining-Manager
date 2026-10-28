@@ -50,6 +50,65 @@ class DashboardController extends Controller
      * Directors see BOTH their personal stats AND corporation overview
      * Regular members see only their personal stats
      */
+    /**
+     * Mining Metrics: the corporation's moon mining for one month, laid out
+     * like eve-ro.com/tools/mining. This is the Dashboard's landing page; the
+     * personal and director dashboards are under details().
+     *
+     * Everyone with the member role sees the corporation's totals, its
+     * refineries and each player's volume. ISK and tax per player are shown
+     * to directors, and to members for their own card only.
+     */
+    public function metrics(\Illuminate\Http\Request $request, \MiningManager\Services\Metrics\MiningMetricsService $metrics)
+    {
+        $month = Carbon::now()->startOfMonth();
+        if (preg_match('/^(\d{4})-(\d{2})$/', (string) $request->query('month'), $m)
+            && checkdate((int) $m[2], 1, (int) $m[1])) {
+            $asked = Carbon::create((int) $m[1], (int) $m[2], 1)->startOfMonth();
+            if ($asked->lte($month)) {
+                $month = $asked;
+            }
+        }
+
+        $trendMonths = (int) $request->query('months', 12);
+        $data = $metrics->forMonth($month, $trendMonths);
+
+        $isDirector = $this->hasDirectorPermissions();
+        $user = auth()->user();
+        $own = array_map('intval', $this->getUserCharacterIds($user));
+        if ($user->main_character_id) {
+            $own[] = (int) $user->main_character_id;
+        }
+
+        if (!empty($data['players'])) {
+            foreach ($data['players'] as &$player) {
+                $player['own'] = in_array((int) $player['character_id'], $own, true);
+                if (!$isDirector && !$player['own']) {
+                    $player['isk'] = null;
+                    $player['tax'] = null;
+                }
+            }
+            unset($player);
+        }
+
+        return view('mining-manager::dashboard.metrics', [
+            'data' => $data,
+            'month' => $month,
+            'isDirector' => $isDirector,
+            'canSeeIsk' => $isDirector,
+            'taxBanner' => $this->taxBanner($user),
+        ]);
+    }
+
+    /**
+     * The personal dashboard for members, and personal plus corporation
+     * views for directors. Reached from Mining Metrics' "Details".
+     */
+    public function details()
+    {
+        return $this->index();
+    }
+
     public function index()
     {
         $user = auth()->user();

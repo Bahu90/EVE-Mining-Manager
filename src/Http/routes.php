@@ -21,9 +21,17 @@ Route::group([
 
     // Dashboard Routes
     Route::group(['prefix' => 'dashboard'], function () {
+        // Mining Metrics, the Dashboard's landing page.
         Route::get('/', [
             'as' => 'mining-manager.dashboard',
-            'uses' => 'DashboardController@index',
+            'uses' => 'DashboardController@metrics',
+            'middleware' => 'can:mining-manager.member',
+        ]);
+
+        // The personal dashboard, and the director's combined one.
+        Route::get('/details', [
+            'as' => 'mining-manager.dashboard.details',
+            'uses' => 'DashboardController@details',
             'middleware' => 'can:mining-manager.member',
         ]);
 
