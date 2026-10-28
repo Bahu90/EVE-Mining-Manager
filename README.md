@@ -309,3 +309,12 @@ GNU General Public License v2.0 -- see [LICENSE](LICENSE) for details.
 ---
 
 *EVE Online and the EVE logo are the registered trademarks of CCP hf. All rights are reserved worldwide.*
+
+## Development
+
+```bash
+composer update
+vendor/bin/phpunit
+```
+
+GitHub Actions lints every PHP file and runs the test suite on PHP 8.1 to 8.4 for every push.
