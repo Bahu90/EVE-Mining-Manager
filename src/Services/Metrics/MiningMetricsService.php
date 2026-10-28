@@ -64,7 +64,7 @@ class MiningMetricsService
         }
 
         $isCurrent = $month->isSameMonth(Carbon::now());
-        $key = "mining-manager:metrics:v1:{$corporationId}:{$month->format('Y-m')}:{$trendMonths}";
+        $key = "mining-manager:metrics:v2:{$corporationId}:{$month->format('Y-m')}:{$trendMonths}";
 
         $data = Cache::remember($key, $isCurrent ? 300 : 3600, function () use ($corporationId, $month, $trendMonths) {
             return $this->build($corporationId, $month, $trendMonths);
@@ -151,12 +151,18 @@ class MiningMetricsService
 
         $out = [];
         foreach ($rows as $row) {
-            $key = $row->k instanceof \DateTimeInterface ? $row->k->format('Y-m-d') : substr((string) $row->k, 0, 10);
+            // Dates come back with a time on some drivers and are cut to the
+            // day; anything else (structure and character IDs) is kept whole.
+            // Cutting every key to 10 characters truncated the 13-digit
+            // structure IDs, so no refinery ever matched its mining.
+            $key = MetricsMath::groupKey($row->k);
+            // Added up, not set: rows grouped by a date with a time in it
+            // land on the same day.
             $out[$key] = [
-                'isk' => (float) $row->isk,
-                'tax' => (float) $row->tax,
-                'volume' => (float) $row->volume,
-                'quantity' => (float) $row->quantity,
+                'isk' => ($out[$key]['isk'] ?? 0.0) + (float) $row->isk,
+                'tax' => ($out[$key]['tax'] ?? 0.0) + (float) $row->tax,
+                'volume' => ($out[$key]['volume'] ?? 0.0) + (float) $row->volume,
+                'quantity' => ($out[$key]['quantity'] ?? 0.0) + (float) $row->quantity,
             ];
         }
 

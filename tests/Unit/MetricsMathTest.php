@@ -73,4 +73,13 @@ class MetricsMathTest extends TestCase
         $counts = MetricsMath::refineryCounts(['ready', 'unstable', 'extracting', 'expired', 'extracting', 'none']);
         $this->assertSame(['online' => 6, 'ready' => 2, 'extracting' => 2, 'idle' => 2], $counts);
     }
+
+    public function test_structure_ids_are_kept_whole(): void
+    {
+        // A 13-digit structure ID once lost its last three digits here.
+        $this->assertSame('1046123456789', MetricsMath::groupKey(1046123456789));
+        $this->assertSame('2124168871', MetricsMath::groupKey('2124168871'));
+        $this->assertSame('2026-10-27', MetricsMath::groupKey('2026-10-27 18:00:00'));
+        $this->assertSame('2026-10', MetricsMath::groupKey('2026-10'));
+    }
 }

@@ -144,4 +144,21 @@ final class MetricsMath
 
         return $counts;
     }
+
+    /**
+     * The key a grouped ledger sum is filed under: a date cut to its day, a
+     * month as it is, an ID whole.
+     *
+     * @param mixed $value
+     */
+    public static function groupKey($value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $value = (string) $value;
+
+        return preg_match('/^\d{4}-\d{2}-\d{2}/', $value) ? substr($value, 0, 10) : $value;
+    }
 }
