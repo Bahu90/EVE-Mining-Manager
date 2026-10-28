@@ -276,20 +276,10 @@ return [
     'delete_failed' => 'Failed to delete mining ledger entry.',
 
     // Reprocessing Calculator
-    'reprocessing_calculator' => 'Reprocessing Calculator',
-    'reprocessing_yield' => 'Reprocessing Yield %',
-    'paste_ores' => 'Paste Ores',
     'calculate' => 'Calculate',
-    'clear_input' => 'Clear',
-    'paste_help' => 'Paste ore data from EVE clipboard. Supported formats: "Ore Name[TAB]Quantity", "Quantity Ore Name", or "Ore Name Quantity".',
     'total_ore_value' => 'Total Ore Value',
     'total_mineral_value' => 'Total Mineral Value',
     'total_items' => 'Total Items',
-    'mineral_name' => 'Mineral',
-    'minerals_output' => 'Minerals Output',
-    'ore_input_breakdown' => 'Ore Input Breakdown',
-    'no_valid_ores' => 'No valid ores found. Please check your input and try again.',
-    'reprocessing_results' => 'Reprocessing Results',
 
     // Chart Info Notes
     'note_mining_trend' => 'Your daily mining quantity over the selected month.',
@@ -297,8 +287,6 @@ return [
     'note_monthly_comparison' => 'Side-by-side comparison of your mining across recent months.',
 
     // Reprocessing: names invTypes could not place
-    'reprocessing_unresolved_title' => 'These names were not recognised and are not included in the totals below',
-    'reprocessing_unresolved_help' => 'Check the spelling against the name shown in game. If it looks right, the local EVE static data may be out of date, which happens when CCP renames or adds ore.',
 
     'not_taxed' => 'Not taxed',
 ];

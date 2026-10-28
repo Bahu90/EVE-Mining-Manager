@@ -24,11 +24,6 @@
                     <i class="fas fa-user"></i> {{ trans('mining-manager::menu.my_mining') }}
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link {{ Request::is('*/ledger/reprocessing') ? 'active' : '' }}" href="{{ route('mining-manager.ledger.reprocessing') }}">
-                    <i class="fas fa-recycle"></i> {{ trans('mining-manager::ledger.reprocessing_calculator') }}
-                </a>
-            </li>
         </ul>
     </div>
     <div class="card-body">

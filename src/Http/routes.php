@@ -105,18 +105,6 @@ Route::group([
             'middleware' => 'can:mining-manager.member',
         ]);
 
-        Route::get('/reprocessing', [
-            'as' => 'mining-manager.ledger.reprocessing',
-            'uses' => 'LedgerController@reprocessingCalculator',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::post('/reprocessing/calculate', [
-            'as' => 'mining-manager.ledger.reprocessing.calculate',
-            'uses' => 'LedgerController@calculateReprocessing',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
         Route::get('/details/{id}', [
             'as' => 'mining-manager.ledger.details',
             'uses' => 'LedgerController@details',

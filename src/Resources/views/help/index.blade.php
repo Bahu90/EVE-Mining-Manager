@@ -2208,8 +2208,8 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         </li>
                         <li>
                             <strong>SeAT's static data (SDE)</strong> supports the registry but never decides a
-                            category. It supplies type names, the reprocessing yields behind refined ore values and the
-                            reprocessing calculator, and a way to check that every registry ID really exists. Moon
+                            category. It supplies type names, the reprocessing yields behind refined ore values, and a
+                            way to check that every registry ID really exists. Moon
                             rarity tiers and tax categories are Mining Manager ideas rather than EVE ones, and CCP's
                             own groups do not line up with them.
                         </li>
