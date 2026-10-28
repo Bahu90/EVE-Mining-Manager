@@ -1098,31 +1098,55 @@ class TaxController extends Controller
 
         $map = [];
 
+        // Two queries for the whole list instead of two per payer: which SeAT
+        // user each payer belongs to, then every character of those users.
+        $userByCharacter = [];
+        $charactersByUser = [];
+        if ($acceptAlts && $payerIds->isNotEmpty()) {
+            $userByCharacter = DB::table('refresh_tokens')
+                ->whereIn('character_id', $payerIds->all())
+                ->pluck('user_id', 'character_id')
+                ->all();
+
+            $userIds = array_values(array_unique(array_filter($userByCharacter, fn ($u) => $u !== null)));
+            if ($userIds) {
+                foreach (DB::table('refresh_tokens')->whereIn('user_id', $userIds)->get(['user_id', 'character_id']) as $row) {
+                    $charactersByUser[$row->user_id][] = (int) $row->character_id;
+                }
+            }
+        }
+
+        // Unpaid invoice ids per character, and their position in the unpaid
+        // list, built once.
+        $order = array_flip($unpaidTaxes->pluck('id')->map(fn ($id) => (int) $id)->all());
+        $invoicesByCharacter = [];
+        foreach ($unpaidTaxes as $tax) {
+            $invoicesByCharacter[(int) $tax->character_id][] = (int) $tax->id;
+        }
+
         foreach ($payerIds as $payerId) {
             $eligible = [$payerId];
 
-            if ($acceptAlts) {
-                $userId = DB::table('refresh_tokens')->where('character_id', $payerId)->value('user_id');
+            $userId = $userByCharacter[$payerId] ?? null;
+            if ($acceptAlts && $userId !== null) {
+                $eligible = $charactersByUser[$userId] ?? [];
 
-                if ($userId !== null) {
-                    $eligible = DB::table('refresh_tokens')
-                        ->where('user_id', $userId)
-                        ->pluck('character_id')
-                        ->map(fn ($id) => (int) $id)
-                        ->all();
-
-                    if (!in_array($payerId, $eligible, true)) {
-                        $eligible[] = $payerId;
-                    }
+                if (!in_array($payerId, $eligible, true)) {
+                    $eligible[] = $payerId;
                 }
             }
 
-            $map[$payerId] = $unpaidTaxes
-                ->filter(fn ($tax) => in_array((int) $tax->character_id, $eligible, true))
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->values()
-                ->all();
+            $ids = [];
+            foreach ($eligible as $characterId) {
+                foreach ($invoicesByCharacter[$characterId] ?? [] as $taxId) {
+                    $ids[] = $taxId;
+                }
+            }
+
+            // Same order as before: the order of the unpaid list.
+            usort($ids, fn ($x, $y) => ($order[$x] ?? 0) <=> ($order[$y] ?? 0));
+
+            $map[$payerId] = $ids;
         }
 
         return $map;

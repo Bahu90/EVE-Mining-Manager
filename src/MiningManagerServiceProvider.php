@@ -27,6 +27,7 @@ use MiningManager\Console\Commands\CachePriceDataCommand;
 use MiningManager\Console\Commands\DiagnosePricesCommand;
 use MiningManager\Console\Commands\DiagnoseAffiliationCommand;
 use MiningManager\Console\Commands\ResolveCharactersCommand;
+use MiningManager\Console\Commands\EveryMinuteCommand;
 use MiningManager\Console\Commands\DiagnoseCharacterCommand;
 use MiningManager\Console\Commands\DiagnoseMoonExtractionsCommand;
 use MiningManager\Console\Commands\DiagnoseTypeIdsCommand;
@@ -154,6 +155,7 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
                 DiagnosePricesCommand::class,
                 DiagnoseAffiliationCommand::class,
                 ResolveCharactersCommand::class,
+                EveryMinuteCommand::class,
                 DiagnoseCharacterCommand::class,
                 DiagnoseMoonExtractionsCommand::class,
                 DiagnoseTypeIdsCommand::class,

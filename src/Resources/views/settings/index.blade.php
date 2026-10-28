@@ -619,6 +619,7 @@ $(document).ready(function() {
 </script>
 
 {{-- Webhook Management JavaScript --}}
-<script src="{{ asset('vendor/mining-manager/js/webhooks.js') }}?v={{ time() }}"></script>
+{{-- Versioned by the file's own change time, so browsers re-fetch it after an update but cache it otherwise. --}}
+<script src="{{ asset('vendor/mining-manager/js/webhooks.js') }}?v={{ @filemtime(public_path('vendor/mining-manager/js/webhooks.js')) ?: '1' }}"></script>
 @endpush
 @endsection

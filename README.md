@@ -215,18 +215,19 @@ The tax selector under Settings > Tax Rates decides which of those categories ar
 
 ## Artisan Commands
 
-40 commands available, 25 of them on automated schedules via SeAT's scheduler.
+41 commands available, 23 schedules in SeAT's scheduler. The three every-minute jobs run together in one process through `mining-manager:every-minute`.
 
 ### Operational Commands
 
 | Command | Schedule | Description |
 |---|---|---|
-| `mining-manager:resolve-characters` | Every minute (`--requested`) + every 10min | Look up names and corporations for characters SeAT does not know. Every minute it takes the ones pages have asked for, every 10 minutes the miners SeAT has no affiliation for. ESI first, then EVEWho and zKillboard, and it backs off while the error budget it shares with SeAT is low. `--stats` shows what the table holds |
+| `mining-manager:every-minute` | Every minute | Runs check-extraction-arrivals, update-events and resolve-characters --requested in one process, so SeAT boots one PHP process a minute for them instead of three |
+| `mining-manager:resolve-characters` | Every minute (`--requested`, inside every-minute) + every 10min | Look up names and corporations for characters SeAT does not know. Every minute it takes the ones pages have asked for, every 10 minutes the miners SeAT has no affiliation for. ESI first, then EVEWho and zKillboard, and it backs off while the error budget it shares with SeAT is low. `--stats` shows what the table holds |
 | `mining-manager:process-ledger` | Every 30min (:15, :45) | Process corporation observer mining data |
 | `mining-manager:import-character-mining` | Every 30min (:20, :50) | Import character mining from SeAT's ESI data, adding up the rows SeAT keeps for each day. Scheduled with `--days=2` by mining date, so mining SeAT saves later is left out and billed days stay put. `--dry-run` shows what it would add or change without writing anything |
 | `mining-manager:update-extractions` | Every 2h | Refresh moon extraction data from ESI (state system: what EVE says is happening). The same run sends Moon Extraction Cancelled, the Moon Not Rescheduled and Moons Need Planning reminders, Next Pull Can Be Started, Moon Scan Missing, and takes pulls off refineries confirmed gone (Refinery Gone) |
-| `mining-manager:check-extraction-arrivals` | Every minute | Send Moon Chunk Ready once a chunk's stored arrival time passes, Moon Chunk Unstable before a chunk goes unstable, and Extraction Started when Manager Core's fast-poll is not handling it. Each goes out once per extraction |
-| `mining-manager:update-events` | Every minute | Auto-transition event status (planned→active→completed) with notifications, update participant data |
+| `mining-manager:check-extraction-arrivals` | Every minute (inside every-minute) | Send Moon Chunk Ready once a chunk's stored arrival time passes, Moon Chunk Unstable before a chunk goes unstable, and Extraction Started when Manager Core's fast-poll is not handling it. Each goes out once per extraction |
+| `mining-manager:update-events` | Every minute (inside every-minute) | Auto-transition event status (planned→active→completed) with notifications, update participant data |
 | `mining-manager:scan-extraction-events` | Every 5min | Publish `mining.extraction_ready` / `unstable` / `expired` on Manager Core's EventBus, once per extraction per stage. Does nothing without Manager Core |
 | `mining-manager:scan-metenox-cargo-fill` | Every 5min | Send Metenox Cargo Bay Full when a drill's bay crosses the threshold set under Settings, Notifications |
 | `mining-manager:cache-prices` | Every 4h (:30) | Cache market prices from configured provider |
@@ -245,7 +246,7 @@ The tax selector under Settings > Tax Rates decides which of those categories ar
 | `mining-manager:detect-theft` | 1st and 15th 1:00 AM | Full scan for unauthorized moon mining |
 | `mining-manager:monitor-active-thefts` | Every 6h (:10) | Monitor characters already on theft list |
 | `mining-manager:finalize-month` | 2nd of month 2:00 AM | Pre-calculate summaries for closed month |
-| `mining-manager:calculate-monthly-stats` | 2nd of month 3:00 AM + every 30min (current month) | Dashboard statistics |
+| `mining-manager:calculate-monthly-stats` | 2nd of month 3:00 AM + every 30min at :25/:55 (current month) | Dashboard statistics |
 
 ### Utility Commands
 

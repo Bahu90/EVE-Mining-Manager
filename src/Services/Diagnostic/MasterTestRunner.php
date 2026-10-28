@@ -943,7 +943,7 @@ class MasterTestRunner
             'mining-manager:process-ledger',
             'mining-manager:import-character-mining --days=2',
             'mining-manager:update-extractions',
-            'mining-manager:check-extraction-arrivals',
+            'mining-manager:every-minute',
             'mining-manager:calculate-taxes',
             'mining-manager:generate-invoices',
             'mining-manager:verify-payments --auto-match',

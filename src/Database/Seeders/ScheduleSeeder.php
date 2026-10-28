@@ -40,17 +40,21 @@ class ScheduleSeeder extends AbstractScheduleSeeder
     public function getSchedules(): array
     {
         return [
-            // Characters SeAT does not know are looked up in the background, so
-            // no page waits on ESI: the ones pages asked for every minute, and
-            // every 10 minutes also miners SeAT has no affiliation for.
+            // Every minute, in one process (EveryMinuteCommand): chunk arrival
+            // and unstable notices, mining event status changes, and lookups
+            // for the characters pages asked about. They used to be three
+            // schedules, so SeAT booted three PHP processes every minute.
             [
-                'command' => 'mining-manager:resolve-characters --requested',
+                'command' => 'mining-manager:every-minute',
                 'expression' => '* * * * *',
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
                 'ping_before' => null,
                 'ping_after' => null,
             ],
+            // Characters SeAT does not know are looked up in the background, so
+            // no page waits on ESI: every 10 minutes also miners SeAT has no
+            // affiliation for (the ones pages asked for run every minute above).
             [
                 'command' => 'mining-manager:resolve-characters',
                 'expression' => '*/10 * * * *',
@@ -87,32 +91,8 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // Fire moon_arrival notifications based on stored chunk_arrival_time.
-            // Runs every minute — notifications arrive within ~60s of actual
-            // chunk arrival, independent of ESI refresh timing. Idempotent via
-            // the notification_sent flag on moon_extractions.
-            [
-                'command' => 'mining-manager:check-extraction-arrivals',
-                'expression' => '* * * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Update mining events — runs EVERY MINUTE.
-            // Status transitions (planned→active→completed) need to fire close
-            // to the configured start/end times so Discord notifications arrive
-            // promptly. Participant tracking is cheap for small event counts
-            // (simple ledger query filtered by time + location). allow_overlap=false
-            // prevents concurrent runs if a tick takes longer than 60s.
-            [
-                'command' => 'mining-manager:update-events',
-                'expression' => '* * * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
+            // check-extraction-arrivals and update-events run every minute
+            // inside mining-manager:every-minute (above).
             // Calculate mining taxes - runs daily at 2:15 AM
             // Smart: checks shouldCalculateToday() and only acts on period boundaries
             // Shifted +1 day to allow observer data to settle (ESI lags 12-24h):
@@ -289,7 +269,10 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             // Pipeline: :15/:45 process-ledger (+ auto daily summaries) → :20/:50 monthly stats
             [
                 'command' => 'mining-manager:calculate-monthly-stats --current-month',
-                'expression' => '20,50 * * * *',
+                // :25 and :55, after process-ledger (:15/:45) and the personal
+                // import (:20/:50) have written, instead of at the same minute
+                // as the personal import.
+                'expression' => '25,55 * * * *',
                 'allow_overlap' => false,
                 'allow_maintenance' => false,
                 'ping_before' => null,
@@ -370,6 +353,10 @@ class ScheduleSeeder extends AbstractScheduleSeeder
         return [
             'mining-manager:scan-corporation-contracts', // Removed: contract-based taxing replaced by wallet transfers
             'mining-manager:update-daily-summaries --today-only', // Removed: process-ledger now auto-generates daily summaries
+            // Moved into mining-manager:every-minute (one process instead of three)
+            'mining-manager:check-extraction-arrivals',
+            'mining-manager:update-events',
+            'mining-manager:resolve-characters --requested',
         ];
     }
 }
