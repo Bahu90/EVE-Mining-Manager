@@ -6,7 +6,14 @@ All notable changes to Mining Manager will be documented in this file.
 
 First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namespace, tables and permissions, so an existing install switches over and keeps its data.
 
-**After updating**, run the migrations: `000038` encrypts the webhook URLs already saved and `000039` moves one schedule. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
+**After updating**, run the migrations: `000038` encrypts the webhook URLs already saved, `000039` moves one schedule, and `000040` adds the ore contract table. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
+
+### Tax paid in ore
+
+- **Settings > Tax Rates: members pay their tax in ISK or in ore**, per corporation. In ore mode members see the ore their bill comes to, each ore at its own rate, on My Taxes, each bill and the dashboard banner, and pay with an item exchange contract to the corporation (compressed ore counts the same).
+- **Accepted contracts are credited automatically** (`verify-ore-contracts`, hourly): to the bill named by the tax code in the description, otherwise the oldest open bills, with extra ore held as balance. Buyback contracts, contracts made before ore mode, and code-less contracts from pilots with no bill are not treated as tax.
+- **Directors see ore contracts waiting to be accepted** on the Wallet page; members see theirs on My Taxes.
+- Migration `000040` adds the table of checked contracts. SeAT needs the corporation contracts scope.
 
 ### Security
 

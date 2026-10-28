@@ -101,6 +101,19 @@ docker compose exec front php artisan optimize:clear
 
 If `mattfalahe/mining-manager` is still listed, remove it with `docker compose exec front composer remove mattfalahe/mining-manager`. No setup wizard is needed: settings, tax history, invoices and payments all carry over.
 
+## Tax paid in ore
+
+Corporations differ in how they take mining tax: some want ISK, others a share of the ore. Under **Settings > Tax Rates > Tax payment method**, choose per corporation whether members pay in **ISK** (a wallet transfer matched by tax code) or in **Ore**.
+
+In ore mode:
+
+- Bills are still worked out in ISK, so reminders, balances and reports work as before. Members see the **ore their bill comes to**: for each ore, the units they were taxed on at that ore's own rate, scaled to what they still owe and rounded up. It's shown on My Taxes, on each bill and in the dashboard banner.
+- Members pay with an **item exchange contract to the corporation**, price 0, with their tax code in the description. **Compressed ore counts unit for unit** as the raw ore.
+- `mining-manager:verify-ore-contracts` (hourly at :40) credits contracts once a director accepts them. Each ore is valued at what it's worth on the member's bill, so handing in exactly the listed ore pays exactly the bill. Ore that is on none of their bills is valued the way the ledger values mining. The payment goes to the bill named by the code, or else the oldest open bills, and anything left is **held as balance** for the next bill.
+- Contracts with a price (buybacks) are never treated as tax. A contract with no tax code only counts if its pilot has an open bill; after 35 days without one it's set aside as "Not tax". Contracts made before ore mode was turned on are never checked.
+- Directors see contracts waiting to be accepted on the **Wallet** page. ISK transfers are still accepted too.
+- SeAT needs a director token with the `esi-contracts.read_corporation_contracts.v1` scope so it fetches the corporation's contracts and their items.
+
 ## Configuration
 
 ### Key Settings
@@ -215,7 +228,7 @@ The tax selector under Settings > Tax Rates decides which of those categories ar
 
 ## Artisan Commands
 
-41 commands available, 23 schedules in SeAT's scheduler. The three every-minute jobs run together in one process through `mining-manager:every-minute`.
+42 commands available, 24 schedules in SeAT's scheduler. The three every-minute jobs run together in one process through `mining-manager:every-minute`.
 
 ### Operational Commands
 
@@ -235,6 +248,7 @@ The tax selector under Settings > Tax Rates decides which of those categories ar
 | `mining-manager:update-daily-summaries` | Daily 1:30 AM | Safety net for non-observer mining data. Also removes personal mining rows from the last four days that your own observer already recorded, the same as `reconcile-personal-mining` |
 | `mining-manager:calculate-taxes` | Daily 2:15 AM | Update running month-to-date tax totals, and mark bills overdue once their due date is over |
 | `mining-manager:generate-invoices` | Daily 2:30 AM | Generate tax invoices for completed periods with automatic tax code assignment |
+| `mining-manager:verify-ore-contracts` | Hourly (:40) | Credit item exchange contracts members made to a corporation that takes its tax in ore. `--dry-run` shows what it would credit. Does nothing while every corporation takes ISK |
 | `mining-manager:verify-payments` | Every 6h (:05) | Match wallet transfers against tax codes and the upfront keyword, and confirm refunds once the ISK has left the corporation wallet. `--reset-month=YYYY-MM` undoes a month's automatic matches and matches them again, with `--dry-run` to see what it would undo first |
 | `mining-manager:send-reminders` | Daily 10:00 AM | Send tax payment reminders (if enabled in settings) |
 | `mining-manager:generate-reports` | Day 9 of month 4:05 AM + hourly (scheduled) | Generate monthly report (7 days after finalize-month for collection % to mature) and process user-defined scheduled reports. Dedup guard skips if same period+type exists (use `--force` to override) |
