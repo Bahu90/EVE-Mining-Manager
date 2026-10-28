@@ -2,7 +2,7 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
-## [Unreleased] — bahu90/mining-manager
+## [2.1.0] — 2026-10-28 — bahu90/mining-manager
 
 First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namespace, tables and permissions, so an existing install switches over and keeps its data.
 

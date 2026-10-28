@@ -909,7 +909,25 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                      this one is what the latest update changed that you can see on screen. Earlier
                      updates of v2 stay folded away underneath until the next What's New is written. --}}
                 <div class="recent-changes-box">
-                    <h4><i class="fas fa-history"></i> In this update (2.0.5)</h4>
+                    <h4><i class="fas fa-history"></i> In this update (2.1.0)</h4>
+                    <p>
+                        The first release as bahu90/mining-manager. Same tables and permissions, so an
+                        install switching over keeps its data.
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager/blob/main/CHANGELOG.md" target="_blank" rel="noopener">The changelog</a>
+                        has the complete record.
+                    </p>
+                    <ul>
+                        <li><strong>Moon, Anomalies or All</strong> on My Mining, Mining Summary and each pilot's page: moon ore, belt and anomaly mining, or both.</li>
+                        <li><strong>Moon Mining</strong>, a page in the corporation website's layout, and the <strong>Dashboard</strong> first in the menu.</li>
+                        <li><strong>Mining tax in ISK or in ore</strong>, per corporation, with ore contracts to the corporation credited automatically.</li>
+                        <li><strong>No other plugins needed:</strong> Manager Core and Structure Manager are no longer used. An install that priced through Manager Core moves to Fuzzwork.</li>
+                        <li><strong>Security:</strong> webhook URLs are encrypted and must be public HTTPS hosts; page text is escaped; internal errors are no longer shown.</li>
+                        <li>Pages no longer link to each other; the menu on the left is the way around.</li>
+                    </ul>
+                </div>
+
+                <div class="recent-changes-box">
+                    <h4><i class="fas fa-history"></i> In 2.0.5</h4>
                     <p>
                         The changes in this release you will notice without going looking.
                         <a href="https://github.com/Bahu90/EVE-Mining-Manager/blob/main/CHANGELOG.md" target="_blank" rel="noopener">The changelog</a>
