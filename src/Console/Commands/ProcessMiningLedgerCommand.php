@@ -31,6 +31,11 @@ class ProcessMiningLedgerCommand extends Command
 
     protected $description = 'Process corporation observer mining data for COMPLETE moon mining tracking';
 
+    /** Tax rates per structure-owner corporation, read once per run. */
+    private array $taxRatesByCorp = [];
+
+    private ?OreValuationService $valuationService = null;
+
     public function handle()
     {
         $lock = Cache::lock('mining-manager:process-ledger', 900);
@@ -65,7 +70,9 @@ class ProcessMiningLedgerCommand extends Command
         $this->info("💰 Tax rates: per structure-owner corporation from settings (multi-corp support)");
 
         // Build query for observer data (eager-load observer for corporation_id resolution)
-        $query = CorporationObserverMining::with(['character', 'type', 'structure', 'observer'])
+        // Only structure (solar system) and observer (owner corporation) are
+        // read below; character and type were loaded for nothing.
+        $query = CorporationObserverMining::with(['structure', 'observer'])
             ->where('last_updated', '>=', $cutoffDate);
 
         if ($observerId) {
@@ -181,6 +188,12 @@ class ProcessMiningLedgerCommand extends Command
             ) {
             $byObserver = $chunk->groupBy('observer_id');
 
+            // One query for the ledger rows this chunk could match, instead of
+            // one per observer row. Most rows in the window have not changed
+            // since the last run, and are skipped below before any pricing,
+            // tax or invoice work is done for them.
+            $existingRows = $this->existingLedgerRows($chunk);
+
             foreach ($byObserver as $obsId => $entries) {
                 // Resolve structure owner corporation from observer relationship
                 $structureCorpId = $entries->first()->corporation_id; // via getCorporationIdAttribute accessor
@@ -208,25 +221,40 @@ class ProcessMiningLedgerCommand extends Command
                 $uniqueCharacterIds->push($entry->character_id);
                 $totalQuantity += $entry->quantity;
 
-                // Track for daily summary generation
-                $pairKey = $entry->character_id . '|' . Carbon::parse($entry->last_updated)->toDateString();
-                if (!$touchedPairsMap->has($pairKey)) {
-                    $touchedPairsMap->put($pairKey, [
-                        'character_id' => $entry->character_id,
-                        'date' => Carbon::parse($entry->last_updated)->toDateString(),
-                    ]);
-                }
+                $entryDate = Carbon::parse($entry->last_updated)->toDateString();
 
-                // Collect jackpot-relevant entries (moon ores only, lightweight)
+                // Collect jackpot-relevant entries (moon ores only, lightweight).
+                // Kept for unchanged rows too: see the jackpot note further down.
                 if (\MiningManager\Services\TypeIdRegistry::isMoonOre($entry->type_id)) {
                     $jackpotCheckEntries->push($entry);
                 }
+
+                // Unchanged since the last run: observer quantities only grow,
+                // so a row that is not larger than what the ledger holds has
+                // nothing new. This is the same decision the code below makes
+                // ($skipped), taken before the expensive work instead of after.
+                $existing = $existingRows[$this->ledgerKey($entry->character_id, $entryDate, $entry->type_id, $entry->observer_id)] ?? null;
+                if ($existing && !$recalculate && (int) $entry->quantity <= (int) $existing->quantity) {
+                    $skipped++;
+                    $progressBar->advance();
+                    continue;
+                }
+
+                // Only days that change need their daily summary rebuilt.
+                $pairKey = $entry->character_id . '|' . $entryDate;
+                if (!$touchedPairsMap->has($pairKey)) {
+                    $touchedPairsMap->put($pairKey, [
+                        'character_id' => $entry->character_id,
+                        'date' => $entryDate,
+                    ]);
+                }
+
                 try {
                     // Get structure's solar system
                     $solarSystemId = $entry->structure->solar_system_id ?? null;
 
                     // Calculate ore values using OreValuationService (daily session pricing)
-                    $valuationService = app(OreValuationService::class);
+                    $valuationService = $this->valuationService ??= app(OreValuationService::class);
                     $values = $valuationService->calculateOreValue($entry->type_id, $entry->quantity);
 
                     $unitPrice = $values['unit_price'] ?? 0;
@@ -287,12 +315,8 @@ class ProcessMiningLedgerCommand extends Command
                         'observer_id' => $entry->observer_id,
                     ];
 
-                    // Check if already processed (for skip vs update logic)
-                    $existing = MiningLedger::where('character_id', $entry->character_id)
-                        ->whereDate('date', Carbon::parse($entry->last_updated)->toDateString())
-                        ->where('type_id', $entry->type_id)
-                        ->where('observer_id', $entry->observer_id)
-                        ->first();
+                    // $existing was looked up above from the chunk's prefetch,
+                    // with the same match (character, day, type, observer).
 
                     if ($existing && $billed) {
                         // This row was on the bill, so the value and tax it was
@@ -386,7 +410,6 @@ class ProcessMiningLedgerCommand extends Command
                                 Log::debug("Mining Manager: Replaced personal ESI record with observer data for character {$entry->character_id}, type {$entry->type_id}");
                             } else {
                                 // Character mined more than observer shows — keep remainder as non-corp mining
-                                $valuationService = app(OreValuationService::class);
                                 $remainderValues = $valuationService->calculateOreValue($entry->type_id, $remainder);
                                 $personalDupe->update([
                                     'quantity' => $remainder,
@@ -404,6 +427,11 @@ class ProcessMiningLedgerCommand extends Command
 
                         $ledgerEntry = MiningLedger::updateOrCreate($uniqueKey, $data);
                         $processed++;
+
+                        // A later observer row in this chunk for the same
+                        // character, day, type and observer must see this one,
+                        // as it would have when each row ran its own lookup.
+                        $existingRows[$this->ledgerKey($entry->character_id, $entryDate, $entry->type_id, $entry->observer_id)] = $ledgerEntry;
                     }
 
                     $progressBar->advance();
@@ -545,6 +573,40 @@ class ProcessMiningLedgerCommand extends Command
     }
 
     /**
+     * The ledger rows a chunk of observer rows could match, keyed by
+     * ledgerKey(). Matches what the per-row lookup used to do: same
+     * character, day, type and observer, first row by id.
+     */
+    private function existingLedgerRows($chunk): array
+    {
+        if ($chunk->isEmpty()) {
+            return [];
+        }
+
+        $dates = $chunk->map(fn ($e) => Carbon::parse($e->last_updated)->toDateString());
+
+        $rows = MiningLedger::whereIn('observer_id', $chunk->pluck('observer_id')->unique()->values())
+            ->whereIn('character_id', $chunk->pluck('character_id')->unique()->values())
+            ->whereIn('type_id', $chunk->pluck('type_id')->unique()->values())
+            ->whereBetween('date', [$dates->min(), $dates->max()])
+            ->orderBy('id')
+            ->get();
+
+        $byKey = [];
+        foreach ($rows as $row) {
+            $key = $this->ledgerKey($row->character_id, Carbon::parse($row->date)->toDateString(), $row->type_id, $row->observer_id);
+            $byKey[$key] ??= $row;
+        }
+
+        return $byKey;
+    }
+
+    private function ledgerKey($characterId, string $date, $typeId, $observerId): string
+    {
+        return (int) $characterId . '|' . $date . '|' . (int) $typeId . '|' . (int) $observerId;
+    }
+
+    /**
      * Get tax rate for an ore type from corporation settings.
      * Returns 0 if no corporation is configured or ore type is not taxable.
      *
@@ -575,8 +637,10 @@ class ProcessMiningLedgerCommand extends Command
             return 0.0;
         }
 
-        // Get tax rates from settings (respects active corporation context)
-        $taxRates = $settingsService->getTaxRates();
+        // Get tax rates from settings (respects active corporation context).
+        // Read once per corporation per run: getTaxRates() is about a dozen
+        // settings reads, and this runs for every changed ledger row.
+        $taxRates = $this->taxRatesByCorp[$structureCorpId] ??= $settingsService->getTaxRates();
 
         // Check taxability via tax selector
         if ($isMoonOre) {
