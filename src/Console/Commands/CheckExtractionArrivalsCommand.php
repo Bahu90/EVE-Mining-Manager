@@ -299,24 +299,7 @@ class CheckExtractionArrivalsCommand extends Command
             // Window-bounded on extraction_start_time (not created_at) so a
             // history backfill or a fresh deploy doesn't fire for extractions
             // that started long ago — only genuinely recent starts notify.
-            //
-            // SUPPRESSED when Manager Core fast-poll owns extraction_started —
-            // MC's notification handler fires it ~2 min after the drill is
-            // lit, far ahead of this endpoint-driven pass. Running both would
-            // double-fire (they dedup on different keys). Mutual exclusion
-            // mirrors Structure Manager's fast-poll vs SeAT-native model.
             // ================================================================
-            if (\MiningManager\Integrations\MoonFastPollIntegration::isFastPollEnabled()) {
-                $this->info('Extraction-started handled by Manager Core fast-poll — skipping SeAT-native pass.');
-
-                if ($dryRun) {
-                    $this->warn("DRY RUN — no notifications fired, no flags updated.");
-                } else {
-                    $this->info("Arrival dispatched: {$dispatched}" . ($failed > 0 ? ", Failed: {$failed}" : ''));
-                }
-
-                return Command::SUCCESS;
-            }
 
             $startedQuery = MoonExtraction::query()
                 ->where('status', 'extracting')

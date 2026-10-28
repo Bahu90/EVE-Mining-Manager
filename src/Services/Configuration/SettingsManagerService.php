@@ -1338,11 +1338,6 @@ class SettingsManagerService
             // once a day, on top of the message for each new reason.
             'moon_scan_missing_daily' => (bool) $this->getSetting('notifications.moon_scan_missing_daily', false),
 
-            // extraction_started detection mode. 'auto' uses Manager Core's
-            // ESI fast-poll when present (~2 min detection); 'seat_native'
-            // forces the slower endpoint-driven cron pass even with MC.
-            'moon_extraction_fastpoll_mode' => $this->getSetting('notifications.moon_extraction_fastpoll_mode', 'auto'),
-
             // seat-connector availability (runtime)
             'seat_connector_available' => \Illuminate\Support\Facades\Schema::hasTable('seat_connector_users'),
         ];

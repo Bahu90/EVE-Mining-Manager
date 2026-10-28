@@ -269,42 +269,7 @@ class DiagnosticController extends Controller
                 : 'Not set — the planner page shows an empty state. Configure it in Settings → General.',
         ];
 
-        // 6. Manager Core fast-poll registration. This is the wiring that fails
-        //    silently: MC binds the registry singleton under the ::class key, so
-        //    a mis-resolved container key leaves the handler on a throwaway
-        //    instance MC's poll job never sees.
-        $mcAvailable = \MiningManager\Integrations\MoonFastPollIntegration::registryAvailable();
-        $mode = \MiningManager\Integrations\MoonFastPollIntegration::mode();
-        if (!$mcAvailable) {
-            $checks[] = [
-                'label'   => 'Manager Core fast-poll: extraction_started detection',
-                'status'  => 'warn',
-                'message' => 'Manager Core not installed — falling back to the SeAT-native pass (extraction_started fires after the ~30 min moon-extraction endpoint cache instead of ~2 min). This is expected on a standalone install.',
-            ];
-        } elseif ($mode !== \MiningManager\Integrations\MoonFastPollIntegration::MODE_AUTO) {
-            $checks[] = [
-                'label'   => 'Manager Core fast-poll: extraction_started detection',
-                'status'  => 'warn',
-                'message' => "Manager Core is installed but detection mode is '{$mode}' — fast-poll is disabled by operator choice, so extraction_started uses the slower SeAT-native pass. Change at Settings → Notifications → Extraction Started — Detection Speed.",
-            ];
-        } else {
-            $registered = false;
-            try {
-                $registry = app(\ManagerCore\Services\ESI\EsiNotificationRegistry::class);
-                $registered = in_array('MoonminingExtractionStarted', $registry->getRegisteredTypes(), true);
-            } catch (\Throwable $e) {
-                $registered = false;
-            }
-            $checks[] = [
-                'label'   => 'Manager Core fast-poll: MoonminingExtractionStarted registered',
-                'status'  => $registered ? 'ok' : 'fail',
-                'message' => $registered
-                    ? 'Handler registered with MC\'s EsiNotificationRegistry — extraction_started detects in ~2 min. NOTE: this reflects THIS web process; MC\'s poll job runs in a queue worker, so also confirm via MC\'s Plugin Bridge dashboard.'
-                    : 'Handler NOT registered in this process. MC\'s poll job will never route MoonminingExtractionStarted to Mining Manager. Check that the plugin booted cleanly and that a director with esi-characters.read_notifications.v1 is in MC\'s ESI key pool.',
-            ];
-        }
-
-        // 7. Planner data sanity — coverage gaps + open mismatches
+        // 6. Planner data sanity — coverage gaps + open mismatches
         if ($hasPlans && $moonOwner) {
             try {
                 $planner = app(\MiningManager\Services\Moon\MoonPlannerService::class);

@@ -1097,58 +1097,6 @@
         </div>
     </div>
 
-    {{-- ═══════════════════════════════════════════════════════════════ --}}
-    {{-- EXTRACTION STARTED — DETECTION SPEED (MANAGER CORE FAST-POLL)    --}}
-    {{-- ═══════════════════════════════════════════════════════════════ --}}
-    @php $mmFastPollAvailable = class_exists('\ManagerCore\Services\ESI\EsiNotificationRegistry'); @endphp
-    <div class="card bg-dark mb-3">
-        <div class="card-header" style="background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);">
-            <h5 class="card-title mb-0">
-                <i class="fas fa-bolt text-info"></i>
-                Extraction Started — Detection Speed
-            </h5>
-        </div>
-        <div class="card-body">
-            <small class="form-text text-muted mb-3 d-block">
-                How fast the <code>extraction_started</code> notification fires when a refinery lights
-                its moon drill.
-                <strong>Fast (Manager Core)</strong> registers with Manager Core's ESI fast-poll and
-                reacts to the in-game <code>MoonminingExtractionStarted</code> notification in ~2 minutes.
-                <strong>SeAT-native</strong> waits for the corp moon-extraction endpoint to refresh
-                (~30 min cache), then for the in-game notification that names who started it, for
-                up to six hours. The two paths are mutually exclusive — only one fires, so there are
-                no duplicate notifications.
-                @if(!$mmFastPollAvailable)
-                    <span class="d-block mt-1 text-warning">
-                        <i class="fas fa-info-circle"></i>
-                        Manager Core is not installed — only SeAT-native applies regardless of this setting.
-                    </span>
-                @endif
-            </small>
-            @php $mmFastPollMode = old('moon_extraction_fastpoll_mode', $notificationSettings['moon_extraction_fastpoll_mode'] ?? 'auto'); @endphp
-            <div class="form-group mb-0">
-                <div class="custom-control custom-radio mb-2">
-                    <input type="radio" class="custom-control-input" id="fastpoll_auto"
-                           name="moon_extraction_fastpoll_mode" value="auto"
-                           {{ $mmFastPollMode === 'auto' ? 'checked' : '' }}>
-                    <label class="custom-control-label" for="fastpoll_auto">
-                        <i class="fas fa-bolt text-info"></i>
-                        <strong>Fast (Manager Core)</strong> — recommended when Manager Core is installed
-                    </label>
-                </div>
-                <div class="custom-control custom-radio">
-                    <input type="radio" class="custom-control-input" id="fastpoll_seat_native"
-                           name="moon_extraction_fastpoll_mode" value="seat_native"
-                           {{ $mmFastPollMode === 'seat_native' ? 'checked' : '' }}>
-                    <label class="custom-control-label" for="fastpoll_seat_native">
-                        <i class="fas fa-clock text-muted"></i>
-                        <strong>SeAT-native</strong> — endpoint-driven, no Manager Core dependency
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div>
-
     {{-- Save Button --}}
     <div class="action-buttons">
         <button type="submit" class="btn btn-success btn-block">

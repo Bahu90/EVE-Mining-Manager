@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use MiningManager\Models\MoonExtraction;
 use MiningManager\Models\WebhookConfiguration;
-use MiningManager\Integrations\MoonFastPollIntegration;
 use MiningManager\Models\TaxCode;
 use MiningManager\Services\Tax\ClassificationEpoch;
 use MiningManager\Services\OreClassifier;
@@ -1118,18 +1117,12 @@ class MasterTestRunner
     /**
      * Extraction Started alerts still unsent well past their wait.
      *
-     * Only the SeAT-native path holds an alert back, waiting up to six hours for
-     * the notification that names who started the extraction. Manager Core
-     * fast-poll sends straight from that notification, so there is nothing to
-     * check when it is the one sending.
+     * The alert is held back for up to six hours waiting for the notification
+     * that names who started the extraction.
      */
     protected function checkExtractionStartedBacklog(): array
     {
         $name = 'Extraction Started alerts going out';
-
-        if (MoonFastPollIntegration::isFastPollEnabled()) {
-            return $this->skip($name, 'notifications', 'Sent by Manager Core fast-poll, which does not hold alerts back');
-        }
 
         if (!Schema::hasColumn('moon_extractions', 'extraction_started_sent')) {
             return $this->skip($name, 'notifications', 'extraction_started_sent column not present');

@@ -774,10 +774,6 @@ class SettingsController extends Controller
             // Outstanding Mining Tax: whose bills the digest lists.
             'type_tax_outstanding_digest_corporations' => 'nullable|array',
             'type_tax_outstanding_digest_corporations.*' => 'integer|min:1',
-            'moon_extraction_fastpoll_mode' => [
-                'nullable',
-                'in:auto,seat_native',
-            ],
         ]);
 
         if ($validator->fails()) {
@@ -900,13 +896,6 @@ class SettingsController extends Controller
             // Moon Scan Missing goes once per new reason; the daily list on top
             // of that is opt-in.
             $data['moon_scan_missing_daily'] = $request->boolean('moon_scan_missing_daily');
-
-            // extraction_started detection mode (auto = Manager Core fast-poll
-            // when present; seat_native = endpoint-driven cron pass).
-            $fastpollMode = $request->input('moon_extraction_fastpoll_mode');
-            $data['moon_extraction_fastpoll_mode'] = in_array($fastpollMode, ['auto', 'seat_native'], true)
-                ? $fastpollMode
-                : 'auto';
 
             $this->settingsService->updateNotificationSettings($data);
             $this->clearSettingsCache();
