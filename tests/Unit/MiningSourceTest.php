@@ -44,62 +44,55 @@ class MiningSourceTest extends TestCase
         $this->assertSame('all', MiningSource::normalise('all'));
     }
 
-    public function test_a_row_with_an_observer_is_moon_mining(): void
+    public function test_moon_ore_is_moon_mining_wherever_it_was_logged(): void
     {
-        $this->assertSame('moon', MiningSource::ofRow((object) ['observer_id' => 1046000000001]));
-        $this->assertSame('anomalies', MiningSource::ofRow((object) ['observer_id' => null]));
-        $this->assertSame('anomalies', MiningSource::ofRow(['observer_id' => null]));
+        $this->assertSame('moon', MiningSource::ofRow((object) ['observer_id' => 1046000000001, 'is_moon_ore' => true]));
+        $this->assertSame('moon', MiningSource::ofRow((object) ['observer_id' => null, 'is_moon_ore' => true]));
+        $this->assertSame('anomalies', MiningSource::ofRow((object) ['observer_id' => null, 'is_moon_ore' => false]));
+        $this->assertSame('anomalies', MiningSource::ofRow(['observer_id' => null, 'is_moon_ore' => 0]));
     }
 
-    public function test_moon_keeps_observer_rows_of_the_moon_owner(): void
+    public function test_moon_takes_refinery_rows_and_moon_ore_no_refinery_row_covers(): void
     {
         MiningSource::forget(98000001, true);
         $query = new RecordingQuery();
 
         MiningSource::scope($query, MiningSource::MOON);
 
-        $this->assertSame([
-            ['whereNotNull', 'mining_ledger.processed_at'],
-            ['where(group)', [
-                ['whereNull', 'mining_ledger.corporation_id'],
-                ['orWhere', 'mining_ledger.corporation_id', 98000001],
-            ]],
-            ['whereNotNull', 'mining_ledger.observer_id'],
-        ], $query->calls);
+        $this->assertSame(['whereNotNull', 'mining_ledger.processed_at'], $query->calls[0]);
+        $this->assertSame('where(group)', $query->calls[1][0]);
+        $this->assertSame('whereRaw', $query->calls[2][0]);
+        $sql = $query->calls[2][1];
+        $this->assertStringContainsString('mining_ledger.observer_id IS NOT NULL OR (mining_ledger.is_moon_ore = 1 AND NOT EXISTS', $sql);
+        $this->assertStringContainsString('mm_obs.corporation_id = 98000001', $sql);
     }
 
-    public function test_anomalies_keep_rows_without_an_observer(): void
+    public function test_anomalies_never_hold_moon_ore(): void
     {
         MiningSource::forget(null, true);
-        $query = new RecordingQuery();
 
-        MiningSource::scope($query, MiningSource::ANOMALIES, 'l');
-
-        $this->assertSame([
-            ['whereNotNull', 'l.processed_at'],
-            ['whereNull', 'l.observer_id'],
-        ], $query->calls);
-    }
-
-    public function test_all_adds_no_source_condition(): void
-    {
-        MiningSource::forget(null, true);
-        $query = new RecordingQuery();
-
-        MiningSource::scope($query, MiningSource::ALL);
-
-        $this->assertSame([['whereNotNull', 'mining_ledger.processed_at']], $query->calls);
-    }
-
-    public function test_split_sums_are_complementary(): void
-    {
         $this->assertSame(
-            'SUM(CASE WHEN l.observer_id IS NOT NULL THEN l.total_value ELSE 0 END)',
-            MiningSource::sumSql(MiningSource::MOON, 'l.total_value', 'l.observer_id')
+            '(l.observer_id IS NULL AND l.is_moon_ore = 0)',
+            MiningSource::condition(MiningSource::ANOMALIES, 'l')
         );
+    }
+
+    public function test_all_leaves_out_log_rows_a_refinery_row_covers(): void
+    {
+        MiningSource::forget(null, true);
+        $sql = MiningSource::condition(MiningSource::ALL);
+
+        $this->assertStringStartsWith('(mining_ledger.observer_id IS NOT NULL OR mining_ledger.is_moon_ore = 0 OR NOT EXISTS', $sql);
+        $this->assertStringNotContainsString('mm_obs.corporation_id', $sql);
+    }
+
+    public function test_split_sums_use_the_same_conditions(): void
+    {
+        MiningSource::forget(null, true);
+
         $this->assertSame(
-            'SUM(CASE WHEN observer_id IS NULL THEN total_value ELSE 0 END)',
-            MiningSource::sumSql(MiningSource::ANOMALIES)
+            'SUM(CASE WHEN (l.observer_id IS NULL AND l.is_moon_ore = 0) THEN l.total_value ELSE 0 END)',
+            MiningSource::sumSql(MiningSource::ANOMALIES, 'l')
         );
     }
 }

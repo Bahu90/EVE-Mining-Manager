@@ -5,12 +5,17 @@ namespace MiningManager\Support;
 /**
  * Where mining happened, as the pages can show it.
  *
- * - Moon: mined at the corporation's own refineries. These rows come from
- *   the refineries' mining data (they carry an observer_id), which is what
- *   the corporation's website counts.
- * - Anomalies: everything else in a pilot's own mining log: belts,
- *   anomalies, and moons at other corporations' refineries (no observer_id).
+ * - Moon: moon ore. Mostly the refineries' own mining data (rows with an
+ *   observer_id), plus moon ore in pilots' own logs that no refinery row
+ *   covers: mining the refinery data has not reached yet, or another
+ *   corporation's moon.
+ * - Anomalies: everything else in pilots' own logs: ore, ice and gas from
+ *   belts and anomalies. Moon ore never comes from there.
  * - All: both together.
+ *
+ * A pilot's log repeats what the refinery reported for the same pilot, day
+ * and ore. When both are there the refinery row is counted and the log row
+ * is not, so nothing is counted twice.
  *
  * Only what the pages show follows this. Tax is worked out from the tax
  * settings, whatever is picked here.
@@ -92,11 +97,39 @@ final class MiningSource
             });
         }
 
+        return $query->whereRaw(self::condition($source, $table));
+    }
+
+    /**
+     * SQL that is true for a ledger row of one source.
+     *
+     * @param string $table the ledger table or its alias in the query
+     */
+    public static function condition(string $source, string $table = 'mining_ledger'): string
+    {
+        $covered = self::coveredByRefinery($table);
+
         return match ($source) {
-            self::MOON => $query->whereNotNull("{$table}.observer_id"),
-            self::ANOMALIES => $query->whereNull("{$table}.observer_id"),
-            default => $query,
+            self::MOON => "({$table}.observer_id IS NOT NULL OR ({$table}.is_moon_ore = 1 AND NOT {$covered}))",
+            self::ANOMALIES => "({$table}.observer_id IS NULL AND {$table}.is_moon_ore = 0)",
+            default => "({$table}.observer_id IS NOT NULL OR {$table}.is_moon_ore = 0 OR NOT {$covered})",
         };
+    }
+
+    /**
+     * True for a log row whose pilot, day and ore the Moon Owner
+     * Corporation's refinery data already has.
+     */
+    private static function coveredByRefinery(string $table): string
+    {
+        $owner = self::moonOwner();
+        $ownerSql = $owner !== null ? ' AND mm_obs.corporation_id = ' . (int) $owner : '';
+
+        return "EXISTS (SELECT 1 FROM mining_ledger mm_obs"
+            . " WHERE mm_obs.character_id = {$table}.character_id"
+            . " AND mm_obs.date = {$table}.date"
+            . " AND mm_obs.type_id = {$table}.type_id"
+            . " AND mm_obs.observer_id IS NOT NULL{$ownerSql})";
     }
 
     /**
@@ -135,21 +168,18 @@ final class MiningSource
     public static function ofRow($row): string
     {
         $observer = is_array($row) ? ($row['observer_id'] ?? null) : ($row->observer_id ?? null);
+        $moonOre = is_array($row) ? ($row['is_moon_ore'] ?? false) : ($row->is_moon_ore ?? false);
 
-        return $observer ? self::MOON : self::ANOMALIES;
+        return ($observer || $moonOre) ? self::MOON : self::ANOMALIES;
     }
 
     /**
      * SQL that sums a ledger column for one source, for queries that split
      * a total into Moon and Anomalies in one pass.
      */
-    public static function sumSql(string $source, string $valueColumn = 'total_value', string $observerColumn = 'observer_id'): string
+    public static function sumSql(string $source, string $table = 'mining_ledger', string $valueColumn = 'total_value'): string
     {
-        $condition = $source === self::MOON
-            ? "{$observerColumn} IS NOT NULL"
-            : "{$observerColumn} IS NULL";
-
-        return "SUM(CASE WHEN {$condition} THEN {$valueColumn} ELSE 0 END)";
+        return 'SUM(CASE WHEN ' . self::condition($source, $table) . " THEN {$table}.{$valueColumn} ELSE 0 END)";
     }
 
     private static function remember(string $source): void

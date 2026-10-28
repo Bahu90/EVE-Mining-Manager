@@ -225,7 +225,6 @@
                                         @else
                                             <span class="badge badge-secondary">{{ trans('mining-manager::ledger.regular_ore') }}</span>
                                         @endif
-                                        @include('mining-manager::partials.source-tag', ['row' => $entry])
                                     </td>
                                     <td class="text-right">{{ number_format($entry->quantity, 0) }}</td>
                                     <td class="text-right">{{ number_format($entry->quantity * ($entry->type->volume ?? 0), 2) }} m³</td>

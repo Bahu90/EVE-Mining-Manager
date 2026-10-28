@@ -78,8 +78,8 @@ class SourceTotals
 
         $row = $this->base($characterIds, $from, $to, MiningSource::ALL)
             ->selectRaw(
-                MiningSource::sumSql(MiningSource::MOON, 'mining_ledger.total_value', 'mining_ledger.observer_id') . ' as moon, '
-                . MiningSource::sumSql(MiningSource::ANOMALIES, 'mining_ledger.total_value', 'mining_ledger.observer_id') . ' as anomalies'
+                MiningSource::sumSql(MiningSource::MOON) . ' as moon, '
+                . MiningSource::sumSql(MiningSource::ANOMALIES) . ' as anomalies'
             )
             ->first();
 
@@ -158,8 +158,8 @@ class SourceTotals
                 SUM(mining_ledger.quantity) as quantity,
                 SUM(mining_ledger.quantity * COALESCE(invTypes.volume, 0)) as volume,
                 COUNT(DISTINCT mining_ledger.date) as days, '
-                . MiningSource::sumSql(MiningSource::MOON, 'mining_ledger.total_value', 'mining_ledger.observer_id') . ' as moon, '
-                . MiningSource::sumSql(MiningSource::ANOMALIES, 'mining_ledger.total_value', 'mining_ledger.observer_id') . ' as anomalies,
+                . MiningSource::sumSql(MiningSource::MOON) . ' as moon, '
+                . MiningSource::sumSql(MiningSource::ANOMALIES) . ' as anomalies,
                 SUM(CASE WHEN mining_ledger.is_moon_ore = 1 THEN mining_ledger.total_value ELSE 0 END) as moon_ore_value,
                 SUM(CASE WHEN mining_ledger.is_ice = 1 THEN mining_ledger.total_value ELSE 0 END) as ice_value,
                 SUM(CASE WHEN mining_ledger.is_gas = 1 THEN mining_ledger.total_value ELSE 0 END) as gas_value,

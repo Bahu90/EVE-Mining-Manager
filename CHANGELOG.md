@@ -10,8 +10,8 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 
 ### Moon, anomalies or both
 
-- **A Moon / Anomalies / All switch** on My Mining, Mining Summary and each pilot's page. Moon counts ore mined at the corporation's refineries and is the default, so the figures match what the corporation website counts; Anomalies counts what pilots mined anywhere else; All adds both. Totals, best day, daily average, favourite ore, corp rank, charts, the per-pilot table and the activity list follow it, and it is remembered for the session.
-- **Moon and anomalies side by side:** a bar with both figures on each page, Moon ISK and Anomalies ISK columns per pilot under All, and a Moon or Anomaly tag on every ledger row.
+- **A Moon / Anomalies / All switch** on My Mining, Mining Summary and each pilot's page. Moon counts moon ore and is the default: the refineries' own data, plus moon ore in pilots' logs that no refinery row covers yet. Anomalies counts ore, ice and gas from belts and anomalies, never moon ore. All adds both, counting a pilot's log row that repeats a refinery row only once. Totals, best day, daily average, favourite ore, corp rank, charts, the per-pilot table and the activity list follow it, and it is remembered for the session.
+- **Moon and anomalies side by side:** a bar with both figures on each page, and Moon ISK and Anomalies ISK columns per pilot under All.
 - **Tax does not change with the switch:** tax figures cover all taxed mining and say so.
 - **The Dashboard** names the month's anomaly mining beside its moon figures, linking to My Mining.
 - **`initialize` removes mining counted twice** (a pilot's own log repeating what the refinery reported) over everything it imported, not only the last 4 days.

@@ -427,7 +427,6 @@
                                                 <i class="fas fa-bolt"></i>
                                             </span>
                                         @endif
-                                        @include('mining-manager::partials.source-tag', ['row' => $activity])
                                     </td>
                                     <td class="text-right">{{ number_format($activity->quantity, 0) }}</td>
                                     <td class="text-right">{{ number_format($activity->quantity * ($activity->type->volume ?? 0), 2) }} m³</td>
