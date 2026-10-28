@@ -2,8 +2,8 @@
 
 return [
     // Dashboard titles
-    'member_dashboard' => 'Full Dashboard',
-    'director_dashboard' => 'Full Dashboard',
+    'member_dashboard' => 'Dashboard',
+    'director_dashboard' => 'Dashboard',
     
     // Common
     'live' => 'Live',

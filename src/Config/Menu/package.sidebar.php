@@ -17,7 +17,7 @@ return [
                 'permission' => 'mining-manager.member',
             ],
             [
-                'name'       => 'Full Dashboard',
+                'name'       => 'Dashboard',
                 'label'      => 'mining-manager::menu.full_dashboard',
                 'icon'       => 'fas fa-chart-bar',
                 'route'      => 'mining-manager.dashboard.details',

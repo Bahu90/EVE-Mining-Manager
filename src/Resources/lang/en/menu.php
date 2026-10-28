@@ -6,7 +6,7 @@ return [
     
     // Dashboard
     'dashboard' => 'Moon Mining',
-    'full_dashboard' => 'Full Dashboard',
+    'full_dashboard' => 'Dashboard',
     
     // Mining Ledger
     'mining_ledger' => 'Mining Ledger',

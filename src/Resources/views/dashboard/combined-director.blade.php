@@ -60,19 +60,16 @@
                         <li class="nav-item">
                             <a class="nav-link active" id="personal-tab" data-toggle="pill" href="#personal" role="tab" aria-controls="personal" aria-selected="true">
                                 <i class="fas fa-user"></i> {{ trans('mining-manager::dashboard.my_mining') }}
-                                <span class="badge personal-badge ml-2">Personal</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="corporation-tab" data-toggle="pill" href="#corporation" role="tab" aria-controls="corporation" aria-selected="false">
                                 <i class="fas fa-building"></i> {{ trans('mining-manager::dashboard.corporation_overview') }}
-                                <span class="badge corporation-badge ml-2">Corporation</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" id="guest-miners-tab" data-toggle="pill" href="#guest-miners" role="tab" aria-controls="guest-miners" aria-selected="false">
                                 <i class="fas fa-user-friends"></i> Guest Miners
-                                <span class="badge badge-secondary ml-2">Guests</span>
                             </a>
                         </li>
                     </ul>
