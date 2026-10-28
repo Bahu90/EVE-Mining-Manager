@@ -20,14 +20,8 @@ use Illuminate\Support\Facades\Log;
  *     swallows the error, logs a warning, and returns 'unknown' status
  *     so the Help page never errors out from a transient Packagist hiccup
  *
- * Standalone: no Manager Core dependency. Works exactly as well on a
- * vanilla SeAT install as on a fully-integrated stack.
- *
- * Pattern source: ported verbatim from Structure Manager
- * (mattfalahe/structure-manager) which itself was ported from SeAT
- * Broadcast (mattfalahe/seat-discord-pings). Same pattern slots cleanly
- * into other plugins by changing the constants here — return shape is
- * stable so Blade renderers can be copied.
+ * Needs nothing but SeAT. The return shape is stable, so the same pattern
+ * slots into other plugins by changing the constants here.
  */
 class VersionChecker
 {

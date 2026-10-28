@@ -709,11 +709,7 @@
                     </div>
                 </div>
 
-                {{-- Version Status — installed vs latest on Packagist.
-                     Ported from Structure Manager / SeAT Broadcast (same
-                     VersionChecker pattern); shape is stable so subsequent
-                     plugins can reuse this markup verbatim with their own
-                     service. --}}
+                {{-- Version Status — installed vs latest on Packagist. --}}
                 @php
                     $vs = $versionStatus ?? ['current' => '?', 'current_source' => 'config', 'is_dev_branch' => false, 'latest' => null, 'status' => 'unknown', 'message' => '', 'release_url' => null];
                     $statusBadgeClass = [
@@ -836,35 +832,13 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <h3>
                         <i class="fas fa-puzzle-piece"></i>
                         What's New in v2
-                        <span class="whats-new-tag">the ecosystem era</span>
+                        <span class="whats-new-tag">standalone</span>
                     </h3>
                     <p>
-                        Version 2 makes Mining Manager one plugin in a family. It still does its whole job on
-                        its own: set your Moon Owner Corporation and tax rates, and the ledger, taxes, moon
-                        tracking and alerts all run with nothing else installed. When one of its neighbours is
-                        installed, it asks that plugin for what it does best rather than doing the same work
-                        twice.
+                        Mining Manager does its whole job on its own: set your Moon Owner Corporation and tax
+                        rates, and the ledger, taxes, moon tracking and alerts all run with nothing but SeAT
+                        installed. It needs no other plugin, and nothing in it waits on one.
                     </p>
-
-                    <h4><i class="fas fa-plug"></i> Works alone, better with neighbours</h4>
-                    <ul>
-                        <li>
-                            <strong>Manager Core</strong> gives every plugin one place to set market pricing,
-                            and its ESI fast-poll spots a refinery starting an extraction in about two minutes.
-                            Moon chunks that are ready, going unstable or expired are published on its event
-                            bus for other plugins to use.
-                        </li>
-                        <li>
-                            <strong>Structure Manager</strong>, with Manager Core alongside it, reports trouble at
-                            your refineries. A refinery running an extraction that is low on fuel or reinforced
-                            raises <strong>Extraction At Risk</strong>, and one that is destroyed raises
-                            <strong>Extraction Lost</strong>, each with a link to its Structure Board.
-                        </li>
-                        <li>
-                            Neither is required. Anything that depends on another plugin switches itself off
-                            when that plugin is missing.
-                        </li>
-                    </ul>
 
                     <h4><i class="fas fa-calendar-check"></i> Moon pulls are coordinated, not controlled</h4>
                     <ul>
@@ -1062,7 +1036,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <ul>
                         <li>
                             <strong>Moon Chunk Unstable goes out again</strong>, two hours before a chunk turns unstable,
-                            and so does Extraction Started when Manager Core's fast-poll is not handling it. Both had
+                            and so does Extraction Started. Both had
                             only been checked in the minute after some chunk arrived, so they were mostly missed.
                         </li>
                         <li>
@@ -1246,7 +1220,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <ul>
                         <li>
                             <strong>Moon alerts say more.</strong> Extraction Started names the pilot who started
-                            the extraction, and their main. Without Manager Core it holds the alert until the
+                            the extraction, and their main. It holds the alert until the
                             in-game notification reaches SeAT so it can do that, and sends it without the name if
                             six hours pass first. Chunks fractured from now on show who fractured them, the three
                             Moon Planner alerts carry the refinery, moon and time on Discord, and Moon Scheduled
@@ -1256,7 +1230,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                             <strong>Check your webhooks after this update.</strong> Four alerts were on the
                             webhook form but showed as off whenever a webhook was opened for editing, so saving
                             that webhook for any other reason switched them off: the weekly outstanding tax
-                            digest, Price Provider Trouble, and the two cross-plugin extraction alerts. That is
+                            digest, Price Provider Trouble, and two extraction alerts since retired. That is
                             fixed, and the icons in the webhook list now cover every event, but anything
                             switched off this way stays off until you switch it back on.
                         </li>
@@ -1377,14 +1351,9 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                             <p>{{ trans('mining-manager::help.feature_theft_desc') }}</p>
                         </div>
                         <div class="feature-item">
-                            <i class="fas fa-shield-alt"></i>
-                            <h5>Cross-Plugin Alerts</h5>
-                            <p>When Manager Core and Structure Manager are installed, MM subscribes to Structure Manager's threat events and dispatches <strong>Extraction At Risk</strong> (fuel critical, shield or armor reinforced) and <strong>Extraction Lost</strong> (refinery destroyed) notifications with attacker info and Structure Board deeplinks. Toggles auto-disable when either plugin is missing.</p>
-                        </div>
-                        <div class="feature-item">
                             <i class="fas fa-rocket"></i>
                             <h5>Master Test Diagnostic</h5>
-                            <p>A one-click, read-only check of the whole install on the Diagnostic page: schema, settings, cross-plugin integration, pricing, notifications, the mining imports, the moon lifecycle, the tax pipeline, payments and refunds, and security. Run it after an update or a settings change rather than reading logs.</p>
+                            <p>A one-click, read-only check of the whole install on the Diagnostic page: schema, settings, pricing, notifications, the mining imports, the moon lifecycle, the tax pipeline, payments and refunds, and security. Run it after an update or a settings change rather than reading logs.</p>
                         </div>
                     </div>
                 </div>
@@ -2559,7 +2528,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
 
                     <div class="alert alert-secondary mt-2">
                         <i class="fas fa-hammer text-info"></i>
-                        <strong>Extraction Started:</strong> fires when a refinery starts an extraction, and names the pilot who started it, with the main of their account when that pilot is on SeAT. With <strong>Manager Core</strong> installed, its ESI fast-poll picks up the in-game notification in about two minutes and the name comes with it. Without Manager Core the extraction is picked up from SeAT's moon extraction data on the plugin's regular schedule, and the alert then waits for the in-game notification to reach SeAT so it can say who started it. If that notification has still not arrived six hours after the extraction started, the alert goes out without the name: a slow notification can delay the alert but never lose it. The <em>Detection Speed</em> setting for Extraction Started, under Settings &rarr; Notifications, chooses between the two.
+                        <strong>Extraction Started:</strong> fires when a refinery starts an extraction, and names the pilot who started it, with the main of their account when that pilot is on SeAT. The extraction is picked up from SeAT's moon extraction data on the plugin's regular schedule, and the alert then waits for the in-game notification to reach SeAT so it can say who started it. If that notification has still not arrived six hours after the extraction started, the alert goes out without the name: a slow notification can delay the alert but never lose it.
                     </div>
 
                     <div class="alert alert-secondary mt-2">
@@ -2613,10 +2582,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                                 <tr>
                                     <td><i class="fas fa-moon text-warning"></i> {{ trans('mining-manager::help.webhook_cat_moon') }}</td>
                                     <td>{{ trans('mining-manager::help.webhook_cat_moon_events') }}</td>
-                                </tr>
-                                <tr>
-                                    <td><i class="fas fa-shield-alt text-danger"></i> {{ trans('mining-manager::help.webhook_cat_structure_alerts') }}</td>
-                                    <td>{{ trans('mining-manager::help.webhook_cat_structure_alerts_events') }}</td>
                                 </tr>
                                 <tr>
                                     <td><i class="fas fa-calendar-alt text-info"></i> {{ trans('mining-manager::help.webhook_cat_events') }}</td>
@@ -2969,23 +2934,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <h5>ISK valuation</h5>
                     <p>
                         ISK values are computed at page render using the plugin's configured price
-                        provider (Manager Core's pricing service when available, with Jita /
-                        Fuzzwork fallback). Prices are fetched in a single batch for every ore type
+                        provider and its fallback. Prices are fetched in a single batch for every ore type
                         across every visible drill, so adding more Metenoxes doesn't multiply the
                         pricing cost. If pricing is unavailable for any reason, the page renders
                         the quantity columns only and shows "pricing unavailable" in the header.
                     </p>
-                    <h5>Cross-plugin contract</h5>
-                    <p class="text-muted" style="font-size: 0.88em;">
-                        For plugin developers: Mining Manager exposes
-                        <code>mining.metenox.cargoSnapshot($structureId)</code> through Manager
-                        Core's PluginBridge. Returns <code>[type_id =&gt; quantity]</code> for any
-                        Metenox structure the plugin can see, or <code>null</code> for non-Metenox
-                        structures. Lets Structure Manager (or future consumers) render the drill's
-                        contents on its structure detail page without round-tripping through MM's
-                        UI.
-                    </p>
-
                     <h4>{{ trans('mining-manager::help.moon_tracking') }}</h4>
                     <p>{{ trans('mining-manager::help.moon_tracking_desc') }}</p>
 
@@ -3117,79 +3070,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     </p>
                 </div>
 
-                {{-- Cross-Plugin Threat Alerts (v2.0.0+) --}}
-                <div class="help-card">
-                    <h3>
-                        <i class="fas fa-shield-alt text-danger"></i>
-                        Cross-Plugin Threat Alerts
-                    </h3>
-                    <p>When <strong>Manager Core</strong> and <strong>Structure Manager</strong> are both installed, Mining Manager subscribes to SM's <code>structure.alert.*</code> event family via MC's EventBus and dispatches notifications when an active extraction's refinery is at risk or destroyed. The relevant webhook toggles auto-disable when either plugin is missing — no operator action needed.</p>
-
-                    <div class="feature-grid">
-                        <div class="feature-item" style="border-left: 4px solid #f39c12;">
-                            <h5><i class="fas fa-fire"></i> Extraction At Risk &mdash; Fuel Critical</h5>
-                            <p>Structure Manager reports the refinery's fuel as critical, under 7 days left. Embed shows days remaining + fuel-expires timestamp. Severity-aware embed color (info/warning/critical based on SM's severity field).</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #e67e22;">
-                            <h5><i class="fas fa-bolt"></i> Extraction At Risk &mdash; Shield Reinforced</h5>
-                            <p>Refinery shield went down (early warning). Embed shows timer end + hostile force corp name when SM resolved one. Operators can mobilise a defense fleet before the strategic timer.</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #c0392b;">
-                            <h5><i class="fas fa-exclamation-triangle"></i> Extraction At Risk &mdash; Armor Reinforced</h5>
-                            <p>Strategic timer started. Same data shape as Shield, different embed color tier. Final-stage warning before potential destruction.</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #2c3e50;">
-                            <h5><i class="fas fa-skull-crossbones"></i> Extraction Lost &mdash; Destroyed</h5>
-                            <p>Refinery destroyed. Embed shows destroyed-at timestamp, outcome, chunk value lost (using <code>estimated_value_pre_arrival</code> snapshot when available), killer attribution, and killmail link if SM resolved one.</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #27ae60;">
-                            <h5><i class="fas fa-thumbs-up"></i> Fuel Recovered (silent state cleanup)</h5>
-                            <p>SM detects an operator topped off the refinery. MM clears its <code>alert_fuel_critical_sent</code> dedup latch so a future re-critical event fires fresh. No notification dispatched on this flavor — pure state hygiene.</p>
-                        </div>
-                    </div>
-
-                    <div class="info-box">
-                        <i class="fas fa-info-circle"></i>
-                        <strong>Idempotent dispatch:</strong> each extraction has 5 boolean dedup columns (<code>alert_fuel_critical_sent</code>, <code>alert_shield_reinforced_sent</code>, <code>alert_armor_reinforced_sent</code>, <code>alert_hull_reinforced_sent</code>, <code>alert_destroyed_sent</code>) latched via atomic compare-and-swap. SM polls every 10 minutes; without the latch every poll would re-fire the notification until fuel/timer cleared.
-                    </div>
-
-                    <div class="info-box">
-                        <i class="fas fa-link"></i>
-                        <strong>Structure Board deeplink:</strong> every embed includes a one-click "Open in Structure Manager" link to SM's Structure Board scoped to the affected refinery. Operators pivot from the Discord ping straight to SM's full structure context (timers, fuel curve, history) without searching.
-                    </div>
-                </div>
-
-                {{-- Published Events (v2.0.1+) --}}
-                <div class="help-card">
-                    <h3>
-                        <i class="fas fa-broadcast-tower text-info"></i>
-                        Published Events (EventBus)
-                    </h3>
-                    <p>From <strong>v2.0.1</strong>, Mining Manager <em>publishes</em> moon-extraction lifecycle events to Manager Core's EventBus in addition to subscribing to Structure Manager's threat alerts. Other plugins can subscribe to these events instead of polling MM's tables. <strong>SeAT Broadcast v2.0.0</strong> is the first known consumer (FC Opportunities mining category).</p>
-
-                    <p>Events are fired exactly once per extraction per lifecycle stage by the <code>mining-manager:scan-extraction-events</code> cron command (every 5 minutes). Per-stage dedup is enforced via the <code>moon_extraction_event_log</code> table. Without Manager Core installed, the scanner is a no-op.</p>
-
-                    <div class="feature-grid">
-                        <div class="feature-item" style="border-left: 4px solid #17a2b8;">
-                            <h5><code>mining.extraction_ready</code></h5>
-                            <p>Chunk has fractured and its mining window opens: 48 hours, or 72 / 96 with a Moon Drilling Stability or Proficiency rig. Payload includes window_opens_at, window_closes_at, mining_window_hours, timer_rig_tier, is_jackpot, estimated_value.</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #f39c12;">
-                            <h5><code>mining.extraction_unstable</code></h5>
-                            <p>The final 2 hours before expiry, after the mining window. Use for last-call FC reminders.</p>
-                        </div>
-                        <div class="feature-item" style="border-left: 4px solid #6c757d;">
-                            <h5><code>mining.extraction_expired</code></h5>
-                            <p>Window closed, no more mining (past the mining window and its 2 hour tail). Consumers should drop the extraction from active views.</p>
-                        </div>
-                    </div>
-
-                    <div class="info-box">
-                        <i class="fas fa-shield-alt"></i>
-                        <strong>Catch-up logic:</strong> if the scanner first observes an extraction already in the unstable or expired state (Manager Core was down, cron paused, fresh install with already-active moons), earlier stages are back-filled so subscribers see a complete lifecycle picture.
-                    </div>
-                </div>
-
                 {{-- Moon Classification --}}
                 <div class="help-card">
                     <h3>
@@ -3261,10 +3141,8 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         Only part of a chunk is ever mined, so a slider sets the share. It starts at the average of
                         the moon's last six archived chunks, or the corporation's last twenty when the moon has
                         none, or the whole chunk with no history to go on, and the card names the share at which
-                        the refinery comes out ahead. Fuel comes from Structure Manager through Manager Core, at
-                        its Fuel Economics prices: the Moon Drill burns 5 fuel blocks an hour, the Metenox 5 blocks
-                        and 200 Magmatic Gas. Without them, or with Structure Manager's Economics switched off, both
-                        sides are shown before fuel. Moon Managers and Moon Finders do not see the card.
+                        the refinery comes out ahead. Both sides are shown before fuel, which each corporation
+                        buys and prices its own way. Moon Managers and Moon Finders do not see the card.
                     </p>
 
                     <h4><i class="fas fa-search-location"></i> Find Moons</h4>
@@ -4226,15 +4104,8 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                                 <tr>
                                     <td><code>mining-manager:check-extraction-arrivals</code></td>
                                     <td><span class="badge badge-danger">Every minute</span></td>
-                                    <td><strong>Notification system</strong> — fires <code>moon_arrival</code> Discord/Slack notifications based on the stored <code>chunk_arrival_time</code>. Pure time arithmetic — does not call ESI. Answers the question "has arrival time passed and we haven't notified yet?". Idempotent via the <code>notification_sent</code> flag — safe to re-run, handles missed cron ticks, handles extractions imported directly as 'ready'. The same run sends Moon Chunk Unstable before a chunk goes unstable, and Extraction Started when Manager Core's fast-poll is not handling it, each once per extraction.<br>
+                                    <td><strong>Notification system</strong> — fires <code>moon_arrival</code> Discord/Slack notifications based on the stored <code>chunk_arrival_time</code>. Pure time arithmetic — does not call ESI. Answers the question "has arrival time passed and we haven't notified yet?". Idempotent via the <code>notification_sent</code> flag — safe to re-run, handles missed cron ticks, handles extractions imported directly as 'ready'. The same run sends Moon Chunk Unstable before a chunk goes unstable, and Extraction Started, each once per extraction.<br>
                                         <small class="text-muted">Options: <code>--hours-back=72</code> only notify for arrivals within this window (safety on historical data), <code>--limit=50</code> max dispatches per run, <code>--unstable-warning-hours=2</code> how long before a chunk turns unstable to warn, <code>--dry-run</code> preview without firing</small>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td><code>mining-manager:scan-extraction-events</code></td>
-                                    <td><span class="badge badge-info">Every 5 min</span></td>
-                                    <td>Publishes <code>mining.extraction_ready</code>, <code>mining.extraction_unstable</code> and <code>mining.extraction_expired</code> on Manager Core's EventBus, once per extraction per stage. Does nothing without Manager Core.<br>
-                                        <small class="text-muted">Options: <code>--limit=200</code> extractions per run, <code>--dry-run</code> show what would be published without sending it</small>
                                     </td>
                                 </tr>
                                 <tr>
@@ -4404,11 +4275,11 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     </div>
 
                     <h5><i class="fas fa-rocket text-primary"></i> Master Test</h5>
-                    <p>One-click read-only smoke chain that runs 39 checks covering every major area of the plugin: schema integrity (every migration applied, every expected column present, every index in place), settings consistency (pricing/notification/feature flags load with the expected shape), cross-plugin integration (Manager Core + Structure Manager detection, EventBus subscription registered, MC pricing subscription rows present, MC price freshness vs the 8-hour staleness threshold), pricing path (`validateProviderConfig` passes, in-process Tritanium roundtrip), notifications (webhooks HTTPS-only, custom-template injection-safety live-verified by feeding hostile input through the template engine), lifecycle (cron schedules present, moon extractions populated), tax pipeline (no orphan tax codes), security hardening (CAS target columns, ScheduleSeeder firstOrCreate inheritance), and infra (cache put/get roundtrip).</p>
+                    <p>One-click read-only smoke chain that runs 33 checks covering every major area of the plugin: schema integrity (every migration applied, every expected column present, every index in place), settings consistency (pricing/notification/feature flags load with the expected shape), pricing path (`validateProviderConfig` passes, in-process Tritanium roundtrip), notifications (webhooks HTTPS-only, custom-template injection-safety live-verified by feeding hostile input through the template engine), lifecycle (cron schedules present, moon extractions populated), tax pipeline (no orphan tax codes), security hardening (CAS target columns, ScheduleSeeder firstOrCreate inheritance), and infra (cache put/get roundtrip).</p>
                     <p>Tests are idempotent (read-only — never mutates production data), fast (sub-second per test, full chain typically completes in under 30 seconds), and self-contained (per-test try/catch — a single broken test can't crash the run). Click <em>Run Master Test</em>, get a pass/warn/fail/skip table grouped by category. Use the "Show only issues" filter when something needs attention.</p>
                     <div class="info-box">
                         <i class="fas fa-shield-alt"></i>
-                        <strong>{{ trans('mining-manager::help.tip') }}:</strong> Run the Master Test after every plugin upgrade or settings change. It catches stale route caches, missing migrations, broken cross-plugin links, and partial deploys before they cause real-world dispatch failures.
+                        <strong>{{ trans('mining-manager::help.tip') }}:</strong> Run the Master Test after every plugin upgrade or settings change. It catches stale route caches, missing migrations and partial deploys before they cause real-world dispatch failures.
                     </div>
 
                     <h5>{{ trans('mining-manager::help.tax_trace_title') }}</h5>

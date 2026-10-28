@@ -368,8 +368,7 @@ class MoonExtractionService
     /**
      * Who started an extraction, with their main.
      *
-     * Null when SeAT has not pulled the notification yet. Without Manager Core
-     * that is normal for a while, because SeAT fetches the extraction endpoint
+     * Null when SeAT has not pulled the notification yet. That is normal for a while, because SeAT fetches the extraction endpoint
      * and the notifications on separate schedules.
      */
     private function extractionStartedBy(MoonExtraction $extraction): ?string

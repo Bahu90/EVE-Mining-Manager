@@ -24,8 +24,6 @@ use Carbon\Carbon;
  * @property bool $notify_moon_arrival
  * @property bool $notify_jackpot_detected
  * @property bool $notify_moon_chunk_unstable
- * @property bool $notify_extraction_at_risk
- * @property bool $notify_extraction_lost
  * @property bool $notify_metenox_cargo_full
  * @property bool $notify_event_created
  * @property bool $notify_event_started
@@ -87,8 +85,6 @@ class WebhookConfiguration extends Model
         'notify_extraction_cancelled',
         'notify_moon_not_rescheduled',
         'notify_schedule_needs_filling',
-        'notify_extraction_at_risk',
-        'notify_extraction_lost',
         'notify_metenox_cargo_full',
         'notify_event_created',
         'notify_event_started',
@@ -132,8 +128,6 @@ class WebhookConfiguration extends Model
         'notify_extraction_cancelled' => 'boolean',
         'notify_moon_not_rescheduled' => 'boolean',
         'notify_schedule_needs_filling' => 'boolean',
-        'notify_extraction_at_risk' => 'boolean',
-        'notify_extraction_lost' => 'boolean',
         'notify_metenox_cargo_full' => 'boolean',
         'notify_event_created' => 'boolean',
         'notify_event_started' => 'boolean',
@@ -262,8 +256,6 @@ class WebhookConfiguration extends Model
             'extraction_cancelled' => 'notify_extraction_cancelled',
             'moon_not_rescheduled' => 'notify_moon_not_rescheduled',
             'schedule_needs_filling' => 'notify_schedule_needs_filling',
-            'extraction_at_risk' => 'notify_extraction_at_risk',
-            'extraction_lost' => 'notify_extraction_lost',
             'metenox_cargo_full' => 'notify_metenox_cargo_full',
             'event_created' => 'notify_event_created',
             'event_started' => 'notify_event_started',
@@ -399,8 +391,6 @@ class WebhookConfiguration extends Model
             'extraction_cancelled' => $this->notify_extraction_cancelled,
             'moon_not_rescheduled' => $this->notify_moon_not_rescheduled,
             'schedule_needs_filling' => $this->notify_schedule_needs_filling,
-            'extraction_at_risk' => $this->notify_extraction_at_risk,
-            'extraction_lost' => $this->notify_extraction_lost,
             'metenox_cargo_full' => $this->notify_metenox_cargo_full,
             'event_created' => $this->notify_event_created,
             'event_started' => $this->notify_event_started,

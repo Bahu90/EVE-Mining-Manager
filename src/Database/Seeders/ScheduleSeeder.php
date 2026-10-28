@@ -305,9 +305,8 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             // metenox_cargo_alert_state prevents repeats while still over
             // threshold. 5-min cadence matches the corp-assets ESI cache
             // (operator's perceived latency is ~5min from threshold-cross to
-            // ping). Standalone-safe (no Manager Core or Structure Manager
-            // required — purely reads corporation_assets which SeAT itself
-            // populates).
+            // ping). Reads only corporation_assets, which SeAT itself
+            // populates.
             [
                 'command' => 'mining-manager:scan-metenox-cargo-fill',
                 'expression' => '*/5 * * * *',
@@ -355,8 +354,8 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             'mining-manager:check-extraction-arrivals',
             'mining-manager:update-events',
             'mining-manager:resolve-characters --requested',
-            // Removed with the Manager Core integration: it only published
-            // moon lifecycle events onto Manager Core's EventBus.
+            // Retired: it only published moon lifecycle events for another
+            // plugin to pick up. Mining Manager now stands on its own.
             'mining-manager:scan-extraction-events',
         ];
     }

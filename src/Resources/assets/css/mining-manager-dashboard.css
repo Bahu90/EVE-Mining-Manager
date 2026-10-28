@@ -4066,8 +4066,7 @@ div.mining-manager-wrapper div[class*="col-"] div.card-body {
 
 /* "Recent changes" box under What's New on the Help Overview tab. Indigo
    rather than green so the two read as separate blocks: What's New is the
-   whole major version, this one is what the latest update changed. Same
-   shape as Structure Manager's. */
+   whole major version, this one is what the latest update changed. */
 .recent-changes-box {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.1) 100%);
     border-left: 4px solid #667eea;

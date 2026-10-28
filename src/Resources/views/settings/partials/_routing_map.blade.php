@@ -25,8 +25,6 @@
     Locally computed inside this partial:
       $mmRouteCategories        — definitions of every category + type
       $mmRoleLookup             — DiscordRoleResolver::roleLookupMap result
-      $mmManagerCoreAvailable   — flags cross-plugin types that won't fire
-      $mmStructureManagerAvail  — flags cross-plugin types that won't fire
 
     Blade gotcha: do NOT place an
     inline @php(...) directive immediately before this @php block, and never
@@ -157,14 +155,6 @@
 </style>
 
 @php
-    // Manager Core + Structure Manager availability — these flag cross-plugin
-    // notification types that won't fire when companion plugins are missing.
-    // The two extraction_* types ride on MC's EventBus subscriber and SM's
-    // payload contract, so without either plugin they remain dormant even
-    // when toggled on and bound to a webhook.
-    $mmManagerCoreAvailable      = class_exists(\ManagerCore\Services\EventBus::class);
-    $mmStructureManagerAvailable = class_exists(\StructureManager\Helpers\FuelCalculator::class);
-
     // Snowflake lookup → role name + colour for the resolved pill display.
     $mmRoleLookup = \MiningManager\Services\DiscordRoleResolver::roleLookupMap();
 
@@ -210,8 +200,6 @@
                 'moon_not_rescheduled' => ['label' => 'Moon Not Rescheduled (reminder)', 'col' => 'notify_moon_not_rescheduled'],
                 'schedule_needs_filling' => ['label' => 'Moons Need Planning (one list)', 'col' => 'notify_schedule_needs_filling'],
                 'tax_outstanding_digest' => ['label' => 'Outstanding Mining Tax (digest)', 'col' => 'notify_tax_outstanding_digest'],
-                'extraction_at_risk'  => ['label' => 'Extraction at Risk (MC+SM)',      'col' => 'notify_extraction_at_risk',  'requires_mc' => true, 'requires_sm' => true],
-                'extraction_lost'     => ['label' => 'Extraction Lost (MC+SM)',         'col' => 'notify_extraction_lost',     'requires_mc' => true, 'requires_sm' => true],
                 'metenox_cargo_full'  => ['label' => 'Metenox Cargo Bay Full',          'col' => 'notify_metenox_cargo_full'],
             ],
         ],
@@ -266,12 +254,6 @@
                 $mmRouteStatEnabled++;
             }
 
-            $requiresMc = !empty($typeDef['requires_mc']);
-            $requiresSm = !empty($typeDef['requires_sm']);
-            $mcBlocked  = $requiresMc && !$mmManagerCoreAvailable;
-            $smBlocked  = $requiresSm && !$mmStructureManagerAvailable;
-            $crossBlocked = $mcBlocked || $smBlocked;
-
             // Resolve the per-type role under the dispatcher's rules:
             // - tax_invoice (and any 'role_blocked') is hard-blocked from
             //   pings regardless of stored values
@@ -317,11 +299,11 @@
                     'via'     => $via,
                     'role'    => \MiningManager\Services\DiscordRoleResolver::describeRoleMention($effRole, $mmRoleLookup),
                     // Live = the type is reachable for this destination:
-                    // global enabled + webhook enabled + not cross-plugin blocked.
+                    // global enabled + webhook enabled.
                     // Per-channel-type filters (Discord vs Slack vs EVE Mail)
                     // are applied lower in the dispatcher and don't affect
                     // routing-map reachability.
-                    'live'    => $globalEnabled && (bool) ($wh->is_enabled ?? false) && !$crossBlocked,
+                    'live'    => $globalEnabled && (bool) ($wh->is_enabled ?? false),
                 ];
             }
 
@@ -339,9 +321,6 @@
                 'typeDef'      => $typeDef,
                 'globalEnabled'=> $globalEnabled,
                 'dests'        => $dests,
-                'mcBlocked'    => $mcBlocked,
-                'smBlocked'    => $smBlocked,
-                'crossBlocked' => $crossBlocked,
                 'hardBlocked'  => $hardBlocked,
                 'pingRole'     => $pingRole,
             ];
@@ -373,17 +352,6 @@
                     <strong>{{ $mmRouteStatSilent }}</strong> enabled but firing nowhere
                 </div>
             @endif
-            @if(!$mmManagerCoreAvailable)
-                <div class="routing-stat warn" title="Cross-plugin types (extraction_at_risk, extraction_lost) need Manager Core to fire.">
-                    <i class="fas fa-puzzle-piece"></i>
-                    Manager Core missing &mdash; cross-plugin types dormant
-                </div>
-            @elseif(!$mmStructureManagerAvailable)
-                <div class="routing-stat warn" title="Cross-plugin types need Structure Manager's FuelCalculator helper to fire.">
-                    <i class="fas fa-puzzle-piece"></i>
-                    Structure Manager missing &mdash; cross-plugin types dormant
-                </div>
-            @endif
         </div>
 
         @forelse($mmRoutingData as $catKey => $catData)
@@ -406,7 +374,6 @@
                         @php($typeDef = $row['typeDef'])
                         @php($dests = $row['dests'])
                         @php($globalEnabled = $row['globalEnabled'])
-                        @php($crossBlocked = $row['crossBlocked'])
                         @if(count($dests) === 0)
                             <tr class="{{ $globalEnabled ? '' : 'routing-row-disabled' }}">
                                 <td class="routing-cat-cell">
@@ -419,11 +386,6 @@
                                 <td colspan="3">
                                     @if(!$globalEnabled)
                                         <span class="routing-none">Type disabled globally (no delivery).</span>
-                                    @elseif($crossBlocked)
-                                        <span class="routing-unrouted">
-                                            <i class="fas fa-puzzle-piece"></i>
-                                            Requires {{ $row['mcBlocked'] && $row['smBlocked'] ? 'Manager Core + Structure Manager' : ($row['mcBlocked'] ? 'Manager Core' : 'Structure Manager') }} to fire (not installed). Not bound to any webhook either.
-                                        </span>
                                     @else
                                         <span class="routing-unrouted">
                                             <i class="fas fa-exclamation-triangle"></i>
@@ -445,8 +407,6 @@
                                             <div class="routing-cat-key">{{ $typeKey }}</div>
                                             @if(!$globalEnabled)
                                                 <div class="routing-status"><span class="off">Type disabled globally</span></div>
-                                            @elseif($crossBlocked)
-                                                <div class="routing-status"><span class="off">Dormant: needs {{ $row['mcBlocked'] && $row['smBlocked'] ? 'MC + SM' : ($row['mcBlocked'] ? 'Manager Core' : 'Structure Manager') }}</span></div>
                                             @endif
                                             @if($row['hardBlocked'])
                                                 <div class="routing-status"><span class="off">Role pings hard-blocked (batch protection)</span></div>

@@ -111,10 +111,6 @@ function loadWebhookData(webhookId) {
                 if (providerField) providerField.checked = !!webhook.notify_price_provider;
                 const scanMissingField = document.getElementById('notify-moon-scan-missing');
                 if (scanMissingField) scanMissingField.checked = !!webhook.notify_moon_scan_missing;
-                const atRiskField = document.getElementById('notify-extraction-at-risk');
-                if (atRiskField) atRiskField.checked = !!webhook.notify_extraction_at_risk;
-                const lostField = document.getElementById('notify-extraction-lost');
-                if (lostField) lostField.checked = !!webhook.notify_extraction_lost;
 
                 // Discord settings
                 const discordUsernameField = document.getElementById('discord-username');
@@ -176,8 +172,6 @@ function saveWebhook() {
         notify_tax_outstanding_digest: document.getElementById('notify-tax-outstanding-digest')?.checked ? 1 : 0,
         notify_price_provider: document.getElementById('notify-price-provider')?.checked ? 1 : 0,
         notify_moon_scan_missing: document.getElementById('notify-moon-scan-missing')?.checked ? 1 : 0,
-        notify_extraction_at_risk: document.getElementById('notify-extraction-at-risk')?.checked ? 1 : 0,
-        notify_extraction_lost: document.getElementById('notify-extraction-lost')?.checked ? 1 : 0,
         notify_metenox_cargo_full: document.getElementById('notify-metenox-cargo-full')?.checked ? 1 : 0,
         notify_event_created: document.getElementById('notify-event-created').checked ? 1 : 0,
         notify_event_started: document.getElementById('notify-event-started').checked ? 1 : 0,

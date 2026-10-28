@@ -77,8 +77,6 @@ class NotificationService
     const TYPE_EXTRACTION_CANCELLED = 'extraction_cancelled';
     const TYPE_MOON_NOT_RESCHEDULED = 'moon_not_rescheduled';
     const TYPE_SCHEDULE_NEEDS_FILLING = 'schedule_needs_filling';
-    const TYPE_EXTRACTION_AT_RISK = 'extraction_at_risk';
-    const TYPE_EXTRACTION_LOST = 'extraction_lost';
     const TYPE_THEFT_DETECTED = 'theft_detected';
     const TYPE_CRITICAL_THEFT = 'critical_theft';
     const TYPE_ACTIVE_THEFT = 'active_theft';
@@ -655,7 +653,7 @@ class NotificationService
      * chunk is on the clock and when it'll arrive.
      *
      * Corp-scoped (moon owner) via the default webhook scoping in
-     * sendViaWebhooks. Standalone — no cross-plugin dependency.
+     * sendViaWebhooks.
      *
      * Expected keys in $data (all optional, filtered if missing):
      *   moon_name, structure_name, system_name, started_by,
@@ -726,7 +724,7 @@ class NotificationService
      * same cycle — i.e. someone fired the drill on the wrong timer, or the plan
      * is stale. One-shot per plan (latched on mismatch_notified_at).
      *
-     * Corp-scoped (moon owner). Standalone — no cross-plugin dependency.
+     * Corp-scoped (moon owner).
      *
      * Expected keys in $data:
      *   moon_name, structure_name, planned_arrival_time, actual_arrival_time,
@@ -816,112 +814,14 @@ class NotificationService
     }
 
     /**
-     * Send an extraction_at_risk notification — cross-plugin threat warning.
-     *
-     * Fires when Structure Manager detects an Athanor/Tatara running an active
-     * moon extraction is in danger (fuel critical, under attack, or in a
-     * reinforcement timer). Driven by a `structure.alert.*` event on Manager
-     * Core's EventBus → StructureAlertHandler → this method.
-     *
-     * The embed title, color, and description vary by `alert_flavor`:
-     *   - fuel_critical     → 🔥 MOON CHUNK COMPROMISED — Fuel Critical
-     *   - shield_reinforced → ⚠️ EXTRACTION IN DANGER — Shield Down
-     *   - armor_reinforced  → 🚨 EXTRACTION IN DANGER — Armor Timer
-     *   - hull_reinforced   → 💀 MOON CHUNK DESTABILISED — Final Timer
-     *
-     * Uses the structure's owner corp (from the SM event payload) for
-     * corp scoping — parallels the event-dispatch-corp model used by
-     * event_created/event_started/event_completed.
-     *
-     * Requires BOTH Manager Core AND Structure Manager installed; early-
-     * returns (skipped) if either is missing, so a legacy install without
-     * MC/SM can still toggle the flag in settings without breakage.
-     *
-     * Expected keys in $data (all optional except structure_corporation_id
-     * for corp-scoping; formatters filter missing keys):
-     *   alert_flavor       (string — one of the four above)
-     *   moon_name, structure_name, system_name, extraction_url,
-     *   days_remaining     (float — fuel flavor only),
-     *   hours_remaining    (float — fuel flavor only),
-     *   fuel_expires       (ISO8601 string — fuel flavor only),
-     *   timer_ends_at      (ISO8601 string — reinforced flavors only),
-     *   estimated_value    (int ISK),
-     *   structure_corporation_id (int — for corp scoping; = event publisher's structure owner)
-     *
-     * @param array $data
-     * @return array Result map from send()
-     */
-    public function sendExtractionAtRisk(array $data): array
-    {
-        // Hard gate: without MC/SM infrastructure this type can't meaningfully fire.
-        // We still pass through send() so logging/diagnostic parity works, but mark
-        // the skip reason explicitly. Settings UI greys the toggle when missing.
-        if (!class_exists('ManagerCore\\Services\\EventBus')
-            || !class_exists('StructureManager\\Helpers\\FuelCalculator')) {
-            Log::info('sendExtractionAtRisk: cross-plugin dependency missing (Manager Core or Structure Manager)', [
-                'manager_core' => class_exists('ManagerCore\\Services\\EventBus'),
-                'structure_manager' => class_exists('StructureManager\\Helpers\\FuelCalculator'),
-            ]);
-            return ['skipped' => true, 'reason' => 'Manager Core or Structure Manager not installed'];
-        }
-
-        $data['description'] = $data['description']
-            ?? $this->resolveExtractionAtRiskDescription($data['alert_flavor'] ?? 'generic');
-
-        return $this->send(self::TYPE_EXTRACTION_AT_RISK, [], $data);
-    }
-
-    /**
-     * Send an extraction_lost notification — post-mortem for a destroyed
-     * structure that had an active extraction.
-     *
-     * Separate from extraction_at_risk because the recipient set is
-     * typically different (management / finance rather than fleet ops) and
-     * the follow-up is different: tax reconciliation, "no chunk this cycle"
-     * announcement to miners, insurance claim, etc.
-     *
-     * Driven by SM's `structure.alert.destroyed` event (destruction
-     * detection ships in a future Structure Manager release).
-     *
-     * Same MC+SM gating as extraction_at_risk.
-     *
-     * Expected keys in $data:
-     *   moon_name, structure_name, system_name, extraction_url,
-     *   destroyed_at         (ISO8601),
-     *   detection_source     ('notification' | 'grace_period' | 'killmail'),
-     *   final_timer_result   (display string),
-     *   chunk_value          (int ISK — what was lost),
-     *   structure_corporation_id (int — for corp scoping)
-     *
-     * @param array $data
-     * @return array Result map from send()
-     */
-    public function sendExtractionLost(array $data): array
-    {
-        if (!class_exists('ManagerCore\\Services\\EventBus')
-            || !class_exists('StructureManager\\Helpers\\FuelCalculator')) {
-            Log::info('sendExtractionLost: cross-plugin dependency missing (Manager Core or Structure Manager)', [
-                'manager_core' => class_exists('ManagerCore\\Services\\EventBus'),
-                'structure_manager' => class_exists('StructureManager\\Helpers\\FuelCalculator'),
-            ]);
-            return ['skipped' => true, 'reason' => 'Manager Core or Structure Manager not installed'];
-        }
-
-        $data['description'] = $data['description']
-            ?? '☠️ **The structure running this extraction has been destroyed.** The chunk is lost. Tax reconciliation and miner communication recommended. Check the linked extraction for last-known ore composition and value at time of loss.';
-
-        return $this->send(self::TYPE_EXTRACTION_LOST, [], $data);
-    }
-
-    /**
      * Send a `metenox_cargo_full` notification — fires when a Metenox Moon
      * Drill's MoonMaterialBay crosses the configured fill-% threshold going
      * up. The bay sits at 32,000 m³ capacity for every Metenox (CCP fixed),
      * so "85%" is roughly 27,200 m³ = ~5,000 m³ remaining = ~2 days of
      * accumulation at typical drill rates.
      *
-     * Standalone notification — no cross-plugin dependencies. Data comes
-     * from SeAT's existing corporation_assets table (no new ESI scopes).
+     * Data comes from SeAT's existing corporation_assets table (no new ESI
+     * scopes).
      * Triggered by ScanMetenoxCargoFillCommand on cross-up transitions
      * across the threshold (dedup latch in metenox_cargo_alert_state
      * prevents repeat fires; latch resets when cargo is pulled).
@@ -950,25 +850,6 @@ class NotificationService
             );
 
         return $this->send(self::TYPE_METENOX_CARGO_FULL, [], $data);
-    }
-
-    /**
-     * Resolve the default description text for an extraction_at_risk alert
-     * based on the flavor (fuel_critical, shield_reinforced, armor_reinforced,
-     * hull_reinforced). Used when the caller didn't supply a description.
-     *
-     * @param string $flavor
-     * @return string
-     */
-    protected function resolveExtractionAtRiskDescription(string $flavor): string
-    {
-        return match ($flavor) {
-            'fuel_critical' => '🔥 **This refinery is running out of fuel mid-extraction.** If fuel runs dry the structure goes offline and the moon drill stops — chunk mining halts. Top up fuel blocks now or the extraction may be lost.',
-            'shield_reinforced' => '⚠️ **Shield depleted — structure entering first reinforcement timer.** Defensive window opens when the timer expires. Call defense fleet. Chunk is still recoverable if the structure holds.',
-            'armor_reinforced' => '🚨 **Armor depleted — structure in second reinforcement timer (24h).** This is the strategic timer. Muster capitals and defense fleet now. If armor timer ends undefended, hull timer starts next.',
-            'hull_reinforced' => '💀 **Final timer — structure in hull reinforcement.** This is the last stand. Lose this timer and the structure explodes and the chunk is lost permanently. All hands on deck.',
-            default => '⚠️ **Refinery running an active extraction is under threat.** Check the linked extraction and respond immediately.',
-        };
     }
 
     /**
@@ -1051,8 +932,6 @@ class NotificationService
             'moon_arrival', 'moon_ready' => self::TYPE_MOON_READY,
             'jackpot_detected' => self::TYPE_JACKPOT_DETECTED,
             'moon_chunk_unstable' => self::TYPE_MOON_CHUNK_UNSTABLE,
-            'extraction_at_risk' => self::TYPE_EXTRACTION_AT_RISK,
-            'extraction_lost' => self::TYPE_EXTRACTION_LOST,
             'metenox_cargo_full' => self::TYPE_METENOX_CARGO_FULL,
             'theft_detected' => self::TYPE_THEFT_DETECTED,
             'critical_theft' => self::TYPE_CRITICAL_THEFT,
@@ -1512,8 +1391,6 @@ class NotificationService
             self::TYPE_MOON_READY => 'moon_ready',
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
-            self::TYPE_EXTRACTION_AT_RISK => 'extraction_at_risk',
-            self::TYPE_EXTRACTION_LOST => 'extraction_lost',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
             self::TYPE_THEFT_DETECTED => 'theft_detected',
             self::TYPE_CRITICAL_THEFT => 'critical_theft',
@@ -1561,8 +1438,6 @@ class NotificationService
             self::TYPE_MOON_READY => 'moon_ready',
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
-            self::TYPE_EXTRACTION_AT_RISK => 'extraction_at_risk',
-            self::TYPE_EXTRACTION_LOST => 'extraction_lost',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
             self::TYPE_THEFT_DETECTED => 'theft_detected',
             self::TYPE_CRITICAL_THEFT => 'critical_theft',
@@ -1752,8 +1627,6 @@ class NotificationService
             self::TYPE_MOON_READY => 'moon_arrival',
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
-            self::TYPE_EXTRACTION_AT_RISK => 'extraction_at_risk',
-            self::TYPE_EXTRACTION_LOST => 'extraction_lost',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
             self::TYPE_THEFT_DETECTED => 'theft_detected',
             self::TYPE_CRITICAL_THEFT => 'critical_theft',
@@ -1791,7 +1664,6 @@ class NotificationService
         $eventTypesThatAreGlobal = ['report_generated'];
         $individualTaxEventTypes = ['tax_reminder', 'tax_invoice', 'tax_overdue'];
         $eventDispatchTypes = ['event_created', 'event_started', 'event_completed'];
-        $structureAlertTypes = ['extraction_at_risk', 'extraction_lost'];
 
         if (in_array($eventType, $eventTypesThatAreGlobal, true)) {
             $webhooks = \MiningManager\Models\WebhookConfiguration::enabled()
@@ -1815,17 +1687,6 @@ class NotificationService
                 ? (int) $data['event_corporation_id']
                 : null;
             $webhooks = $this->getMoonOwnerScopedWebhooks($eventType, $eventCorpId);
-        } elseif (in_array($eventType, $structureAlertTypes, true)) {
-            // Structure alert notifications (extraction_at_risk, extraction_lost)
-            // — include the STRUCTURE OWNER corp in the scope filter. The
-            // StructureAlertHandler injects structure_corporation_id from the
-            // Structure Manager EventBus payload. Parallel to event-dispatch
-            // scoping: admin webhooks (NULL) + moon owner corp + structure
-            // owner corp all receive.
-            $structureCorpId = isset($data['structure_corporation_id']) && $data['structure_corporation_id']
-                ? (int) $data['structure_corporation_id']
-                : null;
-            $webhooks = $this->getMoonOwnerScopedWebhooks($eventType, $structureCorpId);
         } else {
             $webhooks = $this->getMoonOwnerScopedWebhooks($eventType);
         }
@@ -2300,47 +2161,6 @@ class NotificationService
                     $this->getCorpName()
                 )
             ]),
-            self::TYPE_EXTRACTION_AT_RISK => [
-                'subject' => sprintf(
-                    'EXTRACTION IN DANGER (%s): %s',
-                    isset($data['alert_flavor']) ? ucwords(str_replace('_', ' ', $data['alert_flavor'])) : 'Threat',
-                    $data['moon_name'] ?? 'Unknown Moon'
-                ),
-                'body' => sprintf(
-                    "An active moon extraction is at risk.\n\n" .
-                    "Threat: %s\nMoon: %s\nStructure: %s\nSystem: %s\n%s%s%s%s\n" .
-                    "Chunk Value: %s ISK\n\n" .
-                    "%s Management",
-                    isset($data['alert_flavor']) ? ucwords(str_replace('_', ' ', $data['alert_flavor'])) : 'Unknown',
-                    $data['moon_name'] ?? 'Unknown',
-                    $data['structure_name'] ?? 'Unknown Structure',
-                    $data['system_name'] ?? 'Unknown System',
-                    isset($data['days_remaining']) ? "Fuel Remaining: " . number_format((float) $data['days_remaining'], 1) . " days\n" : '',
-                    isset($data['fuel_expires']) ? "Fuel Expires: {$data['fuel_expires']}\n" : '',
-                    isset($data['timer_ends_at']) ? "Timer Ends: {$data['timer_ends_at']}\n" : '',
-                    !empty($data['attacker_summary']) ? "Hostile Force: {$data['attacker_summary']}\n" : '',
-                    isset($data['estimated_value']) ? number_format((float) $data['estimated_value'], 0) : 'Unknown',
-                    $this->getCorpName()
-                )
-            ],
-            self::TYPE_EXTRACTION_LOST => [
-                'subject' => sprintf('MOON CHUNK DESTROYED: %s', $data['moon_name'] ?? 'Unknown Moon'),
-                'body' => sprintf(
-                    "A moon extraction structure has been destroyed.\n\n" .
-                    "Moon: %s\nStructure: %s\nSystem: %s\nDestroyed: %s\n" .
-                    "Outcome: %s\nChunk Value Lost: %s ISK\n%s%s\n" .
-                    "%s Management",
-                    $data['moon_name'] ?? 'Unknown',
-                    $data['structure_name'] ?? 'Unknown Structure',
-                    $data['system_name'] ?? 'Unknown System',
-                    $data['destroyed_at'] ?? 'Unknown',
-                    $data['final_timer_result'] ?? 'Unknown',
-                    isset($data['chunk_value']) ? number_format((float) $data['chunk_value'], 0) : 'Unknown',
-                    !empty($data['attacker_summary']) ? "Destroyed By: {$data['attacker_summary']}\n" : '',
-                    !empty($data['killmail_url']) ? "Killmail: {$data['killmail_url']}\n" : '',
-                    $this->getCorpName()
-                )
-            ],
             self::TYPE_METENOX_CARGO_FULL => [
                 'subject' => sprintf(
                     'METENOX BAY %s%% FULL: %s',
@@ -2763,72 +2583,6 @@ class NotificationService
     }
 
     /**
-     * Resolve the Discord embed color for an extraction_at_risk alert.
-     *
-     * Two-stage resolution:
-     *   1. First check the envelope's severity field ('info'|'warning'|'critical').
-     *      SM controls this and may upgrade severity in edge cases (e.g. mark a
-     *      shield_reinforced as 'critical' when the timer ends in <30min).
-     *      Severity is the operator-meaningful tier; we honour it when present.
-     *   2. Fall back to flavor-based defaults — preserves the original color
-     *      mapping so alerts published by older SM (or third-party publishers)
-     *      that omit severity still render with sensible per-flavor colors.
-     *
-     * Per-flavor defaults:
-     *   fuel_critical       → 0x992D22 dark red (ops must act, not combat)
-     *   shield_reinforced   → 0xE67E22 orange (early warning)
-     *   armor_reinforced    → 0xE74C3C red (strategic timer)
-     *   hull_reinforced     → 0x992D22 dark red (final stand)
-     *
-     * Per-severity overrides (only applied when severity is present in payload):
-     *   info     → 0x3498DB blue (informational, e.g. fuel_recovered all-clear)
-     *   warning  → flavor default (the bulk of alerts)
-     *   critical → 0xFF0000 hard red (escalation — overrides flavor color)
-     *
-     * @param array $data
-     * @return int Discord color int
-     */
-    protected function resolveExtractionAtRiskColor(array $data): int
-    {
-        // Severity overrides flavor when explicitly present and non-default.
-        $severity = $data['severity'] ?? null;
-        if ($severity === 'critical') {
-            return 0xFF0000; // hard red — operator must act NOW
-        }
-        if ($severity === 'info') {
-            return 0x3498DB; // calm blue — non-urgent state-change ping
-        }
-
-        // 'warning' (or missing) falls through to per-flavor defaults.
-        return match ($data['alert_flavor'] ?? 'generic') {
-            'fuel_critical' => 0x992D22,      // dark red
-            'shield_reinforced' => 0xE67E22,  // orange
-            'armor_reinforced' => 0xE74C3C,   // red
-            'hull_reinforced' => 0x992D22,    // dark red
-            default => 0xE67E22,              // orange fallback
-        };
-    }
-
-    /**
-     * Resolve the Discord embed title for an extraction_at_risk alert.
-     * Urgent, dramatic language by design — these are high-signal events
-     * a defense FC needs to spot in a noisy channel.
-     *
-     * @param array $data
-     * @return string
-     */
-    protected function resolveExtractionAtRiskTitle(array $data): string
-    {
-        return match ($data['alert_flavor'] ?? 'generic') {
-            'fuel_critical' => '🔥 MOON CHUNK COMPROMISED — Fuel Critical',
-            'shield_reinforced' => '⚠️ EXTRACTION IN DANGER — Shield Down',
-            'armor_reinforced' => '🚨 EXTRACTION IN DANGER — Armor Timer',
-            'hull_reinforced' => '💀 MOON CHUNK DESTABILISED — Final Timer',
-            default => '⚠️ EXTRACTION IN DANGER',
-        };
-    }
-
-    /**
      * Build the Discord embed payload for the given notification type.
      *
      * Public so the diagnostic preview UI can call it directly rather
@@ -2852,8 +2606,6 @@ class NotificationService
             self::TYPE_MOON_CHUNK_UNSTABLE => 0xFF6B00, // Orange-red (capital-safety warning)
             // Extraction at-risk color depends on flavor — fuel = dark red,
             // shield = orange, armor = red, hull = dark red. Resolved by helper.
-            self::TYPE_EXTRACTION_AT_RISK => $this->resolveExtractionAtRiskColor($data),
-            self::TYPE_EXTRACTION_LOST => 0x1F0000, // Near-black / very dark red — post-mortem
             self::TYPE_METENOX_CARGO_FULL => 0xFF9800, // Orange — yield-stopping warning, not safety
             self::TYPE_EXTRACTION_STARTED => 0x1ABC9C, // Teal — new chunk on the clock
             self::TYPE_NEXT_EXTRACTION_PLANNED => match ($data['variant'] ?? null) {
@@ -2890,8 +2642,6 @@ class NotificationService
             self::TYPE_JACKPOT_DETECTED => 'JACKPOT MOON DETECTED!',
             self::TYPE_MOON_CHUNK_UNSTABLE => '⚠️ Moon Chunk Going Unstable — Dock Capitals',
             // Extraction at-risk title depends on flavor — see helper.
-            self::TYPE_EXTRACTION_AT_RISK => $this->resolveExtractionAtRiskTitle($data),
-            self::TYPE_EXTRACTION_LOST => '☠️ MOON CHUNK DESTROYED',
             self::TYPE_METENOX_CARGO_FULL => 'Metenox Cargo Bay Filling Up — Pull Soon',
             self::TYPE_EXTRACTION_STARTED => '⛏️ Moon Extraction Started',
             self::TYPE_NEXT_EXTRACTION_PLANNED => match ($data['variant'] ?? null) {
@@ -3120,52 +2870,6 @@ class NotificationService
             self::TYPE_MOON_SCAN_MISSING => array_values(array_filter([
                 !empty($data['reminder']) ? ['title' => 'Reminder', 'value' => 'Daily, until each moon is scanned', 'short' => false] : null,
                 !empty($data['moons_url']) ? ['title' => 'Add a scan', 'value' => '<' . $data['moons_url'] . "|Open SeAT's Moons Reporter>", 'short' => false] : null,
-            ])),
-            self::TYPE_EXTRACTION_AT_RISK => array_values(array_filter([
-                isset($data['alert_flavor']) ? ['title' => 'Threat Type', 'value' => ucwords(str_replace('_', ' ', $data['alert_flavor'])), 'short' => true] : null,
-                isset($data['moon_name']) ? ['title' => 'Moon', 'value' => $data['moon_name'], 'short' => true] : null,
-                isset($data['structure_name']) ? ['title' => 'Structure', 'value' => $data['structure_name'], 'short' => true] : null,
-                isset($data['system_name']) ? ['title' => 'System', 'value' => $data['system_name'], 'short' => true] : null,
-                // Fuel-flavor specifics
-                (($data['alert_flavor'] ?? null) === 'fuel_critical' && isset($data['days_remaining']))
-                    ? ['title' => 'Fuel Remaining', 'value' => number_format((float) $data['days_remaining'], 1) . ' days', 'short' => true] : null,
-                (($data['alert_flavor'] ?? null) === 'fuel_critical' && isset($data['fuel_expires']))
-                    ? ['title' => 'Fuel Expires', 'value' => $data['fuel_expires'], 'short' => true] : null,
-                // Reinforcement-flavor specifics
-                (in_array($data['alert_flavor'] ?? null, ['shield_reinforced','armor_reinforced','hull_reinforced'], true) && isset($data['timer_ends_at']))
-                    ? ['title' => 'Timer Ends', 'value' => $data['timer_ends_at'], 'short' => true] : null,
-                // Hostile force — only for tactical flavors. Prefer attacker_summary
-                // (richest), fall back to bare attacker_corporation_name. Skipped
-                // entirely on fuel_critical and when SM has no attacker info.
-                (in_array($data['alert_flavor'] ?? null, ['shield_reinforced','armor_reinforced','hull_reinforced'], true)
-                    && (!empty($data['attacker_summary']) || !empty($data['attacker_corporation_name'])))
-                    ? ['title' => 'Hostile Force', 'value' => $data['attacker_summary'] ?? $data['attacker_corporation_name'], 'short' => true] : null,
-                // Common
-                (isset($data['estimated_value']) && $data['estimated_value'] > 0)
-                    ? ['title' => 'Chunk Value', 'value' => number_format((float) $data['estimated_value'], 0) . ' ISK', 'short' => true] : null,
-                !empty($data['extraction_url']) ? ['title' => 'Details', 'value' => '<' . $data['extraction_url'] . '|View Extraction>', 'short' => false] : null,
-                // Cross-plugin pivot — Structure Board deeplink (only when SM
-                // supplied a url; older SM publishers will still have all the
-                // other fields).
-                !empty($data['structure_board_url']) ? ['title' => 'Structure Board', 'value' => '<' . $data['structure_board_url'] . '|Open in Structure Manager>', 'short' => false] : null,
-            ])),
-            self::TYPE_EXTRACTION_LOST => array_values(array_filter([
-                isset($data['moon_name']) ? ['title' => 'Moon', 'value' => $data['moon_name'], 'short' => true] : null,
-                isset($data['structure_name']) ? ['title' => 'Structure', 'value' => $data['structure_name'], 'short' => true] : null,
-                isset($data['system_name']) ? ['title' => 'System', 'value' => $data['system_name'], 'short' => true] : null,
-                isset($data['destroyed_at']) ? ['title' => 'Destroyed At', 'value' => $data['destroyed_at'], 'short' => true] : null,
-                isset($data['final_timer_result']) ? ['title' => 'Outcome', 'value' => $data['final_timer_result'], 'short' => true] : null,
-                (isset($data['chunk_value']) && $data['chunk_value'] > 0)
-                    ? ['title' => 'Chunk Value Lost', 'value' => number_format((float) $data['chunk_value'], 0) . ' ISK', 'short' => true] : null,
-                isset($data['detection_source']) ? ['title' => 'Detected Via', 'value' => $data['detection_source'], 'short' => true] : null,
-                // Killer attribution — pulled from killmail/destruction notification.
-                (!empty($data['attacker_summary']) || !empty($data['attacker_corporation_name']))
-                    ? ['title' => 'Destroyed By', 'value' => $data['attacker_summary'] ?? $data['attacker_corporation_name'], 'short' => true] : null,
-                !empty($data['killmail_url']) ? ['title' => 'Killmail', 'value' => '<' . $data['killmail_url'] . '|View Killmail>', 'short' => false] : null,
-                !empty($data['extraction_url']) ? ['title' => 'Extraction', 'value' => '<' . $data['extraction_url'] . '|View Extraction>', 'short' => false] : null,
-                // Structure Board deeplink (archival forensics — SM keeps the
-                // board entry post-destruction for last-known state lookups).
-                !empty($data['structure_board_url']) ? ['title' => 'Structure Board', 'value' => '<' . $data['structure_board_url'] . '|Open in Structure Manager>', 'short' => false] : null,
             ])),
             self::TYPE_METENOX_CARGO_FULL => array_values(array_filter([
                 isset($data['structure_name']) ? ['title' => 'Drill', 'value' => $data['structure_name'], 'short' => true] : null,
@@ -3468,59 +3172,6 @@ class NotificationService
                 !empty($data['reminder']) ? ['name' => '🔁 Reminder', 'value' => 'Daily, until each moon is scanned', 'inline' => false] : null,
                 !empty($data['moons_url']) ? ['name' => '🔗 Add a scan', 'value' => "[Open SeAT's Moons Reporter](" . $data['moons_url'] . ')', 'inline' => false] : null,
             ])),
-            self::TYPE_EXTRACTION_AT_RISK => array_values(array_filter([
-                // Flavor indicator — important for quick triage in a noisy channel
-                isset($data['alert_flavor']) ? ['name' => '🚨 Threat Type', 'value' => ucwords(str_replace('_', ' ', $data['alert_flavor'])), 'inline' => true] : null,
-                isset($data['moon_name']) ? ['name' => '🌙 Moon', 'value' => $data['moon_name'], 'inline' => true] : null,
-                isset($data['structure_name']) ? ['name' => '🏗️ Structure', 'value' => $data['structure_name'], 'inline' => true] : null,
-                isset($data['system_name']) ? ['name' => '📍 System', 'value' => $data['system_name'], 'inline' => true] : null,
-                // Fuel-flavor specifics — days remaining, fuel expires
-                (($data['alert_flavor'] ?? null) === 'fuel_critical' && isset($data['days_remaining']))
-                    ? ['name' => '⛽ Fuel Remaining', 'value' => number_format((float) $data['days_remaining'], 1) . ' days', 'inline' => true] : null,
-                (($data['alert_flavor'] ?? null) === 'fuel_critical' && isset($data['fuel_expires']))
-                    ? ['name' => '⏰ Fuel Expires', 'value' => $data['fuel_expires'], 'inline' => true] : null,
-                // Reinforcement-flavor specifics — when the timer ends
-                (in_array($data['alert_flavor'] ?? null, ['shield_reinforced','armor_reinforced','hull_reinforced'], true) && isset($data['timer_ends_at']))
-                    ? ['name' => '⏱️ Timer Ends', 'value' => $data['timer_ends_at'], 'inline' => true] : null,
-                // Hostile force context — only relevant for tactical (combat) flavors.
-                // Prefer attacker_summary (richest, e.g. "Goonswarm [GOONS]") over the
-                // bare attacker_corporation_name. Skipped on fuel_critical and on
-                // missing data (SM may not have attacker info every time).
-                (in_array($data['alert_flavor'] ?? null, ['shield_reinforced','armor_reinforced','hull_reinforced'], true)
-                    && (!empty($data['attacker_summary']) || !empty($data['attacker_corporation_name'])))
-                    ? ['name' => '⚔️ Hostile Force', 'value' => $data['attacker_summary'] ?? $data['attacker_corporation_name'], 'inline' => true] : null,
-                // Common — chunk value at risk
-                (isset($data['estimated_value']) && $data['estimated_value'] > 0)
-                    ? ['name' => '💰 Chunk Value', 'value' => number_format((float) $data['estimated_value'], 0) . ' ISK', 'inline' => true] : null,
-                !empty($data['extraction_url']) ? ['name' => '🔗 Extraction Details', 'value' => '[View Extraction](' . $data['extraction_url'] . ')', 'inline' => false] : null,
-                // Cross-plugin pivot — Structure Board deeplink from SM. Only
-                // shown if SM supplied a url (i.e. the publisher is on a recent
-                // SM with the AlertEventEnvelope helper). Lets a defense FC
-                // jump straight from the alert to SM's full structure context
-                // (timers, fuel, reinforcement state) without searching.
-                !empty($data['structure_board_url']) ? ['name' => '🛰️ Structure Board', 'value' => '[Open in Structure Manager](' . $data['structure_board_url'] . ')', 'inline' => false] : null,
-            ])),
-            self::TYPE_EXTRACTION_LOST => array_values(array_filter([
-                isset($data['moon_name']) ? ['name' => '🌙 Moon', 'value' => $data['moon_name'], 'inline' => true] : null,
-                isset($data['structure_name']) ? ['name' => '🏗️ Structure', 'value' => $data['structure_name'], 'inline' => true] : null,
-                isset($data['system_name']) ? ['name' => '📍 System', 'value' => $data['system_name'], 'inline' => true] : null,
-                isset($data['destroyed_at']) ? ['name' => '💥 Destroyed At', 'value' => $data['destroyed_at'], 'inline' => true] : null,
-                isset($data['final_timer_result']) ? ['name' => '⚰️ Outcome', 'value' => $data['final_timer_result'], 'inline' => true] : null,
-                (isset($data['chunk_value']) && $data['chunk_value'] > 0)
-                    ? ['name' => '💸 Chunk Value Lost', 'value' => number_format((float) $data['chunk_value'], 0) . ' ISK', 'inline' => true] : null,
-                isset($data['detection_source']) ? ['name' => '🔍 Detected Via', 'value' => $data['detection_source'], 'inline' => true] : null,
-                // Killer attribution — present when SM resolved an attacker_corp
-                // (typically from the killmail or the destruction notification).
-                // Useful for post-mortem reporting and intel gathering.
-                (!empty($data['attacker_summary']) || !empty($data['attacker_corporation_name']))
-                    ? ['name' => '⚔️ Destroyed By', 'value' => $data['attacker_summary'] ?? $data['attacker_corporation_name'], 'inline' => true] : null,
-                !empty($data['killmail_url']) ? ['name' => '☠️ Killmail', 'value' => '[View Killmail](' . $data['killmail_url'] . ')', 'inline' => false] : null,
-                !empty($data['extraction_url']) ? ['name' => '🔗 Extraction', 'value' => '[View Extraction](' . $data['extraction_url'] . ')', 'inline' => false] : null,
-                // Structure Board deeplink — even though the structure is
-                // destroyed, SM keeps the board entry for archival/forensic
-                // purposes (last-known fuel, timers, history). One-click pivot.
-                !empty($data['structure_board_url']) ? ['name' => '🛰️ Structure Board', 'value' => '[Open in Structure Manager](' . $data['structure_board_url'] . ')', 'inline' => false] : null,
-            ])),
             self::TYPE_METENOX_CARGO_FULL => array_values(array_filter([
                 isset($data['structure_name']) ? ['name' => 'Drill', 'value' => $data['structure_name'], 'inline' => true] : null,
                 isset($data['system_name']) ? ['name' => 'System', 'value' => $data['system_name'], 'inline' => true] : null,
@@ -3686,7 +3337,7 @@ class NotificationService
      *   2. OR-ing only a subset of the `notify_*` flags (tax_reminder/invoice/
      *      overdue, event_*, moon_arrival). Missing
      *      notify_jackpot_detected, notify_moon_chunk_unstable,
-     *      notify_extraction_at_risk/lost, notify_theft_*,
+     *      notify_theft_*,
      *      notify_incident_resolved, notify_tax_generated,
      *      notify_tax_announcement, notify_report_generated. An
      *      operator who configured Discord webhooks ONLY for theft +

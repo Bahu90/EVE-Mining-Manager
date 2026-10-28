@@ -11,7 +11,8 @@ use MiningManager\Services\Ledger\LedgerSummaryService;
 /**
  * What a moon would earn the corporation over one extraction period, worked
  * out two ways: a refinery whose chunk the members mine and pay tax on, or a
- * Metenox Moon Drill that keeps everything it drills. Both less fuel.
+ * Metenox Moon Drill that keeps everything it drills. Both before fuel:
+ * fuel rates and fuel prices differ too much between corporations to guess.
  *
  * The refinery side charges what an invoice would, through the same methods
  * the daily summaries use: the tax selector and the members' rates of the
@@ -62,7 +63,6 @@ class MoonIncomeEstimate
     {
         $moonId = (int) ($simulation['moon_id'] ?? 0);
         $days = (int) ($simulation['extraction_days'] ?? 14);
-        $hours = $days * 24;
         $hull = (int) ($simulation['rig']['hull'] ?? RefineryService::ATHANOR);
 
         // Read the way the daily summaries read it, not from whichever
@@ -91,9 +91,6 @@ class MoonIncomeEstimate
             $bayM3 += $material['quantity'] * MetenoxCargoService::MOON_MATERIAL_VOLUME_M3;
         }
 
-        $refineryFuel = $this->fuel($hull, ['moon_drill'], $hours);
-        $metenoxFuel = $this->fuel(MetenoxCargoService::METENOX_TYPE_ID, ['metenox_moon_drill'], $hours);
-
         return [
             'days' => $days,
             'tax_basis' => $basis,
@@ -101,7 +98,6 @@ class MoonIncomeEstimate
             'mined_share' => $this->usualMinedShare($moonId, $moonOwner),
             'refinery' => $refinery + [
                 'hull' => $hull,
-                'fuel' => $this->fuelLine($refineryFuel),
             ],
             'metenox' => [
                 'value' => $metenox['value'],
@@ -112,9 +108,7 @@ class MoonIncomeEstimate
                 'bay_full_days' => $bayM3 > 0
                     ? MetenoxCargoService::MOON_MATERIAL_BAY_CAPACITY_M3 / ($bayM3 / $days)
                     : null,
-                'fuel' => $this->fuelLine($metenoxFuel),
             ],
-            'fuel' => $this->fuelStatus($refineryFuel, $metenoxFuel),
         ];
     }
 
@@ -228,83 +222,5 @@ class MoonIncomeEstimate
             ->pluck('rate', 'type_id')
             ->map(fn ($rate) => (float) $rate)
             ->all();
-    }
-
-    /**
-     * Fuel for a structure over the period, priced by Structure Manager.
-     * Null when Manager Core, or a Structure Manager new enough to answer,
-     * is not installed. Fuel rates and prices are Structure Manager's to
-     * keep, so nothing here guesses at them.
-     *
-     * @param string[] $modules Structure Manager's service module names
-     */
-    protected function fuel(int $structureTypeId, array $modules, int $hours): ?array
-    {
-        if (!class_exists('ManagerCore\\Services\\PluginBridge')) {
-            return null;
-        }
-
-        try {
-            $bridge = app(\ManagerCore\Services\PluginBridge::class);
-            if (!$bridge->hasCapability('structure-manager', 'fuel.estimate')) {
-                return null;
-            }
-
-            $result = $bridge->call('structure-manager', 'fuel.estimate', $structureTypeId, $modules, $hours);
-
-            return is_array($result) ? $result : null;
-        } catch (\Throwable $e) {
-            Log::warning('Mining Manager: Structure Manager could not estimate fuel', [
-                'structure_type_id' => $structureTypeId,
-                'error' => $e->getMessage(),
-            ]);
-            return null;
-        }
-    }
-
-    /**
-     * @return array{blocks: int, magmatic_gas: int, block_name: ?string, isk: ?float}|null
-     */
-    protected function fuelLine(?array $fuel): ?array
-    {
-        if ($fuel === null) {
-            return null;
-        }
-
-        return [
-            'blocks' => (int) ($fuel['blocks'] ?? 0),
-            'magmatic_gas' => (int) ($fuel['magmatic_gas'] ?? 0),
-            'block_name' => $fuel['fuel_block']['name'] ?? null,
-            'isk' => isset($fuel['isk']) ? (float) $fuel['isk'] : null,
-        ];
-    }
-
-    /**
-     * Whether the fuel is in ISK, and if not, why.
-     *
-     * @return array{status: string, missing: string[], market: ?string, price_type: ?string}
-     */
-    protected function fuelStatus(?array $refinery, ?array $metenox): array
-    {
-        $status = [
-            'status' => 'priced',
-            'missing' => [],
-            'market' => $refinery['pricing']['market'] ?? null,
-            'price_type' => $refinery['pricing']['price_type'] ?? null,
-        ];
-
-        if ($refinery === null || $metenox === null) {
-            $status['status'] = 'unavailable';
-        } elseif (empty($refinery['pricing']['enabled'])) {
-            $status['status'] = 'disabled';
-        } elseif (!isset($refinery['isk'], $metenox['isk'])) {
-            $status['status'] = 'unpriced';
-            $status['missing'] = array_values(array_unique(array_merge(
-                (array) ($refinery['missing_prices'] ?? []),
-                (array) ($metenox['missing_prices'] ?? [])
-            )));
-        }
-
-        return $status;
     }
 }

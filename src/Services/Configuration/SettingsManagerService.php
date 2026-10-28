@@ -1146,12 +1146,10 @@ class SettingsManagerService
         'event_created', 'event_started', 'event_completed',
         // Moon
         'moon_ready', 'jackpot_detected', 'moon_chunk_unstable',
-        // Moon, from Structure Manager's alerts through Manager Core
-        'extraction_at_risk', 'extraction_lost',
         // Planner — extraction lifecycle coordination
         'extraction_started', 'next_extraction_planned', 'schedule_mismatch',
         'refinery_gone', 'extraction_cancelled', 'moon_not_rescheduled', 'schedule_needs_filling',
-        // Metenox (v2.0.1) — bay-full warning, standalone (no cross-plugin deps)
+        // Metenox — bay-full warning
         'metenox_cargo_full',
         // Plugin health
         'price_provider', 'moon_scan_missing',
@@ -1173,7 +1171,7 @@ class SettingsManagerService
         'event_created', 'event_started', 'event_completed',
         // Moon
         'moon_ready', 'jackpot_detected', 'moon_chunk_unstable', 'extraction_started',
-        'extraction_at_risk', 'extraction_lost', 'metenox_cargo_full',
+        'metenox_cargo_full',
         // Planner
         'next_extraction_planned', 'schedule_mismatch', 'refinery_gone', 'extraction_cancelled',
         'moon_not_rescheduled', 'schedule_needs_filling',

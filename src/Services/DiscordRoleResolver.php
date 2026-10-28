@@ -10,12 +10,8 @@ use Illuminate\Support\Facades\Schema;
  * Detects Discord role providers on a SeAT install and surfaces role lists
  * for Mining Manager's per-notification-type role-id pickers.
  *
- * Ported verbatim from Structure Manager's DiscordRoleResolver (only the
- * namespace + log prefix differ). The pattern + behaviour is the standard
- * for every plugin in the ecosystem. When MC eventually consolidates this,
- * both SM and MM will import from \ManagerCore\Services\DiscordRoleResolver
- * via the PluginBridge `discord.listRoles` capability and these per-plugin
- * copies will be removed.
+ * Every source is optional: each is read only when its table exists, so
+ * nothing here makes Mining Manager depend on another plugin.
  *
  * Detection is TABLE-based (not class_exists) because SeAT plugins ship
  * differently (composer, tarball, manual), and a package may be installed
@@ -253,8 +249,6 @@ class DiscordRoleResolver
      *     'source' => 'discord-roles-table' | null,
      *     'known'  => bool,                 // true when ID resolves to a known role
      *   ]
-     *
-     * Pattern copied verbatim from Structure Manager's DiscordRoleResolver.
      *
      * @param array<string,array>|null $map  pre-built roleLookupMap(); built on demand if null
      */

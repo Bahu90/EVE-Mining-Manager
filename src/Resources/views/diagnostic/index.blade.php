@@ -1348,8 +1348,6 @@
                                                 <option value="moon_chunk_unstable">⚠️ Moon Chunk Unstable (capital safety)</option>
                                                 <option value="extraction_started">⛏️ Extraction Started (drill lit)</option>
                                                 <option value="metenox_cargo_full">📦 Metenox Cargo Bay Full (v2.0.1, yield-stopping)</option>
-                                                <option value="extraction_at_risk">🔥 Extraction at Risk (cross-plugin — MC+SM)</option>
-                                                <option value="extraction_lost">☠️ Extraction Lost (cross-plugin — MC+SM)</option>
                                             </optgroup>
                                             <optgroup label="Moon Planner Notifications">
                                                 <option value="next_extraction_planned">🗓️ Next Extraction Planned (planner nudge)</option>
@@ -1558,17 +1556,6 @@
                                                 <div class="form-group mb-2">
                                                     <label class="small mb-1">Structure ID</label>
                                                     <input type="number" id="ntStructureId" class="form-control form-control-sm" value="1000000000001">
-                                                </div>
-                                                {{-- Flavor selector — only shown for extraction_at_risk (4 flavors) --}}
-                                                <div class="form-group mb-2" id="ntExtractionFlavorGroup" style="display:none;">
-                                                    <label class="small mb-1">Threat Flavor</label>
-                                                    <select id="ntExtractionFlavor" class="form-control form-control-sm">
-                                                        <option value="fuel_critical">🔥 Fuel Critical (MOON CHUNK COMPROMISED)</option>
-                                                        <option value="shield_reinforced">⚠️ Shield Reinforced (EXTRACTION IN DANGER)</option>
-                                                        <option value="armor_reinforced">🚨 Armor Reinforced (EXTRACTION IN DANGER)</option>
-                                                        <option value="hull_reinforced">💀 Hull Reinforced (MOON CHUNK DESTABILISED)</option>
-                                                    </select>
-                                                    <small class="form-text text-muted">Picks which flavor of extraction_at_risk to preview. Each flavor has its own Discord title + color + description.</small>
                                                 </div>
                                             </div>
                                             <!-- Theft fields -->
@@ -3345,8 +3332,6 @@ function runNotificationTest() {
         test_structure_id: parseInt(document.getElementById('ntStructureId').value) || 1000000000001,
         test_structure_name: document.getElementById('ntStructureName').value || 'Athanor - Test Moon',
         test_moon_name: document.getElementById('ntMoonName').value || 'Perimeter I - Moon 1',
-        // extraction_at_risk flavor — ignored by the server for other types
-        test_alert_flavor: document.getElementById('ntExtractionFlavor')?.value || 'fuel_critical',
         // Theft fields
         test_severity: document.getElementById('ntSeverity')?.value || 'medium',
         test_ore_value: parseFloat(document.getElementById('ntOreValue')?.value) || 50000000,
@@ -3451,8 +3436,6 @@ function runNotificationLiveFire() {
         test_structure_id: parseInt(document.getElementById('ntStructureId').value) || 1000000000001,
         test_structure_name: document.getElementById('ntStructureName').value || 'Athanor - Test Moon',
         test_moon_name: document.getElementById('ntMoonName').value || 'Perimeter I - Moon 1',
-        // extraction_at_risk flavor — ignored by the server for other types
-        test_alert_flavor: document.getElementById('ntExtractionFlavor')?.value || 'fuel_critical',
         test_severity: document.getElementById('ntSeverity')?.value || 'medium',
         test_ore_value: parseFloat(document.getElementById('ntOreValue')?.value) || 50000000,
         test_tax_owed: parseFloat(document.getElementById('ntTaxOwed')?.value) || 5000000,
@@ -3537,8 +3520,6 @@ function runFireAllNotifications() {
         { type: 'schedule_needs_filling', label: '🗓️ Moons Need Planning' },
         { type: 'price_provider', label: '💱 Price Provider Trouble' },
         { type: 'moon_scan_missing', label: '🛰️ Moon Scan Missing' },
-        { type: 'extraction_at_risk',  label: '🔥 Extraction at Risk' },
-        { type: 'extraction_lost',     label: '☠️ Extraction Lost' },
         { type: 'report_generated',    label: '📊 Report Generated' },
         { type: 'theft_detected',   label: '⚠️ Theft Detected' },
         { type: 'critical_theft',   label: '🔴 Critical Theft' },
@@ -3585,8 +3566,6 @@ function runFireAllNotifications() {
         test_structure_id: parseInt(document.getElementById('ntStructureId').value) || 1000000000001,
         test_structure_name: document.getElementById('ntStructureName').value || 'Athanor - Test Moon',
         test_moon_name: document.getElementById('ntMoonName').value || 'Perimeter I - Moon 1',
-        // extraction_at_risk flavor — ignored by the server for other types
-        test_alert_flavor: document.getElementById('ntExtractionFlavor')?.value || 'fuel_critical',
         test_severity: document.getElementById('ntSeverity')?.value || 'medium',
         test_ore_value: parseFloat(document.getElementById('ntOreValue')?.value) || 50000000,
         test_tax_owed: parseFloat(document.getElementById('ntTaxOwed')?.value) || 5000000,
@@ -3714,10 +3693,6 @@ function updateNotifTestFields() {
     document.getElementById('ntDaysOverdueGroup').style.display = 'none';
     document.getElementById('ntActiveTheftFields').style.display = 'none';
 
-    // Flavor selector is extraction_at_risk-only — reset on every change
-    const flavorGroup = document.getElementById('ntExtractionFlavorGroup');
-    if (flavorGroup) flavorGroup.style.display = 'none';
-
     if (type === 'tax_reminder' || type === 'tax_invoice' || type === 'tax_overdue' || type === 'tax_generated' || type === 'tax_announcement') {
         document.getElementById('ntTaxFields').style.display = 'block';
         if (type === 'tax_reminder') {
@@ -3727,13 +3702,9 @@ function updateNotifTestFields() {
         }
     } else if (type === 'event_created' || type === 'event_started' || type === 'event_completed') {
         document.getElementById('ntEventFields').style.display = 'block';
-    } else if (type === 'moon_ready' || type === 'jackpot_detected' || type === 'moon_chunk_unstable' || type === 'extraction_at_risk' || type === 'extraction_lost') {
-        // All five moon-category types reuse Structure Name / Moon Name / ID.
-        // Only extraction_at_risk exposes the flavor selector (4 flavors).
+    } else if (type === 'moon_ready' || type === 'jackpot_detected' || type === 'moon_chunk_unstable') {
+        // The moon types reuse Structure Name / Moon Name / ID.
         document.getElementById('ntMoonFields').style.display = 'block';
-        if (type === 'extraction_at_risk' && flavorGroup) {
-            flavorGroup.style.display = 'block';
-        }
     } else if (type === 'theft_detected' || type === 'critical_theft' || type === 'active_theft' || type === 'incident_resolved') {
         document.getElementById('ntTheftFields').style.display = 'block';
         if (type === 'active_theft') {

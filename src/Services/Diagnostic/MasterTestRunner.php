@@ -26,7 +26,7 @@ use Throwable;
  *   - Every test is idempotent and read-only (no production data mutated).
  *   - Each test method returns an associative array with keys:
  *       name      → human label ("Schema: alert dedup columns present")
- *       category  → grouping bucket ("schema", "settings", "cross-plugin",
+ *       category  → grouping bucket ("schema", "settings",
  *                   "notifications", "pricing", "lifecycle", "tax",
  *                   "security")
  *       status    → "pass" | "warn" | "fail" | "skip"
@@ -489,10 +489,6 @@ class MasterTestRunner
     }
 
     // =================================================================
-    // CROSS-PLUGIN
-    // =================================================================
-
-    // =================================================================
     // PRICING PATH
     // =================================================================
 
@@ -947,7 +943,7 @@ class MasterTestRunner
                 $name,
                 'lifecycle',
                 "{$started} extractions started in the last 30 days, but no MoonminingExtractionStarted notification reached SeAT",
-                ['hint' => 'SeAT needs a character who receives the in-game moon mining notifications (usually a director or station manager), with the notifications scope. Until then, Extraction Started alerts without Manager Core wait six hours and go out without who started them, Fractured by stays empty, and chunk volumes are estimated.']
+                ['hint' => 'SeAT needs a character who receives the in-game moon mining notifications (usually a director or station manager), with the notifications scope. Until then, Extraction Started alerts wait six hours and go out without who started them, Fractured by stays empty, and chunk volumes are estimated.']
             );
         }
 
@@ -1372,8 +1368,6 @@ class MasterTestRunner
         $required = [
             'is_jackpot',                  // M2 atomic CAS target
             'notification_sent',           // M3 atomic CAS target
-            'alert_fuel_critical_sent',    // StructureAlertHandler
-            'alert_destroyed_sent',        // StructureAlertHandler
         ];
         $missing = array_filter($required, fn($col) => !Schema::hasColumn('moon_extractions', $col));
 

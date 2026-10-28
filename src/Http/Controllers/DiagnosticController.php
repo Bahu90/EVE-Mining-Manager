@@ -3936,28 +3936,6 @@ class DiagnosticController extends Controller
                 'capacity_m3'    => $data['capacity_m3'] ?? 500000,
                 'estimated_value' => (int) ($data['estimated_value'] ?? 850000000),
             ])),
-            'extraction_at_risk' => $ns->sendExtractionAtRisk(array_merge($data, [
-                'alert_flavor' => $data['alert_flavor'] ?? 'fuel_critical',
-                'moon_name' => $data['moon_name'] ?? 'Test Moon IV - Moon 3',
-                'structure_name' => $data['structure_name'] ?? 'Diagnostic Athanor',
-                'system_name' => $data['system_name'] ?? 'J-Space Test',
-                'days_remaining' => $data['days_remaining'] ?? 2.4,
-                'hours_remaining' => $data['hours_remaining'] ?? 57.6,
-                'fuel_expires' => $data['fuel_expires'] ?? now()->addDays(2)->addHours(14)->format('Y-m-d H:i') . ' UTC',
-                'estimated_value' => (int) ($data['estimated_value'] ?? 1200000000),
-                'structure_corporation_id' => (int) ($data['structure_corporation_id'] ?? 98000001),
-            ])),
-            'extraction_lost' => $ns->sendExtractionLost(array_merge($data, [
-                'moon_name' => $data['moon_name'] ?? 'Test Moon IV - Moon 3',
-                'structure_name' => $data['structure_name'] ?? 'Diagnostic Athanor',
-                'system_name' => $data['system_name'] ?? 'J-Space Test',
-                'destroyed_at' => $data['destroyed_at'] ?? now()->subMinutes(30)->format('Y-m-d H:i') . ' UTC',
-                'detection_source' => $data['detection_source'] ?? 'notification',
-                'final_timer_result' => $data['final_timer_result'] ?? 'Defended and lost',
-                'chunk_value' => (int) ($data['chunk_value'] ?? 1200000000),
-                'killmail_url' => $data['killmail_url'] ?? 'https://zkillboard.com/',
-                'structure_corporation_id' => (int) ($data['structure_corporation_id'] ?? 98000001),
-            ])),
             'theft_detected' => $ns->sendTheftDetected($this->buildFakeTheftIncident($data), [
                 'incident_url' => $data['incident_url'] ?? route('mining-manager.theft.index'),
             ]),
@@ -4218,8 +4196,6 @@ class DiagnosticController extends Controller
             'moon_not_rescheduled' => 'Moon Not Rescheduled (reminder)',
             'schedule_needs_filling' => 'Moons Need Planning (one list)',
             'metenox_cargo_full' => 'Metenox Cargo Bay Full (yield-stopping)',
-            'extraction_at_risk' => 'Extraction at Risk (fuel / attack / reinforced)',
-            'extraction_lost' => 'Extraction Lost (structure destroyed)',
             'theft_detected' => 'Theft Detected',
             'critical_theft' => 'Critical Theft',
             'active_theft' => 'Active Theft in Progress',
@@ -4461,7 +4437,7 @@ class DiagnosticController extends Controller
         // now live in NotificationService. We still reflect
         // into the protected formatter to build the preview without actually
         // sending to any webhook.
-        $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable', 'extraction_at_risk', 'extraction_lost']);
+        $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable']);
         $isTheftType = in_array($type, ['theft_detected', 'critical_theft', 'active_theft', 'incident_resolved']);
         $isReportType = $type === 'report_generated';
         $message = null;
@@ -4556,19 +4532,12 @@ class DiagnosticController extends Controller
                 $nsType = match ($type) {
                     'jackpot_detected' => \MiningManager\Services\Notification\NotificationService::TYPE_JACKPOT_DETECTED,
                     'moon_chunk_unstable' => \MiningManager\Services\Notification\NotificationService::TYPE_MOON_CHUNK_UNSTABLE,
-                    'extraction_at_risk' => \MiningManager\Services\Notification\NotificationService::TYPE_EXTRACTION_AT_RISK,
-                    'extraction_lost' => \MiningManager\Services\Notification\NotificationService::TYPE_EXTRACTION_LOST,
                     default => \MiningManager\Services\Notification\NotificationService::TYPE_MOON_READY,
                 };
 
                 // Provide a sensible description for the preview when the
                 // caller didn't supply one.
                 $previewData = $data;
-                // Seed reasonable defaults for extraction_at_risk preview so
-                // the Discord embed title resolver can pick the right flavor.
-                if ($type === 'extraction_at_risk' && !isset($previewData['alert_flavor'])) {
-                    $previewData['alert_flavor'] = 'fuel_critical';
-                }
                 if (!isset($previewData['description'])) {
                     $previewData['description'] = match ($nsType) {
                         \MiningManager\Services\Notification\NotificationService::TYPE_JACKPOT_DETECTED
@@ -4577,10 +4546,6 @@ class DiagnosticController extends Controller
                                 : 'A jackpot moon extraction has been confirmed! Miners found +100% variant ores in the belt.',
                         \MiningManager\Services\Notification\NotificationService::TYPE_MOON_CHUNK_UNSTABLE
                             => '⚠️ This chunk will enter **unstable state** soon. Capital ship pilots (Rorquals, Orcas) should dock up or warp to safety — unstable chunks are known hotspots for hostile activity.',
-                        \MiningManager\Services\Notification\NotificationService::TYPE_EXTRACTION_AT_RISK
-                            => '🔥 **Preview** — refinery running an active extraction is under threat. Flavor can be fuel_critical / shield_reinforced / armor_reinforced / hull_reinforced.',
-                        \MiningManager\Services\Notification\NotificationService::TYPE_EXTRACTION_LOST
-                            => '☠️ **Preview** — refinery destroyed mid-extraction. Chunk lost. Tax reconciliation and miner comms recommended.',
                         default => 'A moon chunk is ready for mining!',
                     };
                 }
@@ -4762,7 +4727,7 @@ class DiagnosticController extends Controller
         // The branches below stay type-specialised because some
         // surfaces (moon, report) build inline field layouts in this preview
         // rather than reflecting into protected formatters.
-        $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable', 'extraction_at_risk', 'extraction_lost']);
+        $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable']);
         $isTheftType = in_array($type, ['theft_detected', 'critical_theft', 'active_theft', 'incident_resolved']);
         $isReportType = $type === 'report_generated';
         $message = null;
@@ -5134,8 +5099,7 @@ class DiagnosticController extends Controller
             'metenox_cargo_full' => [
                 // Default sample for the metenox_cargo_full live-fire preview.
                 // Operators can override via test_* inputs to preview a
-                // specific drill or fill state. Defaults assume the test
-                // data SM's CreateTestMetenoxCommand creates (~90% fill).
+                // specific drill or fill state. Defaults to a drill at ~90%.
                 'structure_id'   => (int) $request->input('test_structure_id', 9999999999),
                 'structure_name' => $request->input('test_structure_name', 'Diagnostic Metenox - Test Moon'),
                 'system_name'    => $request->input('test_system_name', 'Jita'),
@@ -5145,37 +5109,6 @@ class DiagnosticController extends Controller
                 'capacity_m3'    => 500000,
                 'estimated_value' => (int) $request->input('test_estimated_value', 850000000),
                 'cargo_url'      => rtrim(config('app.url', ''), '/') . '/mining-manager/moon/metenox-cargo',
-                'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
-            ],
-            'extraction_at_risk' => [
-                // Default flavor for the Fire Live / Fire ALL preview. Operators
-                // can override via test_* inputs if they want to preview a
-                // specific threat flavor (shield_reinforced, armor_reinforced,
-                // hull_reinforced).
-                'alert_flavor' => $request->input('test_alert_flavor', 'fuel_critical'),
-                'moon_name' => $request->input('test_moon_name', 'Perimeter I - Moon 1'),
-                'structure_name' => $request->input('test_structure_name', 'Athanor - Test Moon'),
-                'system_name' => $request->input('test_system_name', 'Perimeter'),
-                'days_remaining' => (float) $request->input('test_days_remaining', 2.4),
-                'hours_remaining' => (float) $request->input('test_hours_remaining', 57.6),
-                'fuel_expires' => now()->addDays(2)->addHours(14)->format('Y-m-d H:i') . ' UTC',
-                'timer_ends_at' => now()->addHours(24)->format('Y-m-d H:i') . ' UTC',
-                'estimated_value' => (int) $request->input('test_estimated_value', 1200000000),
-                'extraction_url' => rtrim(config('app.url', ''), '/') . '/mining-manager/moon/1',
-                'structure_corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
-                'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
-            ],
-            'extraction_lost' => [
-                'moon_name' => $request->input('test_moon_name', 'Perimeter I - Moon 1'),
-                'structure_name' => $request->input('test_structure_name', 'Athanor - Test Moon'),
-                'system_name' => $request->input('test_system_name', 'Perimeter'),
-                'destroyed_at' => now()->subMinutes(30)->format('Y-m-d H:i') . ' UTC',
-                'detection_source' => $request->input('test_detection_source', 'notification'),
-                'final_timer_result' => $request->input('test_final_timer_result', 'Defended and lost'),
-                'chunk_value' => (int) $request->input('test_chunk_value', 1200000000),
-                'killmail_url' => 'https://zkillboard.com/',
-                'extraction_url' => rtrim(config('app.url', ''), '/') . '/mining-manager/moon/1',
-                'structure_corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
                 'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
             ],
             'theft_detected', 'critical_theft', 'active_theft', 'incident_resolved' => $this->buildTheftTestData($request, $type, $characterId, $characterName),

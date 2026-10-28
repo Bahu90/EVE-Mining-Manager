@@ -396,27 +396,6 @@ class TaxCalculationService
                             $newTax->refresh();
                             Log::info("Mining Manager: applied " . number_format($creditApplied, 2) . " ISK of held credit to invoice {$newTax->id}");
                         }
-
-                        // B1a: announce on the cross-plugin event bus so other
-                        // plugins (Discord Pings, HR Manager, etc.) can react.
-                        // Topics handles publisher attribution, idempotency-key
-                        // composition, and Discord sanitization. Standalone-safe:
-                        // when MC is not installed, the class_exists guard makes
-                        // this a complete no-op.
-                        if (class_exists(\ManagerCore\Topics::class)) {
-                            \ManagerCore\Topics::publish('mining.tax_created', [
-                                'tax_id'         => $newTax->id,
-                                'character_id'   => $mainCharacterId,
-                                'period'         => $calendarMonth,            // template uses {period}
-                                'period_type'    => $periodType,
-                                'period_start'   => $startDate->format('Y-m-d'),
-                                'period_end'     => $endDate->format('Y-m-d'),
-                                'amount_owed'    => round($combinedTaxAmount, 2),
-                                'due_date'       => $dueDate->format('Y-m-d'),
-                                'corporation_id' => null, // visibility scoping (subscriber may filter)
-                                'role_id'        => null,
-                            ]);
-                        }
                     }
 
                     $calculated++;

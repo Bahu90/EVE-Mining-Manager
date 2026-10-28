@@ -1073,7 +1073,7 @@ Route::group([
         ]);
 
         // One-click "Master Test" — runs the full read-only smoke chain
-        // (schema, settings, cross-plugin integration, pricing, notifications,
+        // (schema, settings, pricing, notifications,
         // lifecycle, tax, security). Returns structured JSON for the UI.
         Route::post('/master-test', [
             'as' => 'mining-manager.diagnostic.master-test',

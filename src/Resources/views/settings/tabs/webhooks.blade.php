@@ -163,16 +163,6 @@
                                                     <i class="fas fa-exclamation-triangle"></i>
                                                 </span>
                                             @endif
-                                            @if($webhook->notify_extraction_at_risk ?? false)
-                                                <span class="badge badge-danger" title="Extraction at Risk (fuel / attack / reinforced)">
-                                                    <i class="fas fa-fire"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_extraction_lost ?? false)
-                                                <span class="badge" style="background: #1f0000; color: #fff;" title="Extraction Lost (structure destroyed)">
-                                                    <i class="fas fa-skull"></i>
-                                                </span>
-                                            @endif
                                             @if($webhook->notify_metenox_cargo_full ?? false)
                                                 <span class="badge badge-warning" title="Metenox Cargo Bay Full">
                                                     <i class="fas fa-box-open"></i>
@@ -532,38 +522,6 @@
                             </label>
                         </div>
 
-                        @php
-                            // Cross-plugin checks for extraction_at_risk + extraction_lost.
-                            // Disabled with tooltip when either MC or SM is missing — keeps
-                            // stale toggles from firing no-ops in the backend.
-                            $mmMcInstalled = class_exists('ManagerCore\\Services\\EventBus');
-                            $mmSmInstalled = class_exists('StructureManager\\Helpers\\FuelCalculator');
-                            $mmCrossReady = $mmMcInstalled && $mmSmInstalled;
-                            $mmMissingTip = $mmCrossReady ? ''
-                                : 'Requires ' . (!$mmMcInstalled ? 'Manager Core' : '')
-                                . (!$mmMcInstalled && !$mmSmInstalled ? ' + ' : '')
-                                . (!$mmSmInstalled ? 'Structure Manager' : '');
-                        @endphp
-                        <div class="custom-control custom-checkbox" title="{{ $mmMissingTip }}">
-                            <input type="checkbox" class="custom-control-input" id="notify-extraction-at-risk" name="notify_extraction_at_risk" value="1" {{ !$mmCrossReady ? 'disabled' : '' }}>
-                            <label class="custom-control-label{{ !$mmCrossReady ? ' text-muted' : '' }}" for="notify-extraction-at-risk">
-                                <i class="fas fa-fire text-danger"></i>
-                                Extraction at Risk
-                                @if(!$mmCrossReady)
-                                    <small class="badge badge-secondary ml-1">Plugin required</small>
-                                @endif
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox" title="{{ $mmMissingTip }}">
-                            <input type="checkbox" class="custom-control-input" id="notify-extraction-lost" name="notify_extraction_lost" value="1" {{ !$mmCrossReady ? 'disabled' : '' }}>
-                            <label class="custom-control-label{{ !$mmCrossReady ? ' text-muted' : '' }}" for="notify-extraction-lost">
-                                <i class="fas fa-skull text-danger"></i>
-                                Extraction Lost
-                                @if(!$mmCrossReady)
-                                    <small class="badge badge-secondary ml-1">Plugin required</small>
-                                @endif
-                            </label>
-                        </div>
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="notify-metenox-cargo-full" name="notify_metenox_cargo_full" value="1">
                             <label class="custom-control-label" for="notify-metenox-cargo-full">

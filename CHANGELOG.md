@@ -6,7 +6,7 @@ All notable changes to Mining Manager will be documented in this file.
 
 First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namespace, tables and permissions, so an existing install switches over and keeps its data.
 
-**After updating**, run the migrations: `000038` encrypts the webhook URLs already saved, `000039` moves one schedule, and `000040` adds the ore contract table. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
+**After updating**, run the migrations: `000038` encrypts the webhook URLs already saved, `000039` moves one schedule, `000040` adds the ore contract table, and `000041` moves price settings off Manager Core. Webhook URLs are no longer shown once saved; leave the field blank when editing to keep the saved one.
 
 ### Tax paid in ore
 
@@ -14,6 +14,17 @@ First changes after taking the plugin over from Matt Falahe's 2.0.5. Same namesp
 - **Accepted contracts are credited automatically** (`verify-ore-contracts`, hourly): to the bill named by the tax code in the description, otherwise the oldest open bills, with extra ore held as balance. Buyback contracts, contracts made before ore mode, and code-less contracts from pilots with no bill are not treated as tax.
 - **Directors see ore contracts waiting to be accepted** on the Wallet page; members see theirs on My Taxes.
 - Migration `000040` adds the table of checked contracts. SeAT needs the corporation contracts scope.
+
+### No other plugins needed
+
+Mining Manager no longer works with Manager Core or Structure Manager, and nothing in it checks for them. It runs on SeAT alone.
+
+- **Pricing:** Manager Core is gone from the price providers and fallbacks. Migration `000041` moves an install that used it to Fuzzwork (same trade hubs, no key), and a Manager Core fallback to Fuzzwork, or to none when Fuzzwork is now the provider.
+- **Extraction at Risk and Extraction Lost are retired.** They only ever came from Structure Manager's alerts. Their toggles are gone from webhooks, Notifications, the routing map and Diagnostics; the database columns stay, unused.
+- **Extraction Started** always comes from SeAT's own data, waiting for the in-game notification to name the pilot as before. The Detection Speed setting, which chose Manager Core's fast-poll, is gone.
+- **Nothing is published for other plugins:** the tax, theft, jackpot and extraction lifecycle events are no longer sent, and `scan-extraction-events` is removed from the schedule.
+- **The simulator's corporation income** is shown before fuel on both sides. Fuel came from Structure Manager; fuel rates and prices differ too much between corporations to guess.
+- **Master Test** drops its Manager Core and Structure Manager checks (33 checks now).
 
 ### Security
 

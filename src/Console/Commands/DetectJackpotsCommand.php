@@ -141,22 +141,6 @@ class DetectJackpotsCommand extends Command
                     $this->newLine();
                     $this->info("  ⭐ JACKPOT DETECTED: {$extraction->moon_name}");
 
-                    // B1c: announce on the cross-plugin event bus. Idempotency
-                    // key (jackpot_detected:{extraction_id}) guarantees re-runs
-                    // of this command on the same extraction won't re-publish.
-                    // Standalone-safe via class_exists guard.
-                    if (class_exists(\ManagerCore\Topics::class)) {
-                        \ManagerCore\Topics::publish('mining.jackpot_detected', [
-                            'extraction_id'  => $extraction->id,
-                            'moon_id'        => $extraction->moon_id ?? null,
-                            'moon_name'      => $extraction->moon_name ?? null,
-                            'structure_id'   => $extraction->structure_id ?? null,
-                            'corporation_id' => $extraction->corporation_id ?? null, // visibility scoping
-                            'role_id'        => null,
-                            'detected_at'    => $extraction->jackpot_detected_at->toIso8601String(),
-                        ]);
-                    }
-
                     // Send webhook notification
                     try {
                         $structure = DB::table('universe_structures')

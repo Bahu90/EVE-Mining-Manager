@@ -873,7 +873,6 @@
                             <div class="income-side" id="incomeRefinery">
                                 <h6 class="income-side-title"><i class="fas fa-industry"></i> <span id="incomeRefineryTitle"></span></h6>
                                 <div class="income-row"><span>{{ trans('mining-manager::moons.income_tax') }}</span><span id="incomeRefineryTax"></span></div>
-                                <div class="income-row"><span id="incomeRefineryFuelLabel"></span><span id="incomeRefineryFuel"></span></div>
                                 <div class="income-row income-net" id="incomeRefineryNetRow"><span>{{ trans('mining-manager::moons.income_corporation') }}</span><span id="incomeRefineryNet"></span></div>
                                 <div class="income-row income-per-day"><span></span><span id="incomeRefineryPerDay"></span></div>
                                 <small class="d-block income-note mt-2" id="incomeMembers"></small>
@@ -883,7 +882,6 @@
                             <div class="income-side" id="incomeMetenox">
                                 <h6 class="income-side-title"><i class="fas fa-satellite"></i> {{ trans('mining-manager::moons.income_metenox') }}</h6>
                                 <div class="income-row"><span>{{ trans('mining-manager::moons.income_materials') }}</span><span id="incomeMetenoxValue"></span></div>
-                                <div class="income-row"><span id="incomeMetenoxFuelLabel"></span><span id="incomeMetenoxFuel"></span></div>
                                 <div class="income-row income-net" id="incomeMetenoxNetRow"><span>{{ trans('mining-manager::moons.income_corporation') }}</span><span id="incomeMetenoxNet"></span></div>
                                 <div class="income-row income-per-day"><span></span><span id="incomeMetenoxPerDay"></span></div>
                                 <small class="d-block income-note mt-2" id="incomeBay"></small>
@@ -1053,13 +1051,11 @@
     if ($canSeeMoonIncome ?? false) {
         foreach ([
             'income_title', 'income_intro_refined', 'income_intro_ore', 'income_share_moon',
-            'income_share_corporation', 'income_share_none', 'income_refinery', 'income_fuel',
-            'income_fuel_refinery', 'income_fuel_metenox', 'income_fuel_not_counted', 'income_per_day',
+            'income_share_corporation', 'income_share_none', 'income_refinery', 'income_per_day',
             'income_members_keep', 'income_bay', 'income_ahead_refinery', 'income_ahead_metenox',
             'income_level', 'income_break_even', 'income_metenox_always', 'income_refinery_always',
-            'income_no_tax', 'income_no_moon_owner', 'income_metenox_loss', 'income_fuel_unavailable',
-            'income_fuel_disabled', 'income_fuel_unpriced', 'income_fuel_priced', 'income_fuel_priced_plain',
-            'income_fuel_blocks', 'income_magmatic_gas', 'income_unpriced_materials',
+            'income_no_tax', 'income_no_moon_owner', 'income_before_fuel',
+            'income_unpriced_materials',
         ] as $incomeKey) {
             $moonLang[$incomeKey] = trans('mining-manager::moons.' . $incomeKey);
         }
@@ -1397,27 +1393,12 @@ function renderIncome(data) {
     `).join(''));
 
     const notices = [];
-    const fuel = income.fuel || { status: 'unavailable', missing: [] };
     if (!income.moon_owner_set) {
         notices.push(['warn', MOON_LANG.income_no_moon_owner]);
     } else if (!(income.refinery.tax > 0)) {
         notices.push(['', MOON_LANG.income_no_tax]);
     }
-    if (fuel.status === 'priced') {
-        if (metenox.value < (metenox.fuel ? metenox.fuel.isk : 0)) {
-            notices.push(['warn', MOON_LANG.income_metenox_loss]);
-        }
-        notices.push(['', fuel.market && fuel.price_type
-            ? MOON_LANG.income_fuel_priced.replace(':source', fuel.price_type.toUpperCase() + ' on ' + fuel.market.toUpperCase())
-            : MOON_LANG.income_fuel_priced_plain]);
-    } else if (fuel.status === 'disabled') {
-        notices.push(['warn', MOON_LANG.income_fuel_disabled]);
-    } else if (fuel.status === 'unpriced') {
-        const names = (fuel.missing || []).map(key => key === 'magmatic_gas' ? MOON_LANG.income_magmatic_gas : MOON_LANG.income_fuel_blocks);
-        notices.push(['warn', MOON_LANG.income_fuel_unpriced.replace(':items', names.join(', '))]);
-    } else {
-        notices.push(['', MOON_LANG.income_fuel_unavailable]);
-    }
+    notices.push(['', MOON_LANG.income_before_fuel]);
     if ((metenox.unpriced || []).length > 0) {
         notices.push(['warn', MOON_LANG.income_unpriced_materials.replace(':materials', metenox.unpriced.join(', '))]);
     }
@@ -1430,8 +1411,7 @@ function renderIncome(data) {
 }
 
 /**
- * Work both sides out at the share on the slider. Fuel counts only when both
- * sides have it in ISK, so the two are always compared like for like.
+ * Work both sides out at the share on the slider, both before fuel.
  */
 function updateIncome() {
     if (!incomeData) {
@@ -1444,33 +1424,19 @@ function updateIncome() {
     const share = (parseInt($('#incomeShare').val(), 10) || 0) / 100;
     const percent = Math.round(share * 100);
     const days = income.days || 1;
-    const priced = income.fuel && income.fuel.status === 'priced';
-
-    const refineryFuel = priced ? refinery.fuel.isk : 0;
-    const metenoxFuel = priced ? metenox.fuel.isk : 0;
     const tax = refinery.tax * share;
-    const refineryNet = tax - refineryFuel;
-    const metenoxNet = metenox.value - metenoxFuel;
+    const refineryNet = tax;
+    const metenoxNet = metenox.value;
 
     $('#incomeShareValue').text(percent + '%');
 
     $('#incomeRefineryTax').text(formatNumber(tax) + ' ISK');
-    $('#incomeRefineryFuelLabel').text(refinery.fuel
-        ? MOON_LANG.income_fuel_refinery.replace(':blocks', formatNumber(refinery.fuel.blocks))
-        : MOON_LANG.income_fuel);
-    $('#incomeRefineryFuel').text(priced ? '− ' + formatNumber(refineryFuel) + ' ISK' : MOON_LANG.income_fuel_not_counted);
     $('#incomeRefineryNet').text(formatNumber(refineryNet) + ' ISK');
     $('#incomeRefineryNetRow').toggleClass('income-negative', refineryNet < 0);
     $('#incomeRefineryPerDay').text(MOON_LANG.income_per_day.replace(':value', formatNumber(refineryNet / days)));
     $('#incomeMembers').text(MOON_LANG.income_members_keep.replace(':value', formatNumber((refinery.value - refinery.tax) * share)));
 
     $('#incomeMetenoxValue').text(formatNumber(metenox.value) + ' ISK');
-    $('#incomeMetenoxFuelLabel').text(metenox.fuel
-        ? MOON_LANG.income_fuel_metenox
-            .replace(':blocks', formatNumber(metenox.fuel.blocks))
-            .replace(':gas', formatNumber(metenox.fuel.magmatic_gas))
-        : MOON_LANG.income_fuel);
-    $('#incomeMetenoxFuel').text(priced ? '− ' + formatNumber(metenoxFuel) + ' ISK' : MOON_LANG.income_fuel_not_counted);
     $('#incomeMetenoxNet').text(formatNumber(metenoxNet) + ' ISK');
     $('#incomeMetenoxNetRow').toggleClass('income-negative', metenoxNet < 0);
     $('#incomeMetenoxPerDay').text(MOON_LANG.income_per_day.replace(':value', formatNumber(metenoxNet / days)));

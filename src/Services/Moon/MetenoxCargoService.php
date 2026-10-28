@@ -25,9 +25,7 @@ use Illuminate\Support\Facades\DB;
 class MetenoxCargoService
 {
     /**
-     * Metenox Moon Drill type ID. Mirrored from
-     * \StructureManager\Helpers\TypeIdRegistry::METENOX to keep MM
-     * standalone-installable (no hard dependency on Structure Manager).
+     * Metenox Moon Drill type ID.
      */
     public const METENOX_TYPE_ID = 81826;
 
@@ -234,10 +232,8 @@ class MetenoxCargoService
 
     /**
      * Cargo snapshot for a single Metenox structure as a flat
-     * [type_id => quantity] array. Used by the PluginBridge capability
-     * (`mining.metenox.cargoSnapshot`) so Structure Manager or future
-     * consumers can read the drill's contents without bouncing through
-     * MM's UI layer.
+     * [type_id => quantity] array, for code that wants the drill's contents
+     * without going through the UI layer.
      *
      * Returns null when the structure is not a Metenox or has no recorded
      * cargo (lets consumers distinguish "unknown structure" from "empty

@@ -10,8 +10,7 @@
     Inherited from the parent (Settings):
       $roleProviderAvailable — bool, whether any Discord role source exists.
 
-    Pattern copied verbatim from Structure Manager's
-    notifications/_role_pill.blade.php. Styling lives inside the routing-map
+    Styling lives inside the routing-map
     partial below (.mm-role-pill family) so the rules travel with the panel.
 --}}
 @php($rp_hasProvider = $roleProviderAvailable ?? false)

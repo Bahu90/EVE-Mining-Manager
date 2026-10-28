@@ -147,38 +147,16 @@
                     'extraction_started' => [
                         'label' => 'Extraction Started',
                         'icon' => 'fas fa-hammer text-info',
-                        'desc' => 'Fires when a refinery begins a new extraction (drill fired, chunk forming). Read from the in-game MoonminingExtractionStarted director notification, which also names who started it and their main. Lets the team plan around the upcoming arrival. Standalone — no Manager Core or Structure Manager required.',
+                        'desc' => 'Fires when a refinery begins a new extraction (drill fired, chunk forming). Read from the in-game MoonminingExtractionStarted director notification, which also names who started it and their main. Lets the team plan around the upcoming arrival.',
                         'scope' => 'general',
                         'has_role_ping' => true,
                         'has_user_ping' => false,
                         'has_show_amount' => false,
-                    ],
-                    'extraction_at_risk' => [
-                        'label' => 'Extraction at Risk',
-                        'icon' => 'fas fa-fire text-danger',
-                        'desc' => 'Moon chunk is in danger — refinery running out of fuel, or structure is under attack / in a reinforcement timer. Uses Structure Manager data for accurate fuel math and combat state. Requires Manager Core + Structure Manager.',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                        'requires_plugins' => ['ManagerCore\\Services\\EventBus', 'StructureManager\\Helpers\\FuelCalculator'],
-                        'required_plugin_labels' => ['Manager Core', 'Structure Manager'],
-                    ],
-                    'extraction_lost' => [
-                        'label' => 'Extraction Lost',
-                        'icon' => 'fas fa-skull text-danger',
-                        'desc' => 'Post-mortem — the refinery running an active extraction has been destroyed. Chunk is gone for good. Separate from "at risk" so management / finance channels can opt into only the post-mortem, not live threat pings. Requires Manager Core + Structure Manager.',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                        'requires_plugins' => ['ManagerCore\\Services\\EventBus', 'StructureManager\\Helpers\\FuelCalculator'],
-                        'required_plugin_labels' => ['Manager Core', 'Structure Manager'],
                     ],
                     'metenox_cargo_full' => [
                         'label' => 'Metenox Cargo Bay Full',
                         'icon' => 'fas fa-box-open text-warning',
-                        'desc' => 'Fires when a Metenox MoonMaterialBay crosses the configured fill-% threshold (default 85%). Yield-stopping warning, not a structure-safety alert — drilling stops when the bay caps out but the structure itself stays online. Latch prevents repeat fires while still over threshold; resets when cargo is pulled. Standalone — no Manager Core or Structure Manager required.',
+                        'desc' => 'Fires when a Metenox MoonMaterialBay crosses the configured fill-% threshold (default 85%). Yield-stopping warning, not a structure-safety alert — drilling stops when the bay caps out but the structure itself stays online. Latch prevents repeat fires while still over threshold; resets when cargo is pulled.',
                         'scope' => 'general',
                         'has_role_ping' => true,
                         'has_user_ping' => false,
@@ -355,61 +333,17 @@
                         $showAmount = $ts['show_amount'] ?? true;
                         $filterCorporations = array_map('intval', (array) ($ts['corporations'] ?? []));
 
-                        // Cross-plugin dependency check (e.g. extraction_at_risk, extraction_lost
-                        // require Manager Core + Structure Manager). If any required plugin is
-                        // missing we grey out the whole card and show a banner explaining which.
-                        $missingPlugins = [];
-                        if (!empty($typeInfo['requires_plugins'])) {
-                            $labels = $typeInfo['required_plugin_labels'] ?? $typeInfo['requires_plugins'];
-                            foreach ($typeInfo['requires_plugins'] as $idx => $reqClass) {
-                                if (!class_exists($reqClass)) {
-                                    $missingPlugins[] = $labels[$idx] ?? $reqClass;
-                                }
-                            }
-                        }
-                        $crossPluginReady = empty($missingPlugins);
                     @endphp
 
-                    <div class="card mb-2 ml-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);{{ !$crossPluginReady ? ' opacity: 0.6;' : '' }}">
+                    <div class="card mb-2 ml-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
                         <div class="card-body py-2 px-3">
-                            @if(!$crossPluginReady)
-                                <div class="alert alert-warning py-2 mb-2" style="font-size: 0.85em;">
-                                    <i class="fas fa-plug"></i>
-                                    <strong>Cross-plugin notification</strong> — requires:
-                                    <ul class="mb-0 mt-1" style="padding-left: 1.5em;">
-                                        @foreach($typeInfo['requires_plugins'] as $idx => $reqClass)
-                                            @php
-                                                $label = ($typeInfo['required_plugin_labels'] ?? $typeInfo['requires_plugins'])[$idx];
-                                                $installed = class_exists($reqClass);
-                                            @endphp
-                                            <li class="{{ $installed ? 'text-success' : 'text-danger' }}">
-                                                <i class="fas {{ $installed ? 'fa-check' : 'fa-times' }}"></i>
-                                                {{ $label }}
-                                                <small class="text-muted">({{ $installed ? 'installed' : 'not installed' }})</small>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                    <small class="text-muted d-block mt-1">
-                                        Install the missing plugin(s) to enable this notification.
-                                        The toggle below is disabled until then.
-                                    </small>
-                                </div>
-                            @endif
-
-                            {{-- A disabled switch is not submitted, so its stored value rides
-                                 along here. Without it, saving would switch the type off. --}}
-                            @if(!$crossPluginReady && $isEnabled)
-                                <input type="hidden" name="notify_global_{{ $typeKey }}" value="1">
-                            @endif
-
                             {{-- Master toggle row --}}
                             <div class="d-flex align-items-center justify-content-between">
                                 <div class="custom-control custom-switch">
                                     <input type="checkbox" class="custom-control-input notify-master-toggle"
                                            id="notify_global_{{ $typeKey }}" name="notify_global_{{ $typeKey }}" value="1"
                                            data-type="{{ $typeKey }}"
-                                           {{ $isEnabled ? 'checked' : '' }}
-                                           {{ !$crossPluginReady ? 'disabled' : '' }}>
+                                           {{ $isEnabled ? 'checked' : '' }}>
                                     <label class="custom-control-label" for="notify_global_{{ $typeKey }}">
                                         <i class="{{ $typeInfo['icon'] }}"></i> <strong>{{ $typeInfo['label'] }}</strong>
                                         @if(($typeInfo['scope'] ?? '') === 'individual')
@@ -435,7 +369,7 @@
                                 <div id="typeSettings_{{ $typeKey }}" class="mt-2 pl-4 pr-2 pb-2"
                                      style="display: {{ ($pingRole || $pingUser || !$showAmount || $filterCorporations) ? 'block' : 'none' }};
                                             border-left: 3px solid rgba(88,166,255,0.3); margin-left: 10px;
-                                            {{ (!$isEnabled || !$crossPluginReady) ? 'opacity: 0.5; pointer-events: none;' : '' }}">
+                                            {{ !$isEnabled ? 'opacity: 0.5; pointer-events: none;' : '' }}">
 
                                     {{-- Role Ping --}}
                                     @if($typeInfo['has_role_ping'])
@@ -741,8 +675,6 @@
                         'jackpot_detected' => ['label' => 'Jackpot Detected', 'icon' => 'fas fa-star text-warning'],
                         'moon_chunk_unstable' => ['label' => 'Moon Chunk Unstable (capital safety)', 'icon' => 'fas fa-exclamation-triangle text-warning'],
                         'extraction_started' => ['label' => 'Extraction Started', 'icon' => 'fas fa-hammer text-info'],
-                        'extraction_at_risk' => ['label' => 'Extraction at Risk', 'icon' => 'fas fa-fire text-danger'],
-                        'extraction_lost' => ['label' => 'Extraction Lost', 'icon' => 'fas fa-skull text-danger'],
                         'metenox_cargo_full' => ['label' => 'Metenox Cargo Bay Full', 'icon' => 'fas fa-box-open text-warning'],
                         'next_extraction_planned' => ['label' => 'Next Extraction Planned', 'icon' => 'fas fa-calendar-check text-primary'],
                         'schedule_mismatch' => ['label' => 'Moon Scheduled Off-Plan', 'icon' => 'fas fa-exclamation-triangle text-danger'],
@@ -1160,9 +1092,6 @@ $(document).ready(function() {
     // is AJAX-fetched once and cached in inlineRolesCache, then rendered
     // into each picker's body on first open. Subsequent opens reuse the
     // cache instantly.
-    //
-    // The picker UI deliberately mirrors Structure Manager's webhook
-    // modal picker so SM and MM operators get the same experience.
     // ============================================================
     let inlineRolesCache = null;
     const inlineRolesLoadedFor = {};

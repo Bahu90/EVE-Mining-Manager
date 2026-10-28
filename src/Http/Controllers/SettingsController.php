@@ -164,9 +164,7 @@ class SettingsController extends Controller
         // role-id picker buttons in the notifications tab. When at least one
         // provider is detected (SeAT Broadcast / SeAT Connector / legacy
         // warlof), each role-id input gets a "Pick from Discord" button +
-        // collapsible inline picker. Source-of-truth implementation:
-        // structure-manager/src/Services/DiscordRoleResolver.php (copied here
-        // verbatim with namespace change).
+        // collapsible inline picker.
         $roleProviderAvailable = DiscordRoleResolver::isAvailable();
         $roleProviderLabel     = DiscordRoleResolver::providerLabel();
 
@@ -1573,8 +1571,6 @@ class SettingsController extends Controller
             $data['notify_tax_outstanding_digest'] = $request->boolean('notify_tax_outstanding_digest');
             $data['notify_price_provider'] = $request->boolean('notify_price_provider');
             $data['notify_moon_scan_missing'] = $request->boolean('notify_moon_scan_missing');
-            $data['notify_extraction_at_risk'] = $request->boolean('notify_extraction_at_risk');
-            $data['notify_extraction_lost'] = $request->boolean('notify_extraction_lost');
             $data['notify_metenox_cargo_full'] = $request->boolean('notify_metenox_cargo_full');
             $data['notify_event_created'] = $request->boolean('notify_event_created');
             $data['notify_event_started'] = $request->boolean('notify_event_started');
@@ -1656,8 +1652,6 @@ class SettingsController extends Controller
             $data['notify_tax_outstanding_digest'] = $request->boolean('notify_tax_outstanding_digest');
             $data['notify_price_provider'] = $request->boolean('notify_price_provider');
             $data['notify_moon_scan_missing'] = $request->boolean('notify_moon_scan_missing');
-            $data['notify_extraction_at_risk'] = $request->boolean('notify_extraction_at_risk');
-            $data['notify_extraction_lost'] = $request->boolean('notify_extraction_lost');
             $data['notify_metenox_cargo_full'] = $request->boolean('notify_metenox_cargo_full');
             $data['notify_event_created'] = $request->boolean('notify_event_created');
             $data['notify_event_started'] = $request->boolean('notify_event_started');
@@ -1775,43 +1769,18 @@ class SettingsController extends Controller
      * Validation rules shared by storeWebhook + updateWebhook.
      *
      * Centralised so the two endpoints can't drift — historically the
-     * update endpoint missed several newer notify_* fields (moon_chunk_unstable,
-     * extraction_at_risk, extraction_lost) which meant operators couldn't
-     * edit those toggles after the initial create.
+     * update endpoint missed newer notify_* fields, which meant operators
+     * couldn't edit those toggles after the initial create.
      *
-     * Two cross-cutting safety rules applied to specific fields:
-     *
-     *  - `webhook_url` requires `https://` prefix in addition to URL format.
-     *    Discord/Slack webhooks are always HTTPS so this loses no functionality.
-     *    Closes a small SSRF surface where a malicious or compromised admin
-     *    could register `http://127.0.0.1:port` to probe internal services.
-     *
-     *  - `notify_extraction_at_risk` and `notify_extraction_lost` are
-     *    cross-plugin notifications that require Manager Core's EventBus +
-     *    Structure Manager's FuelCalculator at runtime. The UI greys these
-     *    out when either plugin is missing, but a direct API POST or stale
-     *    form replay can bypass the UI gate. The closure validator below
-     *    rejects toggle=true on the backend if either plugin is absent so
-     *    the persisted state can't drift from the runtime capability.
+     * `webhook_url` requires `https://` prefix in addition to URL format.
+     * Discord/Slack webhooks are always HTTPS so this loses no functionality.
+     * Closes a small SSRF surface where a malicious or compromised admin
+     * could register `http://127.0.0.1:port` to probe internal services.
      *
      * @return array<string, mixed>
      */
     private function webhookValidationRules(bool $requireUrl = true): array
     {
-        $crossPluginRule = function ($attribute, $value, $fail) {
-            if (!$value) {
-                return; // not enabling — no plugin requirement
-            }
-            $hasMC = class_exists('ManagerCore\\Services\\EventBus');
-            $hasSM = class_exists('StructureManager\\Helpers\\FuelCalculator');
-            if (!$hasMC || !$hasSM) {
-                $missing = [];
-                if (!$hasMC) $missing[] = 'Manager Core';
-                if (!$hasSM) $missing[] = 'Structure Manager';
-                $fail("Cannot enable {$attribute}: requires " . implode(' + ', $missing) . ' to be installed.');
-            }
-        };
-
         return [
             'name' => 'required|string|max:255',
             'type' => 'required|in:discord,slack,custom',
@@ -1840,8 +1809,6 @@ class SettingsController extends Controller
             'notify_tax_outstanding_digest' => 'nullable|boolean',
             'notify_price_provider' => 'nullable|boolean',
             'notify_moon_scan_missing' => 'nullable|boolean',
-            'notify_extraction_at_risk' => ['nullable', 'boolean', $crossPluginRule],
-            'notify_extraction_lost' => ['nullable', 'boolean', $crossPluginRule],
             'notify_metenox_cargo_full' => 'nullable|boolean',
             'notify_event_created' => 'nullable|boolean',
             'notify_event_started' => 'nullable|boolean',
