@@ -593,6 +593,38 @@
                 </div>
             </div>
 
+            {{-- ISK or ore: what members hand over --}}
+            @php
+                $taxPaymentForm = old('tax_payment_form', $settings->tax_payment_form ?? 'isk');
+                $oreSince = $settings->ore_contracts_since ?? null;
+            @endphp
+            <div class="form-group mt-3">
+                <label>
+                    <i class="fas fa-cubes"></i>
+                    {{ trans('mining-manager::settings.tax_payment_form') }}
+                </label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="tax_payment_form" id="tax_payment_form_isk" value="isk" {{ $taxPaymentForm !== 'ore' ? 'checked' : '' }}>
+                    <label class="form-check-label" for="tax_payment_form_isk">
+                        <strong>{{ trans('mining-manager::settings.tax_payment_form_isk') }}</strong>
+                        <span class="text-muted">{{ trans('mining-manager::settings.tax_payment_form_isk_desc') }}</span>
+                    </label>
+                </div>
+                <div class="form-check mt-1">
+                    <input class="form-check-input" type="radio" name="tax_payment_form" id="tax_payment_form_ore" value="ore" {{ $taxPaymentForm === 'ore' ? 'checked' : '' }}>
+                    <label class="form-check-label" for="tax_payment_form_ore">
+                        <strong>{{ trans('mining-manager::settings.tax_payment_form_ore') }}</strong>
+                        <span class="text-muted">{{ trans('mining-manager::settings.tax_payment_form_ore_desc') }}</span>
+                    </label>
+                </div>
+                <small class="form-text text-muted">
+                    {{ trans('mining-manager::settings.tax_payment_form_help') }}
+                    @if($taxPaymentForm === 'ore' && $oreSince)
+                        {{ trans('mining-manager::settings.tax_payment_form_since', ['date' => \Carbon\Carbon::parse($oreSince)->format('Y-m-d H:i')]) }}
+                    @endif
+                </small>
+            </div>
+
             <div class="form-group mt-3">
                 <label for="tax_wallet_division">
                     <i class="fas fa-wallet"></i>

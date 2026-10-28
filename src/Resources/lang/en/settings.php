@@ -375,4 +375,13 @@ return [
     'optional' => 'Optional',
     'cancel' => 'Cancel',
     'save_webhook' => 'Save Webhook',
+
+    // How members pay their mining tax
+    'tax_payment_form' => 'Members pay their tax in',
+    'tax_payment_form_isk' => 'ISK',
+    'tax_payment_form_isk_desc' => ': an ISK transfer to the corporation wallet, matched by tax code.',
+    'tax_payment_form_ore' => 'Ore',
+    'tax_payment_form_ore_desc' => ': an item exchange contract to the corporation with their share of the ore. Accepted contracts are credited against their bill every hour.',
+    'tax_payment_form_help' => 'Bills are still worked out in ISK. In ore mode members see the ore their bill comes to, each ore at its own rate, and ISK transfers are still accepted too. Needs a director token with the corporation contracts scope on SeAT.',
+    'tax_payment_form_since' => 'Contracts made from :date on are checked.',
 ];

@@ -660,6 +660,8 @@ class SettingsManagerService
 
             // Tax Payment Method
             'tax_payment_method' => $this->getSetting('tax_rates.tax_payment_method', 'wallet'),
+            'tax_payment_form' => $this->getSetting('tax_rates.payment_form', 'isk'),
+            'ore_contracts_since' => $this->getSetting('tax_rates.ore_contracts_since'),
             'tax_wallet_division' => $this->getSetting('tax_rates.tax_wallet_division', 1000),
 
             // Tax Code Settings

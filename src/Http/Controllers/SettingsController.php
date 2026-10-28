@@ -990,6 +990,8 @@ class SettingsController extends Controller
 
             // Tax Payment Method
             'tax_payment_method' => 'required|in:wallet',
+            // ISK by wallet transfer, or a share of the ore by contract.
+            'tax_payment_form' => 'nullable|in:isk,ore',
             'tax_wallet_division' => 'required|integer|min:1|max:7',
 
             // Tax Code Settings
@@ -1050,6 +1052,19 @@ class SettingsController extends Controller
 
             // Update all settings via service
             $this->settingsService->updateTaxRates($data);
+
+            // How members pay: ISK, or ore by contract. Turning ore on stamps
+            // the date contract checking starts from, so contracts made
+            // before it are never credited as tax.
+            if (!empty($data['tax_payment_form'])) {
+                $oreKey = \MiningManager\Services\Tax\Ore\OreTaxService::FORM_KEY;
+                $sinceKey = \MiningManager\Services\Tax\Ore\OreTaxService::SINCE_KEY;
+                $this->settingsService->updateSetting($oreKey, $data['tax_payment_form'], 'string');
+                if ($data['tax_payment_form'] === 'ore' && !$this->settingsService->getSetting($sinceKey)) {
+                    $this->settingsService->updateSetting($sinceKey, now()->toDateTimeString(), 'string');
+                }
+            }
+
             $this->clearSettingsCache();
 
             // Redirect back with corporation_id to maintain context
