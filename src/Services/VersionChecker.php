@@ -32,16 +32,16 @@ use Illuminate\Support\Facades\Log;
 class VersionChecker
 {
     /** Packagist v2 metadata URL for this package. */
-    private const PACKAGIST_URL = 'https://repo.packagist.org/p2/mattfalahe/mining-manager.json';
+    private const PACKAGIST_URL = 'https://repo.packagist.org/p2/bahu90/mining-manager.json';
 
     /** Composer package key under packages.* in the Packagist response. */
-    private const PACKAGE_KEY = 'mattfalahe/mining-manager';
+    private const PACKAGE_KEY = 'bahu90/mining-manager';
 
     /** Cache key for the fetched-latest result. */
     private const CACHE_KEY = 'mining-manager:packagist_latest';
 
     /** GitHub repository behind the dev branches, for the commit lookup. */
-    private const GITHUB_REPO = 'MattFalahe/Mining-Manager';
+    private const GITHUB_REPO = 'Bahu90/EVE-Mining-Manager';
 
     /** Cache key prefix for the dev-branch commit lookup. */
     private const COMMIT_CACHE_KEY = 'mining-manager:dev_commit:';
@@ -116,7 +116,7 @@ class VersionChecker
                 'latest'         => $latest,
                 'status'         => 'outdated',
                 'message'        => 'A newer release is available. Update via your standard plugin upgrade path (composer + container restart). See the Upgrade section in the CHANGELOG for the exact recipe.',
-                'release_url'    => 'https://github.com/MattFalahe/Mining-Manager/releases/tag/' . $latest,
+                'release_url'    => 'https://github.com/Bahu90/EVE-Mining-Manager/releases/tag/' . $latest,
             ];
         }
 

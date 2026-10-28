@@ -665,29 +665,29 @@
                         {{ trans('mining-manager::help.plugin_information') }}
                     </h3>
                     <p>
-                        Version: <img src="https://img.shields.io/packagist/v/mattfalahe/mining-manager?label=release&color=667eea" alt="version" style="vertical-align: middle;">
+                        Version: <img src="https://img.shields.io/packagist/v/bahu90/mining-manager?label=release&color=667eea" alt="version" style="vertical-align: middle;">
                         <img src="https://img.shields.io/badge/SeAT-5.0-764ba2" alt="SeAT 5.0" style="vertical-align: middle;">
                     </p>
                     <p>License: {{ trans('mining-manager::help.plugin_license') }}</p>
                     <p>
-                        <i class="fas fa-user"></i> Author: {{ trans('mining-manager::help.plugin_author') }}<br>
-                        <i class="fas fa-envelope"></i> <a href="mailto:{{ trans('mining-manager::help.plugin_author_email') }}" style="color: #667eea;">{{ trans('mining-manager::help.plugin_author_email') }}</a>
+                        <i class="fas fa-user"></i> Maintainer: {{ trans('mining-manager::help.plugin_author') }}<br>
+                        <i class="fas fa-code-branch"></i> {{ trans('mining-manager::help.plugin_based_on') }}
                     </p>
 
                     <div class="quick-links" style="margin-top: 15px;">
-                        <a href="https://github.com/MattFalahe/Mining-Manager" class="quick-link" target="_blank" style="padding: 10px;">
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager" class="quick-link" target="_blank" style="padding: 10px;">
                             <i class="fas fa-code-branch" style="font-size: 1rem; margin-bottom: 4px;"></i>
                             {{ trans('mining-manager::help.github_repository') }}
                         </a>
-                        <a href="https://github.com/MattFalahe/Mining-Manager/blob/main/CHANGELOG.md" class="quick-link" target="_blank" style="padding: 10px;">
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager/blob/main/CHANGELOG.md" class="quick-link" target="_blank" style="padding: 10px;">
                             <i class="fas fa-list" style="font-size: 1rem; margin-bottom: 4px;"></i>
                             {{ trans('mining-manager::help.full_changelog') }}
                         </a>
-                        <a href="https://github.com/MattFalahe/Mining-Manager/issues" class="quick-link" target="_blank" style="padding: 10px;">
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager/issues" class="quick-link" target="_blank" style="padding: 10px;">
                             <i class="fas fa-bug" style="font-size: 1rem; margin-bottom: 4px;"></i>
                             {{ trans('mining-manager::help.report_issues') }}
                         </a>
-                        <a href="https://github.com/MattFalahe/Mining-Manager/blob/main/README.md" class="quick-link" target="_blank" style="padding: 10px;">
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager/blob/main/README.md" class="quick-link" target="_blank" style="padding: 10px;">
                             <i class="fas fa-book" style="font-size: 1rem; margin-bottom: 4px;"></i>
                             {{ trans('mining-manager::help.readme') }}
                         </a>
@@ -937,7 +937,7 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                     <h4><i class="fas fa-history"></i> In this update (2.0.5)</h4>
                     <p>
                         The changes in this release you will notice without going looking.
-                        <a href="https://github.com/MattFalahe/Mining-Manager/blob/main/CHANGELOG.md" target="_blank" rel="noopener">The changelog</a>
+                        <a href="https://github.com/Bahu90/EVE-Mining-Manager/blob/main/CHANGELOG.md" target="_blank" rel="noopener">The changelog</a>
                         has the complete record.
                     </p>
                     <h5>Check your notification settings</h5>

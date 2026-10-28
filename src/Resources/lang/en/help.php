@@ -29,8 +29,8 @@ return [
 
     // Overview Section - Plugin Information
     'plugin_information' => 'Plugin Information',
-    'plugin_author' => 'Matt Falahe',
-    'plugin_author_email' => 'mattfalahe@gmail.com',
+    'plugin_author' => 'Bahu90',
+    'plugin_based_on' => 'Based on Mining Manager by Matt Falahe (GPL-2.0)',
     'plugin_license' => 'GPL-2.0',
     'github_repository' => 'GitHub Repository',
     'full_changelog' => 'Full Changelog',

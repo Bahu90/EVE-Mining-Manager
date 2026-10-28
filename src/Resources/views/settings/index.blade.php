@@ -483,7 +483,7 @@
                                 <i class="fas fa-question-circle"></i>
                                 Full Documentation
                             </a>
-                            <a href="https://github.com/MattFalahe/seat-corp-mining-manager"
+                            <a href="https://github.com/Bahu90/EVE-Mining-Manager"
                                target="_blank"
                                class="btn btn-info">
                                 <i class="fab fa-github"></i>

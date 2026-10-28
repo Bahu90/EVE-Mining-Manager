@@ -1,10 +1,12 @@
 # Mining Manager for SeAT
 
-[![Latest Version](https://img.shields.io/packagist/v/mattfalahe/mining-manager.svg?style=flat-square)](https://packagist.org/packages/mattfalahe/mining-manager)
+[![Latest Version](https://img.shields.io/packagist/v/bahu90/mining-manager.svg?style=flat-square)](https://packagist.org/packages/bahu90/mining-manager)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg?style=flat-square)](LICENSE)
 [![SeAT](https://img.shields.io/badge/SeAT-5.x-blue.svg?style=flat-square)](https://github.com/eveseat/seat)
 
 A comprehensive mining management plugin for SeAT 5.x. Track mining operations, manage moon extractions, calculate taxes, and generate detailed reports for your corporation.
+
+> Maintained by Bahu90 as `bahu90/mining-manager`. Based on [Mining Manager](https://github.com/MattFalahe/Mining-Manager) by Matt Falahe, released under the GPL-2.0. The PHP namespace, database tables, routes and permissions are unchanged, so an existing `mattfalahe/mining-manager` install can switch over and keep its data.
 
 ## The Ecosystem Era
 
@@ -65,7 +67,7 @@ Release history lives in the [CHANGELOG](CHANGELOG.md).
 ## Installation
 
 ```bash
-composer require mattfalahe/mining-manager
+composer require bahu90/mining-manager
 php artisan migrate
 php artisan db:seed --class=MiningManager\\Database\\Seeders\\ScheduleSeeder
 ```
@@ -82,6 +84,22 @@ php artisan mining-manager:initialize
 ```
 
 The wizard verifies your settings, populates current month data (prices, mining entries, summaries, extractions), and optionally backfills historical data for reports and analytics.
+
+### Switching from `mattfalahe/mining-manager`
+
+Nothing in the database changes, so take a backup and swap the package. On SeAT Docker:
+
+```bash
+docker compose exec mariadb mysqldump -u seat -p seat > ~/seat-before-mining-switch.sql
+# .env, SEAT_PLUGINS: replace mattfalahe/mining-manager with bahu90/mining-manager
+docker compose up -d
+docker compose exec front composer show | grep -i mining-manager   # only bahu90 should be listed
+docker compose exec front php artisan migrate --force
+docker compose exec front php artisan vendor:publish --tag=seat --force
+docker compose exec front php artisan optimize:clear
+```
+
+If `mattfalahe/mining-manager` is still listed, remove it with `docker compose exec front composer remove mattfalahe/mining-manager`. No setup wizard is needed: settings, tax history, invoices and payments all carry over.
 
 ## Configuration
 
@@ -280,7 +298,7 @@ Settings → Webhooks → **Test** button sends a minimal "✅ Webhook Active" p
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/MattFalahe/Mining-Manager/issues)
+- **Issues**: [GitHub Issues](https://github.com/Bahu90/EVE-Mining-Manager/issues)
 - **Wiki**: [Documentation & Screenshots](https://github.com/MattFalahe/Mining-Manager/wiki)
 - **In-App Help**: Full documentation under **Help & Documentation** in the plugin's sidebar
 

@@ -767,7 +767,7 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
      */
     public function getPackageRepositoryUrl(): string
     {
-        return 'https://github.com/MattFalahe/mining-manager';
+        return 'https://github.com/Bahu90/EVE-Mining-Manager';
     }
 
     /**
@@ -787,6 +787,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
      */
     public function getPackagistVendorName(): string
     {
-        return 'mattfalahe';
+        return 'bahu90';
     }
 }

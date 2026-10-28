@@ -52,7 +52,7 @@ class AffiliationResolutionService
 
     private const ESI = 'https://esi.evetech.net/latest';
 
-    private const USER_AGENT = 'SeAT Mining Manager (https://github.com/MattFalahe/Mining-Manager)';
+    private const USER_AGENT = 'SeAT Mining Manager (https://github.com/Bahu90/EVE-Mining-Manager)';
 
     /** Set when ESI says the error budget is low: no ESI calls until then. */
     private ?Carbon $esiPausedUntil = null;
