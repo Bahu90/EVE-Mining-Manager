@@ -7,6 +7,14 @@
 @include('mining-manager::partials.head')
 <link rel="stylesheet" href="{{ asset('vendor/mining-manager/css/tax-management.css') }}">
 @include('mining-manager::partials.theme')
+<style>
+    /* Mining breakdown: one line per pilot, its ores folded away. */
+    .mm-bd-head { cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.06); }
+    .mm-bd-head:hover { background: rgba(255,255,255,0.04); }
+    .mm-bd-chevron { transition: transform .15s ease; width: 10px; opacity: .6; }
+    .mm-bd-head[aria-expanded="true"] .mm-bd-chevron { transform: rotate(90deg); }
+</style>
+
 @endpush
 
 @section('full')
@@ -94,6 +102,72 @@
         </div>
     </div>
     @endif
+
+    {{-- ALL TIME: what is owed now across every bill, and the totals since the first --}}
+    @php
+        $mmThisPeriodTax = collect($currentMonthBreakdown ?? [])->sum('total_tax');
+    @endphp
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-infinity"></i>
+                        {{ trans('mining-manager::taxes.all_time_title') }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-3 col-md-6">
+                            <div class="info-box {{ ($summary['total_owed'] ?? 0) > 0 ? 'bg-gradient-warning' : 'bg-gradient-success' }}">
+                                <span class="info-box-icon"><i class="fas fa-file-invoice-dollar"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">{{ trans('mining-manager::taxes.all_time_owed') }}</span>
+                                    <span class="info-box-number">{{ number_format($summary['total_owed'] ?? 0, 0) }}</span>
+                                    <small>
+                                        ISK &middot; {{ trans_choice('mining-manager::taxes.all_time_unpaid_bills', $summary['unpaid_count'] ?? 0, ['count' => $summary['unpaid_count'] ?? 0]) }}
+                                        @if(($summary['overdue_amount'] ?? 0) > 0)
+                                            <span class="d-block text-danger">{{ trans('mining-manager::taxes.all_time_overdue', ['amount' => number_format($summary['overdue_amount'], 0)]) }}</span>
+                                        @endif
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="info-box bg-gradient-secondary">
+                                <span class="info-box-icon"><i class="fas fa-receipt"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">{{ trans('mining-manager::taxes.all_time_billed') }}</span>
+                                    <span class="info-box-number">{{ number_format($totalTaxBilled ?? 0, 0) }}</span>
+                                    <small>ISK</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="info-box bg-gradient-info">
+                                <span class="info-box-icon"><i class="fas fa-coins"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">{{ trans('mining-manager::taxes.all_time_paid') }}</span>
+                                    <span class="info-box-number">{{ number_format($totalTaxPaid ?? 0, 0) }}</span>
+                                    <small>ISK</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6">
+                            <div class="info-box bg-gradient-primary">
+                                <span class="info-box-icon"><i class="fas fa-hourglass-half"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">{{ trans('mining-manager::taxes.all_time_this_period') }}</span>
+                                    <span class="info-box-number">{{ number_format($mmThisPeriodTax, 0) }}</span>
+                                    <small>ISK &middot; {{ trans('mining-manager::taxes.all_time_not_billed') }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- CURRENT TAX STATUS --}}
     <div class="row">
@@ -412,25 +486,23 @@
                     </div>
                 </div>
                 <div class="card-body p-0">
-                    @foreach($currentMonthBreakdown as $charId => $charBreakdown)
+                    <p class="small text-muted px-3 pt-2 mb-1">{{ trans('mining-manager::taxes.breakdown_click_hint') }}</p>
+                    @foreach(collect($currentMonthBreakdown)->sortByDesc('total_value') as $charId => $charBreakdown)
                     <div class="breakdown-character-section">
-                        <div class="p-3 bg-secondary d-flex align-items-center">
-                            <img src="https://images.evetech.net/characters/{{ $charId }}/portrait?size=64"
-                                 class="img-circle mr-3" style="width:48px;height:48px;">
-                            <div>
-                                <strong class="d-block">{{ $charBreakdown['character_name'] }}</strong>
-                                <small class="text-muted">Character ID: {{ $charId }}</small>
-                            </div>
-                            <div class="ml-auto text-right">
-                                <span class="badge badge-primary" style="font-size: 0.9em;">
-                                    {{ number_format($charBreakdown['total_value'], 0) }} ISK mined
-                                </span>
-                                <br>
-                                <span class="badge badge-danger mt-1" style="font-size: 0.9em;">
-                                    {{ number_format($charBreakdown['total_tax'], 0) }} ISK tax
-                                </span>
-                            </div>
+                        <div class="mm-bd-head d-flex align-items-center px-3 py-2" role="button"
+                             data-toggle="collapse" data-target="#mm-bd-{{ $charId }}" aria-expanded="false">
+                            <i class="fas fa-chevron-right mm-bd-chevron mr-2"></i>
+                            <img src="https://images.evetech.net/characters/{{ $charId }}/portrait?size=32"
+                                 class="img-circle mr-2" style="width:24px;height:24px;" alt="">
+                            <strong>{{ $charBreakdown['character_name'] }}</strong>
+                            <small class="text-muted ml-2">{{ count($charBreakdown['breakdown']) }} {{ trans('mining-manager::taxes.breakdown_ores') }}</small>
+                            <span class="ml-auto text-nowrap">
+                                {{ \MiningManager\Support\IskFormat::short($charBreakdown['total_value']) }} ISK
+                                <span class="text-muted mx-1">&middot;</span>
+                                <span class="text-danger">{{ \MiningManager\Support\IskFormat::short($charBreakdown['total_tax']) }} ISK {{ trans('mining-manager::taxes.breakdown_tax') }}</span>
+                            </span>
                         </div>
+                        <div class="collapse" id="mm-bd-{{ $charId }}">
                         <table class="table table-dark table-striped table-sm mb-0">
                             <thead>
                                 <tr>
@@ -487,16 +559,8 @@
                                 </tr>
                                 @endforeach
                             </tbody>
-                            <tfoot class="bg-dark">
-                                <tr>
-                                    <td colspan="3"><strong>Subtotal - {{ $charBreakdown['character_name'] }}</strong></td>
-                                    <td class="text-right"><strong>{{ number_format($charBreakdown['total_value'], 0) }} ISK</strong></td>
-                                    <td></td>
-                                    <td class="text-right"><strong>{{ number_format($charBreakdown['total_tax'], 0) }} ISK</strong></td>
-                                    @if(!empty($oreMode))<td></td>@endif
-                                </tr>
-                            </tfoot>
                         </table>
+                        </div>
                     </div>
                     @endforeach
 

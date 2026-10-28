@@ -534,5 +534,17 @@ return [
     'ore_waiting_title' => 'Ore contracts waiting to be accepted',
     'ore_waiting_text' => 'Contracts members made to pay their tax in ore. Accept them in game; each is credited against the member\'s bill after SeAT next refreshes the corporation\'s contracts.',
     'banner_ore' => 'Hand in as ore: :ores',
-];
 
+    // All-time line and the folded mining breakdown on My Taxes
+    'all_time_title' => 'All time',
+    'all_time_owed' => 'Owed now',
+    'all_time_unpaid_bills' => ':count unpaid bill|:count unpaid bills',
+    'all_time_overdue' => ':amount ISK of it overdue',
+    'all_time_billed' => 'Billed since the first bill',
+    'all_time_paid' => 'Paid since the first bill',
+    'all_time_this_period' => 'This period so far',
+    'all_time_not_billed' => 'not billed yet',
+    'breakdown_click_hint' => 'Click a pilot to see the ores.',
+    'breakdown_ores' => 'ores',
+    'breakdown_tax' => 'tax',
+];

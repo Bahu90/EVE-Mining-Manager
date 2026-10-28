@@ -1744,6 +1744,7 @@ class TaxController extends Controller
                 'currentPeriodEnd' => $periodEndEmpty,
                 'currentPeriodLabel' => $periodHelperEmpty->formatPeriod($periodStartEmpty, $periodEndEmpty, $periodTypeEmpty),
                 'totalTaxPaid' => 0,
+                'totalTaxBilled' => 0,
                 'onTimePayments' => 0,
                 'latePayments' => 0,
                 'status' => $request->input('status', 'all'),
@@ -1859,6 +1860,10 @@ class TaxController extends Controller
         $totalTaxPaid = MiningTax::whereIn('character_id', $taxCharacterIds)
             ->sum('amount_paid');
 
+        // Everything ever billed, for the all-time line at the top.
+        $totalTaxBilled = (float) MiningTax::whereIn('character_id', $taxCharacterIds)
+            ->sum('amount_owed');
+
         // due_date is a day and paid_at a moment. Compared as they are, the
         // due date reads as midnight and a payment made on the day counts late.
         $onTimePayments = MiningTax::whereIn('character_id', $taxCharacterIds)
@@ -1923,6 +1928,7 @@ class TaxController extends Controller
             'currentPeriodEnd',
             'currentPeriodLabel',
             'totalTaxPaid',
+            'totalTaxBilled',
             'onTimePayments',
             'latePayments',
             'status',
