@@ -10,6 +10,8 @@ All notable changes to Mining Manager will be documented in this file.
 - **initialize** takes `--backfill=all` (or a number of months) to backfill without being asked. Asked interactively, "All available data" is now the default answer, and it reaches back to the oldest day SeAT holds.
 - **Dashboard, My Mining** "Last 12 months" totals now add up the same mining as the Top Miners ranking. They read the stored monthly statistics when ten or more months were stored, and those counted refinery mining twice (once from the refinery, once from the pilot's own log) and other corporations' refineries. The monthly statistics now count only that mining too: after updating, run `mining-manager:calculate-monthly-stats --all-history --recalculate`.
 - **Top Miners** counts every character of an account. The ranking read only the 30 best characters across the corporation before adding alts to their main, so accounts with many small alts lost part of their total.
+- **Ore owed and paid.** For pilots who pay tax in ore, My Taxes has an "Ore: owed and paid" card: the ore still to hand in across every open bill (ore, units, m³, worth) and the ore handed in so far in credited contracts. Tax Overview shows the same card for the bills listed, and an "Ore owed / paid" column per bill.
+- **Tax reminders removed.** Remind All Unpaid, Send Reminders and the per-row reminder are gone from Tax Overview, along with the daily `send-reminders` command (its schedule is removed on update), the reminder settings and the Tax Reminder webhook type. Invoice and overdue notifications still go out.
 
 ## [2.2.0] — 2026-10-29
 

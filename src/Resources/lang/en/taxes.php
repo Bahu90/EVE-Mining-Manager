@@ -536,4 +536,16 @@ return [
     'breakdown_click_hint' => 'Click a pilot to see the ores.',
     'breakdown_ores' => 'ores',
     'breakdown_tax' => 'tax',
+
+    // Ore owed and paid (My Taxes card, Tax Overview column)
+    'ore_tally_title' => 'Ore: owed and paid',
+    'ore_tally_owed' => 'Still to hand in',
+    'ore_tally_owed_none' => 'Nothing to hand in.',
+    'ore_tally_paid' => 'Handed in so far',
+    'ore_tally_paid_none' => 'No ore contracts credited yet.',
+    'ore_tally_contracts' => ':count contract|:count contracts',
+    'ore_col_units_paid' => 'Units handed in',
+    'ore_column' => 'Ore owed / paid',
+    'ore_owed_short' => 'Owed',
+    'ore_paid_short' => 'Paid',
 ];

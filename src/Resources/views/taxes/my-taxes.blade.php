@@ -169,6 +169,28 @@
         </div>
     </div>
 
+    {{-- ORE: what is still to hand in, and what was handed in --}}
+    @if(!empty($oreMode) || (($orePaidTotal['contracts'] ?? 0) > 0))
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-cubes"></i>
+                        {{ trans('mining-manager::taxes.ore_tally_title') }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    @include('mining-manager::taxes.partials.ore-tally', [
+                        'owed' => !empty($oreMode) ? ($oreOwedTotal ?? []) : null,
+                        'paid' => $orePaidTotal ?? [],
+                    ])
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- CURRENT TAX STATUS --}}
     <div class="row">
         <div class="col-12">

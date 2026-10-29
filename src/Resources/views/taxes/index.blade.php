@@ -301,6 +301,34 @@
         </div>
     </div>
 
+    {{-- ORE: what the bills below still want in ore, and what was handed in --}}
+    @php $oreColumn = !empty($oreTotals); @endphp
+    @if($oreColumn)
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-dark">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-cubes"></i>
+                        {{ trans('mining-manager::taxes.ore_tally_title') }}
+                    </h3>
+                    <div class="card-tools">
+                        <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                            <i class="fas fa-minus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @include('mining-manager::taxes.partials.ore-tally', [
+                        'owed' => $oreTotals['owed'],
+                        'paid' => $oreTotals['paid'],
+                    ])
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     {{-- TAX LIST TABLE --}}
     <div class="row">
         <div class="col-12">
@@ -338,6 +366,9 @@
                                     <th class="text-right">{{ trans('mining-manager::taxes.amount_owed') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::taxes.amount_paid') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::taxes.left_to_pay') }}</th>
+                                    @if($oreColumn)
+                                    <th>{{ trans('mining-manager::taxes.ore_column') }}</th>
+                                    @endif
                                     <th>{{ trans('mining-manager::taxes.status') }}</th>
                                     <th>{{ trans('mining-manager::taxes.due_date') }}</th>
                                     <th>Payment Date</th>
@@ -418,6 +449,29 @@
                                         <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    @if($oreColumn)
+                                    <td class="mm-ore-cell">
+                                        @php
+                                            $rowOwed = $oreOwed[$tax->id] ?? [];
+                                            $rowPaid = $orePaid[$tax->id] ?? [];
+                                        @endphp
+                                        @if(empty($rowOwed) && empty($rowPaid))
+                                            <span class="text-muted">-</span>
+                                        @endif
+                                        @if(!empty($rowOwed))
+                                            <div class="small text-warning font-weight-bold">{{ trans('mining-manager::taxes.ore_owed_short') }}</div>
+                                            @foreach($rowOwed as $line)
+                                                <div class="small text-nowrap">{{ number_format($line['units']) }} {{ $line['name'] }}</div>
+                                            @endforeach
+                                        @endif
+                                        @if(!empty($rowPaid))
+                                            <div class="small text-success font-weight-bold {{ !empty($rowOwed) ? 'mt-1' : '' }}">{{ trans('mining-manager::taxes.ore_paid_short') }}</div>
+                                            @foreach($rowPaid as $line)
+                                                <div class="small text-nowrap">{{ number_format($line['units']) }} {{ $line['name'] }}</div>
+                                            @endforeach
+                                        @endif
+                                    </td>
+                                    @endif
                                     @php
                                         // Sort key for the status column. Ordered by what a director
                                         // has to do about it, not alphabetically: chase, then wait,
@@ -553,7 +607,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="{{ ($isAdmin ?? false) ? 13 : 12 }}" class="text-center text-muted">
+                                    <td colspan="{{ (($isAdmin ?? false) ? 13 : 12) + ($oreColumn ? 1 : 0) }}" class="text-center text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 mt-3"></i>
                                         <p>{{ trans('mining-manager::taxes.no_taxes_found') }}</p>
                                     </td>
@@ -667,7 +721,7 @@ $(document).ready(function() {
             // Was amount owed descending, which answered a question nobody
             // opens this page to ask.
             order: [
-                [{{ ($isAdmin ?? false) ? 7 : 6 }}, 'asc'],
+                [{{ (($isAdmin ?? false) ? 7 : 6) + ($oreColumn ? 1 : 0) }}, 'asc'],
                 [{{ ($isAdmin ?? false) ? 3 : 2 }}, 'desc']
             ],
             language: {
@@ -680,9 +734,9 @@ $(document).ready(function() {
             },
             columnDefs: [
                 @if($isAdmin ?? false)
-                { orderable: false, targets: [0, 10] },
+                { orderable: false, targets: [0, {{ $oreColumn ? '7, 11' : '10' }}] },
                 @else
-                { orderable: false, targets: [9] },
+                { orderable: false, targets: [{{ $oreColumn ? '6, 10' : '9' }}] },
                 @endif
             ]
         });
@@ -923,7 +977,7 @@ $(document).ready(function() {
         $('.grouped-header-row').remove();
 
         var tbody = $('#taxTable tbody');
-        var colSpan = {{ ($isAdmin ?? false) ? 13 : 12 }};
+        var colSpan = {{ (($isAdmin ?? false) ? 13 : 12) + ($oreColumn ? 1 : 0) }};
 
         // Sort groups by totalOwed descending
         var sortedKeys = Object.keys(groups).sort(function(a, b) {

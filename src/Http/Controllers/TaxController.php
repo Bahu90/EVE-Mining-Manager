@@ -285,6 +285,9 @@ class TaxController extends Controller
         // Enrich with character names and corporation names
         $taxes = $this->enrichWithCharacterInfo(collect($taxes), $this->characterInfoService);
 
+        // Ore owed and paid per bill, for pilots who pay in ore.
+        [$oreOwed, $orePaid, $oreTotals] = $this->oreForBills($taxes);
+
         // Summary statistics - split by corp/guest if moon owner is configured
         // Helper to apply user scoping to summary queries
         $scopeSummary = function($query) use ($viewAll, $taxCharacterIds) {
@@ -417,8 +420,63 @@ class TaxController extends Controller
             'currentPeriodLabel',
             'currentPeriodStart',
             'currentPeriodEnd',
-            'collectedThisPeriod'
+            'collectedThisPeriod',
+            'oreOwed',
+            'orePaid',
+            'oreTotals'
         ));
+    }
+
+    /**
+     * Ore owed (what is left on open bills) and ore paid (credited ore
+     * contracts) for each bill whose pilot pays in ore, plus both added up.
+     *
+     * @return array{0: array<int, array>, 1: array<int, array>, 2: ?array{owed: array, paid: array}}
+     */
+    private function oreForBills($taxes): array
+    {
+        $tally = app(\MiningManager\Services\Tax\Ore\OreTally::class);
+
+        $oreBills = $taxes->filter(fn ($tax) => $tally->paysInOre($tax));
+        if ($oreBills->isEmpty()) {
+            return [[], [], null];
+        }
+
+        $owed = [];
+        foreach ($oreBills as $tax) {
+            $owed[$tax->id] = $tally->owedOn($tax);
+        }
+        $paid = $tally->paidByBill($oreBills->pluck('id')->all());
+
+        $sum = function (array $perBill): array {
+            $total = [];
+            foreach ($perBill as $lines) {
+                foreach ($lines as $typeId => $line) {
+                    if (!isset($total[$typeId])) {
+                        $total[$typeId] = $line;
+                        continue;
+                    }
+                    foreach (['units', 'volume', 'isk'] as $field) {
+                        if (isset($line[$field])) {
+                            $total[$typeId][$field] = ($total[$typeId][$field] ?? 0) + $line[$field];
+                        }
+                    }
+                }
+            }
+            uasort($total, fn ($a, $b) => $b['units'] <=> $a['units']);
+
+            return $total;
+        };
+
+        $paidLines = $sum($paid);
+        $contracts = \MiningManager\Models\OreContract::whereIn('mining_tax_id', $oreBills->pluck('id')->all())
+            ->where('status', \MiningManager\Models\OreContract::CREDITED)
+            ->count();
+
+        return [$owed, $paid, [
+            'owed' => $sum($owed),
+            'paid' => ['lines' => $paidLines, 'contracts' => $contracts],
+        ]];
     }
 
     /**
@@ -1768,6 +1826,12 @@ class TaxController extends Controller
             $corpName = $oreTax->corporationName($oreTax->corporationFor($mainCharacterId)) ?? $corpName;
         }
 
+        // Ore still to hand in on every open bill, and the ore handed in so
+        // far, both by ore type.
+        $oreTally = app(\MiningManager\Services\Tax\Ore\OreTally::class);
+        $oreOwedTotal = $oreMode ? $oreTally->owed($unpaidTaxes) : [];
+        $orePaidTotal = $oreTally->paidBy($characterIds);
+
         return view('mining-manager::taxes.my-taxes', compact(
             'creditBalance',
             'creditRecords',
@@ -1800,7 +1864,9 @@ class TaxController extends Controller
             'acceptsAlts',
             'oreMode',
             'oreLines',
-            'oreContracts'
+            'oreContracts',
+            'oreOwedTotal',
+            'orePaidTotal'
         ));
     }
 
