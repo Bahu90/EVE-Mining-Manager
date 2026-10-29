@@ -302,7 +302,12 @@
     </div>
 
     {{-- ORE: what the bills below still want in ore, and what was handed in --}}
-    @php $oreColumn = !empty($oreTotals); @endphp
+    @php
+        $oreColumn = !empty($oreTotals);
+        $codeColumn = \MiningManager\Support\TaxCodes::enabled();
+        // Columns in the table, for the colspans of empty and grouped rows.
+        $columnCount = (($isAdmin ?? false) ? 13 : 12) + ($oreColumn ? 1 : 0) - ($codeColumn ? 0 : 1);
+    @endphp
     @if($oreColumn)
     <div class="row">
         <div class="col-12">
@@ -356,7 +361,7 @@
                             <thead>
                                 <tr>
                                     @if($isAdmin ?? false)
-                                    <th style="width: 40px">
+                                    <th style="width: 40px" class="mm-no-sort">
                                         <input type="checkbox" id="selectAll">
                                     </th>
                                     @endif
@@ -367,12 +372,14 @@
                                     <th class="text-right">{{ trans('mining-manager::taxes.amount_paid') }}</th>
                                     <th class="text-right">{{ trans('mining-manager::taxes.left_to_pay') }}</th>
                                     @if($oreColumn)
-                                    <th>{{ trans('mining-manager::taxes.ore_column') }}</th>
+                                    <th class="mm-no-sort">{{ trans('mining-manager::taxes.ore_column') }}</th>
                                     @endif
-                                    <th>{{ trans('mining-manager::taxes.status') }}</th>
+                                    <th class="mm-status-col">{{ trans('mining-manager::taxes.status') }}</th>
                                     <th>{{ trans('mining-manager::taxes.due_date') }}</th>
                                     <th>Payment Date</th>
-                                    <th>{{ trans('mining-manager::taxes.tax_code') }}</th>
+                                    @if($codeColumn)
+                                    <th class="mm-no-sort">{{ trans('mining-manager::taxes.tax_code') }}</th>
+                                    @endif
                                     <th>Triggered By</th>
                                     <th class="text-center">{{ trans('mining-manager::taxes.actions') }}</th>
                                 </tr>
@@ -543,6 +550,7 @@
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    @if($codeColumn)
                                     <td>
                                         @php
                                             $taxCode = $tax->taxCodes->where('status', 'active')->first()
@@ -557,6 +565,7 @@
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    @endif
                                     <td>
                                         @if($tax->triggered_by)
                                             <small class="text-muted" data-toggle="tooltip" title="{{ $tax->triggered_by }}">
@@ -607,7 +616,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="{{ (($isAdmin ?? false) ? 13 : 12) + ($oreColumn ? 1 : 0) }}" class="text-center text-muted">
+                                    <td colspan="{{ $columnCount }}" class="text-center text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 mt-3"></i>
                                         <p>{{ trans('mining-manager::taxes.no_taxes_found') }}</p>
                                     </td>
@@ -721,7 +730,7 @@ $(document).ready(function() {
             // Was amount owed descending, which answered a question nobody
             // opens this page to ask.
             order: [
-                [{{ (($isAdmin ?? false) ? 7 : 6) + ($oreColumn ? 1 : 0) }}, 'asc'],
+                [$('#taxTable thead th.mm-status-col').index(), 'asc'],
                 [{{ ($isAdmin ?? false) ? 3 : 2 }}, 'desc']
             ],
             language: {
@@ -733,11 +742,7 @@ $(document).ready(function() {
                 paginate: { first: "First", last: "Last", next: "Next", previous: "Previous" }
             },
             columnDefs: [
-                @if($isAdmin ?? false)
-                { orderable: false, targets: [0, {{ $oreColumn ? '7, 11' : '10' }}] },
-                @else
-                { orderable: false, targets: [{{ $oreColumn ? '6, 10' : '9' }}] },
-                @endif
+                { orderable: false, targets: 'mm-no-sort' },
             ]
         });
     }
@@ -977,7 +982,7 @@ $(document).ready(function() {
         $('.grouped-header-row').remove();
 
         var tbody = $('#taxTable tbody');
-        var colSpan = {{ (($isAdmin ?? false) ? 13 : 12) + ($oreColumn ? 1 : 0) }};
+        var colSpan = {{ $columnCount }};
 
         // Sort groups by totalOwed descending
         var sortedKeys = Object.keys(groups).sort(function(a, b) {

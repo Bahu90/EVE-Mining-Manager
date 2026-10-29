@@ -41,6 +41,12 @@ class GenerateTaxCodesCommand extends Command
 
     public function handle()
     {
+        if (!\MiningManager\Support\TaxCodes::enabled()) {
+            $this->info('Tax codes are turned off (Settings > Tax Rates > Use tax codes). Nothing to do.');
+
+            return Command::SUCCESS;
+        }
+
         $lock = Cache::lock('mining-manager:generate-tax-codes', 600);
         if (!$lock->get()) {
             $this->warn('Another instance of this command is already running. Skipping.');

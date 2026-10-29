@@ -107,8 +107,8 @@ return [
     'tax_code_prefix_help' => 'Prefix for generated tax codes (e.g., TAX-)',
     'tax_code_length' => 'Tax Code Length',
     'tax_code_length_help' => 'Number of characters in generated tax codes',
-    'auto_generate_tax_codes' => 'Auto-Generate Tax Codes',
-    'auto_generate_tax_codes_help' => 'Automatically generate unique tax codes for members',
+    'auto_generate_tax_codes' => 'Use Tax Codes',
+    'auto_generate_tax_codes_help' => 'Each bill gets a code that members put in the ISK transfer reason or the ore contract description, so the payment is matched to the bill on its own. Off: no codes are made or shown, ore contracts are matched to the pilot\'s open bills, and ISK transfers are matched by hand on the Wallet page.',
     
     // Tax Period Settings
     'tax_period_settings' => 'Tax Period Settings',

@@ -2,6 +2,10 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [2.3.1] — 2026-10-29
+
+- **Tax codes can be turned off.** Settings > Tax Rates > Use Tax Codes (was Auto-Generate Tax Codes). Off: no codes are made, and none are shown on Tax Overview, My Taxes, bill details or the ore payment steps; the Tax Codes tab is hidden. Ore contracts are matched to the pilot's open bills; ISK transfers are matched by hand on the Wallet page.
+
 ## [2.3.0] — 2026-10-29
 
 - **My Taxes** opens with an **All time** line: what you owe now across every unpaid bill (and how much of it is overdue), everything billed and paid since your first bill, and the tax building up this period that is not billed yet.

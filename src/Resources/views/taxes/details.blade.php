@@ -80,6 +80,7 @@
                                 @endswitch
                             </span>
                         </li>
+                        @if(\MiningManager\Support\TaxCodes::enabled())
                         <li class="list-group-item bg-dark">
                             <b>{{ trans('mining-manager::taxes.tax_code') }}</b>
                             <span class="float-right">
@@ -97,6 +98,7 @@
                                 @endif
                             </span>
                         </li>
+                        @endif
                     </ul>
 
                     <button class="btn btn-info btn-block" onclick="window.print()">

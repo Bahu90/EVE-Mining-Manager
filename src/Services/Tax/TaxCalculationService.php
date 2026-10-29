@@ -376,7 +376,9 @@ class TaxCalculationService
                         // still owed on it is a separate question, and not one
                         // that should decide if it gets an identity at all.
                         try {
-                            app(TaxCodeGeneratorService::class)->generateTaxCode($newTax);
+                            if (\MiningManager\Support\TaxCodes::enabled()) {
+                                app(TaxCodeGeneratorService::class)->generateTaxCode($newTax);
+                            }
                         } catch (\Exception $e) {
                             // Never block a tax record over its code. The invoice
                             // run will still mint one if this failed.

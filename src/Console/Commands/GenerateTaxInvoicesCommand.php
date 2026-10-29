@@ -148,7 +148,7 @@ class GenerateTaxInvoicesCommand extends Command
 
                     // Auto-generate tax code if the tax record doesn't have an active one.
                     // Previously this required a separate manual `generate-tax-codes` command.
-                    if (!$tax->taxCodes()->where('status', 'active')->exists()) {
+                    if (\MiningManager\Support\TaxCodes::enabled() && !$tax->taxCodes()->where('status', 'active')->exists()) {
                         try {
                             $codeService = app(TaxCodeGeneratorService::class);
                             $taxCode = $codeService->generateTaxCode($tax, $invoice);

@@ -277,7 +277,8 @@
                                 @endif
 
                                 @php
-                                    $activeTaxCode = $currentTax->taxCodes->where('status', 'active')->first();
+                                    $useCodes = \MiningManager\Support\TaxCodes::enabled();
+                                    $activeTaxCode = $useCodes ? $currentTax->taxCodes->where('status', 'active')->first() : null;
                                 @endphp
 
                                 @if(!empty($oreMode))
@@ -286,6 +287,7 @@
                                         'lines' => $oreLines[$currentTax->id] ?? [],
                                         'corpName' => $corpName ?? null,
                                         'taxCode' => $activeTaxCode,
+                                        'useCodes' => $useCodes,
                                     ])
                                 @else
                                 <div class="card bg-dark border-info mt-2 mb-2">
@@ -310,6 +312,7 @@
                                                     <i class="fas fa-copy"></i> Copy
                                                 </button>
                                             </li>
+                                            @if($useCodes)
                                             <li class="mb-2">
                                                 In the <strong>"Reason"</strong> field, paste your tax code:
                                                 <br>
@@ -323,6 +326,11 @@
                                             <li class="mb-0">
                                                 Confirm the transfer, and your payment is matched automatically
                                             </li>
+                                            @else
+                                            <li class="mb-0">
+                                                {{ trans('mining-manager::taxes.isk_step_no_code') }}
+                                            </li>
+                                            @endif
                                         </ol>
                                         @if($acceptsAlts ?? false)
                                         <p class="small text-muted mt-2 mb-0">You can send it from any character on your account.</p>
@@ -691,7 +699,9 @@
                                     <th class="text-right">{{ trans('mining-manager::taxes.left_to_pay') }}</th>
                                     <th>{{ trans('mining-manager::taxes.status') }}</th>
                                     <th>{{ trans('mining-manager::taxes.payment_date') }}</th>
+                                    @if(\MiningManager\Support\TaxCodes::enabled())
                                     <th>{{ trans('mining-manager::taxes.tax_code') }}</th>
+                                    @endif
                                     <th class="text-center">{{ trans('mining-manager::taxes.actions') }}</th>
                                 </tr>
                             </thead>
@@ -768,6 +778,7 @@
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    @if(\MiningManager\Support\TaxCodes::enabled())
                                     <td>
                                         @php
                                             $taxCode = $tax->taxCodes->where('status', 'active')->first()
@@ -786,6 +797,7 @@
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
+                                    @endif
                                     <td class="text-center">
                                         <a href="{{ route('mining-manager.taxes.details', $tax->id) }}"
                                            class="btn btn-sm btn-info"
@@ -806,7 +818,7 @@
                                 </tr>
                                 @empty
                                 <tr>
-                                    <td colspan="{{ $taxMethod === 'character' ? 9 : 8 }}" class="text-center text-muted">
+                                    <td colspan="{{ ($taxMethod === 'character' ? 9 : 8) - (\MiningManager\Support\TaxCodes::enabled() ? 0 : 1) }}" class="text-center text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 mt-3"></i>
                                         <p>{{ trans('mining-manager::taxes.no_history') }}</p>
                                     </td>
@@ -823,7 +835,7 @@
                                     <td class="text-right"><strong>{{ number_format($taxHistory->sum('amount_owed'), 0) }} ISK</strong></td>
                                     <td class="text-right"><strong>{{ number_format($taxHistory->sum('amount_paid'), 0) }} ISK</strong></td>
                                     <td class="text-right"><strong>{{ number_format($taxHistory->sum(fn ($t) => in_array($t->status, \MiningManager\Models\MiningTax::OUTSTANDING_STATUSES) ? $t->getRemainingBalance() : 0), 0) }} ISK</strong></td>
-                                    <td colspan="{{ $taxMethod === 'character' ? 4 : 4 }}"></td>
+                                    <td colspan="{{ \MiningManager\Support\TaxCodes::enabled() ? 4 : 3 }}"></td>
                                 </tr>
                             </tfoot>
                             @endif

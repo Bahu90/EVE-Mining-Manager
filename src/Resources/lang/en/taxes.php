@@ -548,4 +548,5 @@ return [
     'ore_column' => 'Ore owed / paid',
     'ore_owed_short' => 'Owed',
     'ore_paid_short' => 'Paid',
+    'isk_step_no_code' => 'Confirm the transfer. A director matches it to your bill on the Wallet page.',
 ];

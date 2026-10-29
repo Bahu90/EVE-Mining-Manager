@@ -6,7 +6,8 @@
 @php
     $oreIsk = array_sum(array_column($lines, 'isk'));
     $oreVolume = array_sum(array_column($lines, 'volume'));
-    $fullCode = isset($taxCode) && $taxCode ? $taxCode->getFullCode() : null;
+    $useCodes = $useCodes ?? \MiningManager\Support\TaxCodes::enabled();
+    $fullCode = $useCodes && isset($taxCode) && $taxCode ? $taxCode->getFullCode() : null;
 @endphp
 <div class="card bg-dark border-info mt-2 mb-2 mm-ore-pay">
     <div class="card-header bg-dark border-info">
@@ -61,6 +62,7 @@
             <li class="mb-2">{!! trans('mining-manager::taxes.ore_step_create') !!}</li>
             <li class="mb-2">{!! trans('mining-manager::taxes.ore_step_assign', ['corp' => e($corpName ?? trans('mining-manager::taxes.your_corporation'))]) !!}</li>
             <li class="mb-2">{!! trans('mining-manager::taxes.ore_step_items') !!}</li>
+            @if($useCodes)
             <li class="mb-2">
                 {!! trans('mining-manager::taxes.ore_step_code') !!}
                 <br>
@@ -71,6 +73,7 @@
                     </button>
                 @endif
             </li>
+            @endif
             <li class="mb-0">{{ trans('mining-manager::taxes.ore_step_credit') }}</li>
         </ol>
     </div>
