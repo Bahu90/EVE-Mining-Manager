@@ -227,7 +227,7 @@ class CalculateMonthlyStatisticsCommand extends Command
         // Base query
         $ledgerQuery = MiningLedger::whereIn('character_id', $characterIds)
             ->whereBetween('date', [$monthStart, $monthEnd])
-            ->whereNotNull('processed_at');
+            ->tap(fn ($q) => \MiningManager\Support\MiningSource::scope($q, \MiningManager\Support\MiningSource::ALL));
 
         // Total statistics
         $totals = $ledgerQuery->selectRaw('
@@ -241,7 +241,7 @@ class CalculateMonthlyStatisticsCommand extends Command
         // Ore type breakdown
         $oreTypes = MiningLedger::whereIn('character_id', $characterIds)
             ->whereBetween('date', [$monthStart, $monthEnd])
-            ->whereNotNull('processed_at')
+            ->tap(fn ($q) => \MiningManager\Support\MiningSource::scope($q, \MiningManager\Support\MiningSource::ALL))
             ->selectRaw('
                 SUM(CASE WHEN is_moon_ore = 1 THEN total_value ELSE 0 END) as moon_ore_value,
                 SUM(CASE WHEN is_ice = 1 THEN total_value ELSE 0 END) as ice_value,
@@ -264,7 +264,7 @@ class CalculateMonthlyStatisticsCommand extends Command
         // Daily chart data
         $dailyData = MiningLedger::whereIn('character_id', $characterIds)
             ->whereBetween('date', [$monthStart, $monthEnd])
-            ->whereNotNull('processed_at')
+            ->tap(fn ($q) => \MiningManager\Support\MiningSource::scope($q, \MiningManager\Support\MiningSource::ALL))
             ->selectRaw('DATE(date) as day, SUM(total_value) as value')
             ->groupBy('day')
             ->orderBy('day')
@@ -283,7 +283,7 @@ class CalculateMonthlyStatisticsCommand extends Command
         // Top systems
         $topSystems = MiningLedger::whereIn('character_id', $characterIds)
             ->whereBetween('date', [$monthStart, $monthEnd])
-            ->whereNotNull('processed_at')
+            ->tap(fn ($q) => \MiningManager\Support\MiningSource::scope($q, \MiningManager\Support\MiningSource::ALL))
             ->selectRaw('solar_system_id, SUM(total_value) as value')
             ->groupBy('solar_system_id')
             ->orderByDesc('value')

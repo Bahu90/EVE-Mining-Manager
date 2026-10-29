@@ -688,44 +688,10 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        // Try to get stored statistics for closed months
-        $storedStats = MonthlyStatistic::where('user_id', $user->id)
-            ->where('is_closed', true)
-            ->where('month_start', '>=', $startDate)
-            ->get();
-
-        // If we have stored stats for most months, use them
-        if ($storedStats->count() >= 10) {
-            $totalQuantity = $storedStats->sum('total_quantity');
-            $totalValue = $storedStats->sum('total_value');
-
-            // For current month (not in stored stats), calculate live and add
-            $currentMonthStart = Carbon::now()->startOfMonth();
-            $currentMonthEnd = Carbon::now();
-
-            $currentMonthSummary = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-                ->whereBetween('date', [$currentMonthStart, $currentMonthEnd])
-                ->selectRaw('SUM(total_quantity) as total_quantity, SUM(total_value) as total_value')
-                ->first();
-
-            $currentMonthQuantity = $currentMonthSummary->total_quantity ?? 0;
-            $currentMonthValue = $currentMonthSummary->total_value ?? 0;
-
-            $totalQuantity += $currentMonthQuantity;
-            $totalValue += $currentMonthValue;
-            $totalVolume = $this->calculateActualVolume($characterIds, $startDate, Carbon::now());
-
-            $avgPerMonth = $totalValue / 12;
-
-            return [
-                'total_quantity' => $totalQuantity,
-                'total_volume' => $totalVolume,
-                'total_value' => $totalValue,
-                'avg_per_month' => $avgPerMonth,
-            ];
-        }
-
-        // Fallback: Use daily summaries for all months (fast aggregate)
+        // From the daily summaries, the same rows the Top Miners ranking adds
+        // up, so the two figures agree. The stored monthly statistics were
+        // read here before; they are summed from the raw ledger and could
+        // count more than the summaries do.
         $summaryData = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
             ->where('date', '>=', $startDate)
             ->selectRaw('
@@ -961,7 +927,6 @@ class DashboardController extends Controller
             ->groupBy('character_id')
             ->having('total_value', '>', 0)
             ->orderByDesc('total_value')
-            ->limit($limit * 3)
             ->get();
 
         // Supplement: if today has no daily summary yet, add today's data from MiningLedger.
@@ -1023,7 +988,6 @@ class DashboardController extends Controller
             ->groupBy('character_id')
             ->having('total_value', '>', 0)
             ->orderByDesc('total_value')
-            ->limit($limit * 3)
             ->get();
 
         return $this->aggregateTopMinersFromSummary($topCharacters, $limit);
@@ -1053,7 +1017,6 @@ class DashboardController extends Controller
             ->groupBy('character_id')
             ->having('total_value', '>', 0)
             ->orderByDesc('total_value')
-            ->limit($limit * 3)
             ->get();
 
         // Supplement: add today's data if no summary exists yet
@@ -1129,8 +1092,7 @@ class DashboardController extends Controller
             ->selectRaw("character_id, SUM(total_value) as total_value, SUM(quantity) as total_quantity")
             ->groupBy('character_id')
             ->having('total_value', '>', 0)
-            ->orderByDesc('total_value')
-            ->limit($limit * 3);
+            ->orderByDesc('total_value');
 
         if ($startDate && $endDate) {
             $query->whereBetween('date', [$startDate, $endDate]);
@@ -2128,11 +2090,15 @@ class DashboardController extends Controller
         }
 
         try {
-            $volume = DB::table('mining_ledger')
+            $query = DB::table('mining_ledger')
                 ->join('invTypes', 'mining_ledger.type_id', '=', 'invTypes.typeID')
                 ->whereIn('mining_ledger.character_id', $characterIds)
                 ->whereBetween('mining_ledger.date', [$startDate, $endDate])
-                ->whereNull('mining_ledger.deleted_at')
+                ->whereNull('mining_ledger.deleted_at');
+
+            // The rows the totals count: a log row a refinery row already
+            // covers is not counted twice.
+            $volume = \MiningManager\Support\MiningSource::scope($query, \MiningManager\Support\MiningSource::ALL)
                 ->selectRaw('SUM(mining_ledger.quantity * invTypes.volume) as total_volume')
                 ->value('total_volume');
 

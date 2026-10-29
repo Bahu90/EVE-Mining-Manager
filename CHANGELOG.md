@@ -8,6 +8,8 @@ All notable changes to Mining Manager will be documented in this file.
 - **My Taxes, Mining Breakdown** shows one line per pilot (ISK mined and tax), biggest first. Click a pilot to open its ores.
 - **Analytics and Metenox Cargo** write ISK the short way everywhere ("23.43 B ISK" instead of "23430.0 M ISK"): chart tooltips and axes, the summary cards and the tables.
 - **initialize** takes `--backfill=all` (or a number of months) to backfill without being asked. Asked interactively, "All available data" is now the default answer, and it reaches back to the oldest day SeAT holds.
+- **Dashboard, My Mining** "Last 12 months" totals now add up the same mining as the Top Miners ranking. They read the stored monthly statistics when ten or more months were stored, and those counted refinery mining twice (once from the refinery, once from the pilot's own log) and other corporations' refineries. The monthly statistics now count only that mining too: after updating, run `mining-manager:calculate-monthly-stats --all-history --recalculate`.
+- **Top Miners** counts every character of an account. The ranking read only the 30 best characters across the corporation before adding alts to their main, so accounts with many small alts lost part of their total.
 
 ## [2.2.0] — 2026-10-29
 
