@@ -7,6 +7,7 @@ All notable changes to Mining Manager will be documented in this file.
 - **My Taxes** opens with an **All time** line: what you owe now across every unpaid bill (and how much of it is overdue), everything billed and paid since your first bill, and the tax building up this period that is not billed yet.
 - **My Taxes, Mining Breakdown** shows one line per pilot (ISK mined and tax), biggest first. Click a pilot to open its ores.
 - **Analytics and Metenox Cargo** write ISK the short way everywhere ("23.43 B ISK" instead of "23430.0 M ISK"): chart tooltips and axes, the summary cards and the tables.
+- **initialize** takes `--backfill=all` (or a number of months) to backfill without being asked. Asked interactively, "All available data" is now the default answer, and it reaches back to the oldest day SeAT holds.
 
 ## [2.2.0] — 2026-10-29
 

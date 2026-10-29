@@ -17,7 +17,8 @@ class InitializeCommand extends Command
      */
     protected $signature = 'mining-manager:initialize
                             {--skip-checks : Skip settings verification prompts}
-                            {--skip-backfill : Skip historical data backfill}';
+                            {--skip-backfill : Skip historical data backfill}
+                            {--backfill= : Backfill without asking: all, or a number of months (3, 6, 12...)}';
 
     /**
      * The console command description.
@@ -319,7 +320,7 @@ class InitializeCommand extends Command
             return;
         }
 
-        $monthsAvailable = (int) Carbon::now()->startOfMonth()->diffInMonths($oldest->startOfMonth());
+        $monthsAvailable = (int) abs(Carbon::now()->startOfMonth()->diffInMonths($oldest->copy()->startOfMonth()));
         $this->info("  ESI data goes back approximately {$monthsAvailable} months (oldest: {$oldest->format('Y-m-d')}).");
         $this->newLine();
 
@@ -332,30 +333,46 @@ class InitializeCommand extends Command
         $this->warn('  ╚═══════════════════════════════════════════════════════════╝');
         $this->newLine();
 
-        if (!$this->confirm('Would you like to backfill historical data?', false)) {
+        $asked = $this->option('backfill');
+        $allLabel = 'All available data (' . $monthsAvailable . ' months)';
+
+        if ($asked !== null && $asked !== '') {
+            // Answered on the command line, so nothing is asked.
+            if (strtolower((string) $asked) === 'all') {
+                $choice = $allLabel;
+            } elseif (ctype_digit((string) $asked) && (int) $asked > 0) {
+                $choice = (int) $asked . ' months';
+            } else {
+                $this->error("  --backfill takes 'all' or a number of months, not '{$asked}'.");
+                return;
+            }
+            $this->info("  Backfilling: {$choice}.");
+        } elseif (!$this->confirm('Would you like to backfill historical data?', false)) {
             $this->info('  Skipping historical backfill.');
             return;
+        } else {
+            $choice = null;
         }
 
         $choices = [
             '3 months',
             '6 months',
             '12 months',
-            'All available data (' . $monthsAvailable . ' months)',
+            $allLabel,
         ];
 
-        $choice = $this->choice('How far back would you like to backfill?', $choices, 0);
+        // All available data is the default answer: it is what a first
+        // install almost always wants.
+        $choice ??= $this->choice('How far back would you like to backfill?', $choices, 3);
 
-        $months = match ($choice) {
-            '3 months' => 3,
-            '6 months' => 6,
-            '12 months' => 12,
-            default => $monthsAvailable,
-        };
-
-        // Cap at available data
-        $months = min($months, max($monthsAvailable, 1));
-        $days = $months * 31;
+        if ($choice === $allLabel) {
+            // Back to the oldest row SeAT holds, whole days, plus a margin.
+            $days = (int) abs($oldest->copy()->startOfDay()->diffInDays(Carbon::now()->startOfDay())) + 2;
+            $months = max($monthsAvailable, 1);
+        } else {
+            $months = min((int) $choice, max($monthsAvailable + 1, 1));
+            $days = $months * 31;
+        }
 
         $this->newLine();
         $this->info("  Backfilling {$months} months of historical data...");
