@@ -2,6 +2,10 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [3.0.1] — 2026-10-29
+
+- **Dashboard** failed with a server error (500) for everyone: removing the tax banner also removed the helper that finds the pilot's characters. It is back.
+
 ## [3.0.0] — 2026-10-29
 
 **Breaking: the tax system and theft detection are removed.** Mining Manager now only tracks mining and moons. Nothing is billed, chased, notified or shown to pilots about tax.

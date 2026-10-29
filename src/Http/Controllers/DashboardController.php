@@ -1553,6 +1553,85 @@ class DashboardController extends Controller
      * Whether the person looking may see the corporation's and the guest
      * miners' figures: directors, admins and "See all data (read-only)".
      */
+    private function hasDirectorPermissions()
+    {
+        return auth()->user()->can('mining-manager.director');
+    }
+
+    private function getUserCharacterIds($user)
+    {
+        if (!$user) {
+            \Log::warning('getUserCharacterIds: No user provided');
+            return [];
+        }
+        
+        // Method 1: Try the characters relationship (preferred)
+        try {
+            if (method_exists($user, 'characters')) {
+                $characters = $user->characters;
+                if ($characters && $characters->count() > 0) {
+                    $ids = $characters->pluck('character_id')->toArray();
+                    \Log::debug('getUserCharacterIds: Found via characters relationship', [
+                        'user_id' => $user->id,
+                        'count' => count($ids)
+                    ]);
+                    return $ids;
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::warning('getUserCharacterIds: Failed to load characters via relationship', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        // Method 2: Try to load the relationship explicitly
+        try {
+            $user->load('characters');
+            if ($user->relationLoaded('characters') && $user->characters->count() > 0) {
+                $ids = $user->characters->pluck('character_id')->toArray();
+                \Log::debug('getUserCharacterIds: Found via explicit relationship load', [
+                    'user_id' => $user->id,
+                    'count' => count($ids)
+                ]);
+                return $ids;
+            }
+        } catch (\Exception $e) {
+            \Log::warning('getUserCharacterIds: Failed to explicitly load characters', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        // Method 3: Direct database query via refresh_tokens (SeAT v5 stores
+        // the user↔character link in refresh_tokens, NOT character_infos)
+        try {
+            $characterIds = DB::table('refresh_tokens')
+                ->where('user_id', $user->id)
+                ->pluck('character_id')
+                ->toArray();
+
+            if (!empty($characterIds)) {
+                \Log::debug('getUserCharacterIds: Found via refresh_tokens table query', [
+                    'user_id' => $user->id,
+                    'count' => count($characterIds)
+                ]);
+                return $characterIds;
+            }
+        } catch (\Exception $e) {
+            \Log::error('getUserCharacterIds: Failed to get user characters from refresh_tokens', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        \Log::warning('getUserCharacterIds: No characters found for user', [
+            'user_id' => $user->id
+        ]);
+        
+        return [];
+    }
+
     private function canSeeCorporation(): bool
     {
         return \MiningManager\Support\Access::readsCorporation();
