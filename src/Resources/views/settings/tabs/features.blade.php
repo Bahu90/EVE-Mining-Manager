@@ -25,22 +25,6 @@
             <div class="custom-control custom-switch mb-3">
                 <input type="checkbox" 
                        class="custom-control-input" 
-                       id="enable_tax_tracking" 
-                       name="enable_tax_tracking" 
-                       value="1"
-                       {{ old('enable_tax_tracking', $settings->enable_tax_tracking ?? true) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="enable_tax_tracking">
-                    <i class="fas fa-coins"></i>
-                    <strong>{{ trans('mining-manager::settings.enable_tax_tracking') }}</strong>
-                </label>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.enable_tax_tracking_help') }}
-                </small>
-            </div>
-
-            <div class="custom-control custom-switch mb-3">
-                <input type="checkbox" 
-                       class="custom-control-input" 
                        id="enable_ledger_tracking" 
                        name="enable_ledger_tracking" 
                        value="1"
@@ -267,78 +251,6 @@
                 See <strong>Help &amp; Documentation &gt; CLI Commands</strong> for details.
             </div>
 
-            <div class="custom-control custom-switch mb-3">
-                <input type="checkbox" 
-                       class="custom-control-input" 
-                       id="auto_calculate_taxes" 
-                       name="auto_calculate_taxes" 
-                       value="1"
-                       {{ old('auto_calculate_taxes', $settings->auto_calculate_taxes ?? true) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="auto_calculate_taxes">
-                    <i class="fas fa-calculator"></i>
-                    <strong>{{ trans('mining-manager::settings.auto_calculate_taxes') }}</strong>
-                </label>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.auto_calculate_taxes_help') }}
-                </small>
-            </div>
-
-            <div class="custom-control custom-switch mb-3">
-                <input type="checkbox" 
-                       class="custom-control-input" 
-                       id="auto_generate_invoices" 
-                       name="auto_generate_invoices" 
-                       value="1"
-                       {{ old('auto_generate_invoices', $settings->auto_generate_invoices ?? true) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="auto_generate_invoices">
-                    <i class="fas fa-file-invoice"></i>
-                    <strong>{{ trans('mining-manager::settings.auto_generate_invoices') }}</strong>
-                </label>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.auto_generate_invoices_help') }}
-                </small>
-            </div>
-
-            <div class="custom-control custom-switch mb-3">
-                <input type="checkbox" 
-                       class="custom-control-input" 
-                       id="verify_wallet_transactions" 
-                       name="verify_wallet_transactions" 
-                       value="1"
-                       {{ old('verify_wallet_transactions', $settings->verify_wallet_transactions ?? true) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="verify_wallet_transactions">
-                    <i class="fas fa-check-double"></i>
-                    <strong>{{ trans('mining-manager::settings.verify_wallet_transactions') }}</strong>
-                </label>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.verify_wallet_transactions_help') }}
-                </small>
-            </div>
-
-            <div class="custom-control custom-switch mb-3">
-                <input type="checkbox"
-                       class="custom-control-input"
-                       id="enable_upfront_payments"
-                       name="enable_upfront_payments"
-                       value="1"
-                       {{ old('enable_upfront_payments', $settings->enable_upfront_payments ?? false) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="enable_upfront_payments">
-                    <i class="fas fa-hand-holding-usd"></i>
-                    <strong>Upfront Payments</strong>
-                    {{-- The corporation selector at the top of the page does not
-                         govern this one. Say so where the switch is, rather than
-                         letting somebody set it per corporation and wonder why
-                         nothing changed. --}}
-                    <span class="badge badge-info ml-1">{{ trans('mining-manager::settings.applies_to_all_corporations') }}</span>
-                </label>
-                <small class="form-text text-muted">
-                    Lets members pay before being invoiced by putting a standing keyword
-                    in the transfer reason. The payment settles whatever they already owe,
-                    oldest first, and the rest becomes account balance against future
-                    invoices. Off by default. The keyword itself is set under
-                    General &rarr; Payment Settings.
-                </small>
-            </div>
         </div>
     </div>
 
@@ -379,31 +291,6 @@
                 </div>
                 <small class="form-text text-muted">
                     {{ trans('mining-manager::settings.ledger_retention_days_help') }}
-                </small>
-            </div>
-
-            <div class="form-group">
-                <label for="tax_record_retention_days">
-                    <i class="fas fa-coins"></i>
-                    {{ trans('mining-manager::settings.tax_record_retention_days') }}
-                </label>
-                <div class="input-group">
-                    <input type="number" 
-                           class="form-control @error('tax_record_retention_days') is-invalid @enderror" 
-                           id="tax_record_retention_days" 
-                           name="tax_record_retention_days" 
-                           value="{{ old('tax_record_retention_days', $settings->tax_record_retention_days ?? 730) }}"
-                           min="90" 
-                           max="3650">
-                    <div class="input-group-append">
-                        <span class="input-group-text">{{ trans('mining-manager::settings.days') }}</span>
-                    </div>
-                    @error('tax_record_retention_days')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.tax_record_retention_days_help') }}
                 </small>
             </div>
 

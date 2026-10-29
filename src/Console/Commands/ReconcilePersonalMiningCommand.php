@@ -56,7 +56,6 @@ class ReconcilePersonalMiningCommand extends Command
             [
                 ['Personal rows with an observer row beside them', number_format($result['examined'])],
                 [$dryRun ? 'Would be removed' : 'Removed', number_format($result['removed'])],
-                ['Left alone, an issued invoice covers the day', number_format($result['billed_skipped'])],
                 ['Duplicated quantity', number_format($result['quantity'])],
                 ['Duplicated value (ISK)', number_format($result['value'], 0)],
                 ['Daily summaries rebuilt', number_format($result['summaries'])],

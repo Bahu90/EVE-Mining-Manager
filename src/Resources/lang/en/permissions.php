@@ -7,15 +7,15 @@ return [
 
     // Member tier
     'member_label' => 'Member',
-    'member_description' => 'View own mining data, own taxes and tax codes, join/leave events, view moon schedules. Read-only access to personal information.',
+    'member_description' => 'View own mining data, join/leave events, view moon schedules. Read-only access to personal information.',
 
     // Director tier
     'director_label' => 'Director',
-    'director_description' => 'All Member permissions plus: view all corporation data, process ledger, create/edit events, update moon data, view analytics/reports/theft incidents, verify wallet payments.',
+    'director_description' => 'All Member permissions plus: view all corporation data, process ledger, create/edit events, update moon data, view analytics and reports.',
 
     // See all data, read-only (standalone, not a tier)
     'view_all_label' => 'See all data (read-only)',
-    'view_all_description' => 'Read what directors read, change nothing: the corporation\'s mining and guest miners on the Dashboard, every pilot on Mining Summary and Moon Mining, Analytics, the Moon Planner and its blueprints, and Metenox Cargo. Taxes of others, theft incidents, reports and settings stay with directors and admins. Give it together with Member.',
+    'view_all_description' => 'Read what directors read, change nothing: the corporation\'s mining and guest miners on the Dashboard, every pilot on Mining Summary and Moon Mining, Analytics, the Moon Planner and its blueprints, and Metenox Cargo. Reports and settings stay with directors and admins. Give it together with Member.',
 
     // Moon Manager capability (standalone, not a tier)
     'moon_manager_label' => 'Moon Manager',
@@ -25,5 +25,5 @@ return [
 
     // Admin tier
     'admin_label' => 'Admin',
-    'admin_description' => 'All Director permissions plus: manage settings, calculate/manage taxes, generate tax codes, delete data, generate/export reports, resolve theft incidents, API access, diagnostics.',
+    'admin_description' => 'All Director permissions plus: manage settings, delete data, generate/export reports, API access, diagnostics.',
 ];

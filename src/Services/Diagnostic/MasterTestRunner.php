@@ -8,8 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use MiningManager\Models\MoonExtraction;
 use MiningManager\Models\WebhookConfiguration;
-use MiningManager\Models\TaxCode;
-use MiningManager\Services\Tax\ClassificationEpoch;
 use MiningManager\Services\OreClassifier;
 use MiningManager\Services\TypeIdRegistry;
 use MiningManager\Services\Configuration\SettingsManagerService;
@@ -27,7 +25,7 @@ use Throwable;
  *   - Each test method returns an associative array with keys:
  *       name      → human label ("Schema: alert dedup columns present")
  *       category  → grouping bucket ("schema", "settings",
- *                   "notifications", "pricing", "lifecycle", "tax",
+ *                   "notifications", "pricing", "lifecycle",
  *                   "security")
  *       status    → "pass" | "warn" | "fail" | "skip"
  *       message   → one-line summary shown in the UI
@@ -35,7 +33,7 @@ use Throwable;
  *   - Tests are wrapped in try/catch — an unexpected throw becomes a
  *     `fail` with the exception message. No single broken test can crash
  *     the run.
- *   - Repeating logic from the other diagnostic tabs (tax, moon, settings,
+ *   - Repeating logic from the other diagnostic tabs (moon, settings,
  *     etc.) is intentional. The Master Test is meant as a "click once,
  *     see everything green" pre-flight check; the per-area tabs remain
  *     useful for deep-dive debugging.
@@ -92,8 +90,6 @@ class MasterTestRunner
             // Schema & migrations
             'checkMigrationsApplied',
             'checkAlertDedupColumns',
-            'checkTaxCodesUniqueConstraint',
-            'checkPeriodStartBackfill',
             'checkSettingsTableShape',
 
             // Settings consistency
@@ -101,7 +97,6 @@ class MasterTestRunner
             'checkNotificationSettingsLoadable',
             'checkFeatureFlagsLoadable',
             'checkActiveCorporationConfigured',
-            'checkValueShownMatchesTax',
 
             // Pricing path
             'checkConfiguredProviderValid',
@@ -121,19 +116,8 @@ class MasterTestRunner
             'checkExtractionStartedBacklog',
 
             // Ore classification
-            'checkClassificationCutover',
             'checkIgnoredOreLeftOut',
             'checkUnrecognisedOreTypes',
-
-            // Tax pipeline
-            'checkTaxPipelineSanity',
-            'checkProcessedTransactionsTable',
-
-            // Payments and balances
-            'checkUpfrontPaymentsConfig',
-            'checkBalancesAndRefunds',
-            'checkPaymentReconciliation',
-            'checkInvoicesCarryTheirCode',
 
             // Security / audit hardening verification
             'checkAtomicCasColumnsIndexed',
@@ -300,67 +284,6 @@ class MasterTestRunner
     }
 
     /**
-     * Verify migration 000011's UNIQUE constraint on mining_tax_codes.code
-     * is in place AND no duplicate codes exist (which would have prevented
-     * the migration from applying).
-     */
-    protected function checkTaxCodesUniqueConstraint(): array
-    {
-        if (!Schema::hasTable('mining_tax_codes')) {
-            return $this->fail('Tax-code uniqueness', 'schema', 'mining_tax_codes table missing');
-        }
-
-        // Check for duplicates first — proves the constraint is being enforced
-        // even if we can't read information_schema directly.
-        $dupes = DB::table('mining_tax_codes')
-            ->select('code', DB::raw('COUNT(*) as count'))
-            ->whereNotNull('code')
-            ->groupBy('code')
-            ->having('count', '>', 1)
-            ->limit(5)
-            ->get();
-
-        if ($dupes->isNotEmpty()) {
-            return $this->fail(
-                'Tax-code uniqueness',
-                'schema',
-                'Found ' . $dupes->count() . '+ duplicated tax codes — migration 000011 likely did not run',
-                ['sample_duplicates' => $dupes->pluck('code')->all()]
-            );
-        }
-
-        return $this->pass('Tax-code uniqueness', 'schema', 'no duplicate codes (constraint OK)');
-    }
-
-    /**
-     * Verify migration 000012 backfilled period_start for legacy NULL rows.
-     * Should be 0 unless there are legacy mining_taxes rows with NULL `month`
-     * column too (rare — separate data corruption scenario).
-     */
-    protected function checkPeriodStartBackfill(): array
-    {
-        if (!Schema::hasTable('mining_taxes')) {
-            return $this->fail('Tax period_start backfill', 'schema', 'mining_taxes table missing');
-        }
-
-        $nullCount = DB::table('mining_taxes')
-            ->whereNull('deleted_at')
-            ->whereNull('period_start')
-            ->count();
-
-        if ($nullCount > 0) {
-            return $this->warn(
-                'Tax period_start backfill',
-                'schema',
-                "{$nullCount} mining_taxes rows still have NULL period_start",
-                ['hint' => 'These rows likely have NULL `month` too (data corruption from a much older era). Investigate manually.']
-            );
-        }
-
-        return $this->pass('Tax period_start backfill', 'schema', 'no NULL period_start rows');
-    }
-
-    /**
      * Sanity check on the settings table itself — must exist and have rows.
      */
     protected function checkSettingsTableShape(): array
@@ -380,35 +303,6 @@ class MasterTestRunner
     // =================================================================
     // SETTINGS CONSISTENCY
     // =================================================================
-
-    /**
-     * The simulator and Find Moons open on refined or ore value, and tax is
-     * worked out from one or the other. They are separate settings, so they can
-     * disagree, and when they do every simulation carries a warning that the
-     * figure on screen is not the one tax uses.
-     */
-    protected function checkValueShownMatchesTax(): array
-    {
-        $name = 'Moon value shown matches the value taxed';
-
-        $showsRefined = !empty($this->settingsService->getPricingSettings()['use_refined_value']);
-        // Same test OreValuationService makes: minerals, or else the ore.
-        $taxesRefined = ($this->settingsService->getGeneralSettings()['ore_valuation_method'] ?? 'mineral_price') === 'mineral_price';
-
-        $shown = $showsRefined ? 'refined' : 'ore';
-        $taxed = $taxesRefined ? 'refined' : 'ore';
-
-        if ($showsRefined === $taxesRefined) {
-            return $this->pass($name, 'settings', "The simulator and Find Moons open on {$shown} value, the same figure tax is worked out from");
-        }
-
-        return $this->warn(
-            $name,
-            'settings',
-            "The simulator and Find Moons open on {$shown} value, but tax is worked out from {$taxed} value",
-            ['hint' => 'Every simulation warns that the figure on screen is not the one tax uses. Use Refined Mineral Value on the Pricing tab sets which value the pages open on.']
-        );
-    }
 
     protected function checkPricingSettingsLoadable(): array
     {
@@ -470,19 +364,19 @@ class MasterTestRunner
 
     protected function checkActiveCorporationConfigured(): array
     {
-        $corpId = $this->settingsService->getTaxProgramCorporationId();
+        $corpId = $this->settingsService->getMoonOwnerCorporationId();
         if (!$corpId) {
             return $this->warn(
-                'Tax program corporation configured',
+                'Moon owner corporation configured',
                 'settings',
-                'No tax program corporation set — moon owner-scoped queries will not filter',
+                'No moon owner corporation set — moon owner-scoped queries will not filter',
                 ['hint' => 'Set general.moon_owner_corporation_id in Settings → General']
             );
         }
 
         $name = DB::table('corporation_infos')->where('corporation_id', $corpId)->value('name');
         return $this->pass(
-            'Tax program corporation configured',
+            'Moon owner corporation configured',
             'settings',
             $name ? "{$name} ({$corpId})" : "Corp ID {$corpId} (name not in SDE)"
         );
@@ -731,7 +625,7 @@ class MasterTestRunner
             $reflection = new \ReflectionClass($this->notificationService);
             $method = $reflection->getMethod('processCustomTemplate');
             $method->setAccessible(true);
-            $result = $method->invoke($this->notificationService, $template, 'tax_invoice', 'tax_invoice', $hostileInput);
+            $result = $method->invoke($this->notificationService, $template, 'moon_ready', 'moon_ready', $hostileInput);
         } catch (Throwable $e) {
             return $this->warn('Custom-template injection safety', 'security', 'Could not invoke processCustomTemplate: ' . $e->getMessage());
         }
@@ -779,9 +673,6 @@ class MasterTestRunner
             'mining-manager:import-character-mining --days=2',
             'mining-manager:update-extractions',
             'mining-manager:every-minute',
-            'mining-manager:calculate-taxes',
-            'mining-manager:generate-invoices',
-            'mining-manager:verify-payments --auto-match',
             'mining-manager:cache-prices',
         ];
 
@@ -994,45 +885,17 @@ class MasterTestRunner
     // =================================================================
 
     /**
-     * The cutover that keeps mining already in the ledger on the ore
-     * categories it was billed on.
-     */
-    protected function checkClassificationCutover(): array
-    {
-        $name = 'Ore classification cutover';
-        $epoch = ClassificationEpoch::get();
-
-        if ($epoch === null) {
-            return $this->warn(
-                $name,
-                'classification',
-                'No cutover recorded, so mining from before the upgrade is not protected from being re-rated under the new ore categories',
-                ['hint' => 'A migration records the cutover. Restarting the SeAT container runs any migration still outstanding.']
-            );
-        }
-
-        return $this->pass($name, 'classification', 'Recorded ' . $epoch->toDateTimeString() . ' UTC. Mining before it keeps the categories it was billed on');
-    }
-
-    /**
      * Ore the importers ignore should no longer reach the ledger.
      *
-     * Only rows created in the last seven days are looked at, and none from
-     * before the classification cutover. Rows imported before the importers
-     * started skipping these types stay in the ledger as history and are not a
-     * fault, and the cutover is when an install moved onto the version that
-     * skips them.
+     * Only rows created in the last seven days are looked at. Rows imported
+     * before the importers started skipping these types stay in the ledger as
+     * history and are not a fault.
      */
     protected function checkIgnoredOreLeftOut(): array
     {
         $name = 'Ignored ore left out';
 
         $since = Carbon::now()->subDays(7);
-        $epoch = ClassificationEpoch::get();
-
-        if ($epoch && $epoch->greaterThan($since)) {
-            $since = $epoch;
-        }
 
         $ignored = OreClassifier::ignoredTypeIds();
 
@@ -1107,246 +970,9 @@ class MasterTestRunner
             count($unknown) . ' ore types mined in the last 30 days are not in the registry, so they were counted as regular ore',
             [
                 'types' => $types,
-                'hint' => 'Each one needs adding to TypeIdRegistry under its family, or to the ignored lists if it should not be counted. Until then it is taxed at the regular ore rate wherever regular ore is taxed.',
+                'hint' => 'Each one needs adding to TypeIdRegistry under its family, or to the ignored lists if it should not be counted. Until then it is counted and valued as regular ore.',
             ]
         );
-    }
-
-    // =================================================================
-    // TAX PIPELINE
-    // =================================================================
-
-    protected function checkTaxPipelineSanity(): array
-    {
-        if (!Schema::hasTable('mining_taxes') || !Schema::hasTable('mining_tax_codes')) {
-            return $this->fail('Tax pipeline sanity', 'tax', 'mining_taxes or mining_tax_codes table missing');
-        }
-
-        $unpaid = DB::table('mining_taxes')
-            ->whereNull('deleted_at')
-            ->whereIn('status', ['unpaid', 'overdue', 'partial'])
-            ->count();
-        $orphanCodes = DB::table('mining_tax_codes as mtc')
-            ->leftJoin('mining_taxes as mt', 'mtc.mining_tax_id', '=', 'mt.id')
-            ->whereNull('mt.id')
-            ->count();
-
-        if ($orphanCodes > 0) {
-            return $this->warn(
-                'Tax pipeline sanity',
-                'tax',
-                "{$orphanCodes} tax codes reference non-existent mining_tax rows",
-                ['hint' => 'FK constraint missing on mining_tax_codes.mining_tax_id; investigate or DELETE orphans manually']
-            );
-        }
-
-        return $this->pass('Tax pipeline sanity', 'tax', "{$unpaid} unpaid/overdue/partial taxes, no orphan codes");
-    }
-
-    protected function checkProcessedTransactionsTable(): array
-    {
-        if (!Schema::hasTable('mining_manager_processed_transactions')) {
-            return $this->fail('Processed transactions table', 'tax', 'mining_manager_processed_transactions table missing — H1 dedup latch will throw');
-        }
-
-        $rowCount = DB::table('mining_manager_processed_transactions')->count();
-        return $this->pass('Processed transactions table', 'tax', "{$rowCount} processed transaction rows");
-    }
-
-    // =================================================================
-    // PAYMENTS AND BALANCES
-    // =================================================================
-
-    /**
-     * Upfront payments need a keyword to match on, one that cannot be taken
-     * for a tax code or a refund, and somewhere for the money left over to go.
-     */
-    protected function checkUpfrontPaymentsConfig(): array
-    {
-        $name = 'Upfront payments configuration';
-
-        if (!($this->settingsService->getFeatureFlags()['enable_upfront_payments'] ?? false)) {
-            return $this->skip($name, 'payments', 'Upfront payments are switched off');
-        }
-
-        $payment = $this->settingsService->getPaymentSettings();
-        $keyword = trim((string) ($payment['upfront_keyword'] ?? ''));
-
-        if ($keyword === '') {
-            return $this->warn($name, 'payments', 'Switched on, but the keyword is empty, so no payment is recognised as paying ahead');
-        }
-
-        $others = [
-            'tax code prefix' => trim((string) TaxCode::getPrefix()),
-            // An empty refund keyword falls back to the default at match time.
-            'refund keyword' => trim((string) ($payment['refund_keyword'] ?? '')) ?: 'MM-REFUND',
-        ];
-
-        $clashes = [];
-        foreach ($others as $label => $other) {
-            if ($other !== '' && (stripos($keyword, $other) !== false || stripos($other, $keyword) !== false)) {
-                $clashes[] = "{$label} {$other}";
-            }
-        }
-
-        if (!empty($clashes)) {
-            return $this->warn(
-                $name,
-                'payments',
-                "The keyword {$keyword} overlaps the " . implode(' and the ', $clashes) . ', so a payment could be read as either'
-            );
-        }
-
-        if (!($payment['hold_surplus_as_credit'] ?? true)) {
-            return $this->warn(
-                $name,
-                'payments',
-                "Keyword {$keyword}, but Hold surplus as credit is off, so anything paid ahead beyond what a member owes is not held",
-                ['hint' => 'Turn on Hold surplus as credit under Settings, General, or a director has to assign the rest of each pay-ahead by hand.']
-            );
-        }
-
-        return $this->pass($name, 'payments', "On, keyword {$keyword}, surplus held as account balance");
-    }
-
-    /**
-     * Money held for members, and refunds agreed but not yet seen leaving the
-     * wallet.
-     */
-    protected function checkBalancesAndRefunds(): array
-    {
-        $name = 'Account balances and refunds';
-
-        if (!Schema::hasTable('mining_manager_payment_credits') || !Schema::hasTable('mining_manager_payment_refunds')) {
-            return $this->fail($name, 'payments', 'Payment credit or refund table missing');
-        }
-
-        $held = DB::table('mining_manager_payment_credits')->where('remaining', '>', 0);
-        $heldTotal = (float) (clone $held)->sum('remaining');
-        $holders = (clone $held)->distinct()->count('character_id');
-
-        $stale = DB::table('mining_manager_payment_refunds')
-            ->where('status', 'pending')
-            ->where('created_at', '<', Carbon::now()->subDays(7))
-            ->count();
-
-        if ($stale > 0) {
-            return $this->warn(
-                $name,
-                'payments',
-                "{$stale} refunds agreed more than a week ago still have no matching transfer in the wallet",
-                ['hint' => 'A refund confirms only when the refund keyword is in the transfer reason. Check the transfer went out with it, or mark the refund sent from the Balances tab.']
-            );
-        }
-
-        return $this->pass($name, 'payments', number_format($heldTotal, 0) . " ISK held on {$holders} characters, no refund waiting more than a week");
-    }
-
-    /**
-     * Every invoice raised since the cutover and paid should be backed by
-     * payment rows that add up to what it says was paid.
-     *
-     * Keyed on when the invoice was raised, not when it was paid. An invoice
-     * raised before the cutover can carry a payment the old pipeline credited
-     * without a breakdown, and finishing it off afterwards would leave that part
-     * looking unexplained for ever. One raised after the cutover can only ever
-     * have been paid through the allocation rows, so it has to add up exactly.
-     */
-    protected function checkPaymentReconciliation(): array
-    {
-        $name = 'Payment reconciliation';
-
-        if (!Schema::hasTable('mining_manager_payment_allocations')) {
-            return $this->fail($name, 'payments', 'mining_manager_payment_allocations table missing');
-        }
-
-        $epoch = app(\MiningManager\Services\Tax\PaymentAllocationService::class)->getDedupEpoch();
-        if (!$epoch) {
-            return $this->skip($name, 'payments', 'No verification cutover is recorded, so nothing can be reconciled');
-        }
-
-        $taxes = DB::table('mining_taxes')
-            ->where('created_at', '>=', $epoch)
-            ->whereNull('deleted_at')
-            ->whereIn('status', ['paid', 'partial'])
-            ->get(['id', 'character_id', 'amount_paid']);
-
-        if ($taxes->isEmpty()) {
-            return $this->pass($name, 'payments', 'No invoice raised since the cutover has been paid yet');
-        }
-
-        $allocated = DB::table('mining_manager_payment_allocations')
-            ->whereIn('mining_tax_id', $taxes->pluck('id'))
-            ->selectRaw('mining_tax_id, SUM(amount) as total')
-            ->groupBy('mining_tax_id')
-            ->pluck('total', 'mining_tax_id');
-
-        $off = [];
-        foreach ($taxes as $tax) {
-            // A tolerance of 1 ISK matches the settled threshold used when
-            // applying payments, so decimal dust does not read as a fault.
-            $expected = round((float) ($allocated[$tax->id] ?? 0), 2);
-            $actual = round((float) $tax->amount_paid, 2);
-
-            if (abs($expected - $actual) >= 1.0) {
-                $off[] = "invoice {$tax->id} says " . number_format($actual, 0)
-                    . ' ISK paid against ' . number_format($expected, 0) . ' ISK of payments';
-            }
-        }
-
-        if (!empty($off)) {
-            return $this->warn(
-                $name,
-                'payments',
-                count($off) . ' of ' . $taxes->count() . ' invoices do not match the payments recorded against them',
-                [
-                    'examples' => array_slice($off, 0, 10),
-                    'hint' => 'Tax Trace on this page reconciles these in full and names every transaction claim without an allocation.',
-                ]
-            );
-        }
-
-        return $this->pass($name, 'payments', $taxes->count() . ' invoices raised since the cutover and paid, all matching their payments');
-    }
-
-    /**
-     * A member cannot pay an invoice they have no reference for.
-     *
-     * Codes used to be minted only for invoices in certain states, so a part
-     * paid one could go out without one. They are now created with the invoice,
-     * and this catches both a regression and anything left from before.
-     */
-    protected function checkInvoicesCarryTheirCode(): array
-    {
-        $name = 'Invoices carry their payment code';
-
-        if (!Schema::hasTable('mining_taxes') || !Schema::hasTable('mining_tax_codes')) {
-            return $this->fail($name, 'tax', 'mining_taxes or mining_tax_codes table missing');
-        }
-
-        if (!$this->settingsService->getSetting('tax_rates.auto_generate_tax_codes', true)) {
-            return $this->skip($name, 'tax', 'Payment codes are not generated on this install');
-        }
-
-        // Deleted invoices are nobody's to pay, so a missing code on one
-        // says nothing.
-        $missing = DB::table('mining_taxes as mt')
-            ->leftJoin('mining_tax_codes as mtc', 'mtc.mining_tax_id', '=', 'mt.id')
-            ->whereIn('mt.status', ['unpaid', 'overdue', 'partial'])
-            ->whereNull('mt.deleted_at')
-            ->whereNull('mtc.id')
-            ->count();
-
-        if ($missing > 0) {
-            return $this->warn(
-                $name,
-                'tax',
-                "{$missing} invoices are still owed on but have no payment code",
-                ['hint' => 'Recalculate on the Calculate Taxes page mints the missing codes. Invoices created before this version can be short of one.']
-            );
-        }
-
-        return $this->pass($name, 'tax', 'Every invoice still owed on has a payment code');
     }
 
     // =================================================================

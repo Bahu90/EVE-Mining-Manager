@@ -13,9 +13,6 @@ use MiningManager\Services\Pricing\PriceProviderService;
 use MiningManager\Services\Pricing\OreValuationService;
 use MiningManager\Services\Configuration\SettingsManagerService;
 use MiningManager\Services\TypeIdRegistry;
-use MiningManager\Services\Tax\ClassificationEpoch;
-use MiningManager\Services\Tax\InvoiceCoverage;
-use MiningManager\Services\Ledger\LateMining;
 use MiningManager\Http\Controllers\DashboardController;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -27,12 +24,9 @@ class ProcessMiningLedgerCommand extends Command
                             {--observer_id= : Process specific observer/structure}
                             {--character_id= : Process specific character ID}
                             {--days=30 : Number of days to process}
-                            {--recalculate : Recalculate prices and taxes for existing entries}';
+                            {--recalculate : Recalculate prices for existing entries}';
 
     protected $description = 'Process corporation observer mining data for COMPLETE moon mining tracking';
-
-    /** Tax rates per structure-owner corporation, read once per run. */
-    private array $taxRatesByCorp = [];
 
     private ?OreValuationService $valuationService = null;
 
@@ -65,9 +59,7 @@ class ProcessMiningLedgerCommand extends Command
         $recalculate = $this->option('recalculate');
         $cutoffDate = Carbon::now()->subDays($days);
 
-        // Use corporation settings for tax rates (per structure-owner corporation)
         $settingsService = app(SettingsManagerService::class);
-        $this->info("💰 Tax rates: per structure-owner corporation from settings (multi-corp support)");
 
         // Build query for observer data (eager-load observer for corporation_id resolution)
         // Only structure (solar system) and observer (owner corporation) are
@@ -120,8 +112,6 @@ class ProcessMiningLedgerCommand extends Command
 
         $processed = 0;
         $updated = 0;
-        $billedSkips = 0;
-        $lateArrivals = 0;
         $skipped = 0;
         $errors = 0;
 
@@ -183,15 +173,15 @@ class ProcessMiningLedgerCommand extends Command
                 $settingsService, $recalculate, $cutoffDate,
                 &$processed, &$updated, &$skipped, &$errors,
                 &$uniqueObserverIds, &$uniqueCharacterIds, &$totalQuantity,
-                &$touchedPairsMap, &$jackpotCheckEntries, &$billedSkips, &$lateArrivals,
+                &$touchedPairsMap, &$jackpotCheckEntries,
                 $progressBar
             ) {
             $byObserver = $chunk->groupBy('observer_id');
 
             // One query for the ledger rows this chunk could match, instead of
             // one per observer row. Most rows in the window have not changed
-            // since the last run, and are skipped below before any pricing,
-            // tax or invoice work is done for them.
+            // since the last run, and are skipped below before any pricing
+            // work is done for them.
             $existingRows = $this->existingLedgerRows($chunk);
 
             foreach ($byObserver as $obsId => $entries) {
@@ -204,7 +194,6 @@ class ProcessMiningLedgerCommand extends Command
                 } else {
                     $settingsService->setActiveCorporation(null);
                 }
-                $taxSelector = $settingsService->getTaxSelector();
 
                 foreach ($entries as $entry) {
                 // Event ore, quest ore and Mutanite never enter the ledger.
@@ -262,17 +251,13 @@ class ProcessMiningLedgerCommand extends Command
                     $mineralValue = $values['mineral_value'] ?? 0;
                     $totalValue = $values['total_value'] ?? 0;
 
-                    // Classify ore type (must be before tax rate lookup)
+                    // Classify ore type
                     $isMoonOre = TypeIdRegistry::isMoonOre($entry->type_id);
                     $isIce = TypeIdRegistry::isIce($entry->type_id);
                     $isGas = TypeIdRegistry::isGas($entry->type_id);
                     $isAbyssal = OreClassifier::isAbyssal($entry->type_id);
                     $isTriglavian = TypeIdRegistry::isTriglavianOre($entry->type_id);
                     $oreCategory = $this->classifyOreCategory($entry->type_id);
-
-                    // Get tax rate from this structure owner's corporation settings
-                    $taxRate = $this->getTaxRateFromSettings($settingsService, $entry->type_id, $isMoonOre, $isIce, $isGas, $isAbyssal, $isTriglavian, $taxSelector, $structureCorpId);
-                    $taxAmount = $totalValue * ($taxRate / 100);
 
                     // Prepare data
                     $data = [
@@ -282,11 +267,8 @@ class ProcessMiningLedgerCommand extends Command
                         'ore_value' => $oreValue,
                         'mineral_value' => $mineralValue,
                         'total_value' => $totalValue,
-                        'tax_rate' => $taxRate,
-                        'tax_amount' => $taxAmount,
                         'ore_type' => $oreCategory,
                         'corporation_id' => $structureCorpId,
-                        'is_taxable' => true,
                         'is_moon_ore' => $isMoonOre,
                         'is_ice' => $isIce,
                         'is_gas' => $isGas,
@@ -295,16 +277,6 @@ class ProcessMiningLedgerCommand extends Command
                         'ore_category' => $oreCategory,
                         'processed_at' => Carbon::now(),
                     ];
-
-                    // Whether an issued invoice already covers this day. Mining
-                    // that turns up for it now was never on that bill and never
-                    // will be: the invoice is pinned, so charging for it would
-                    // mean re-opening something the member has settled. It is
-                    // recorded, but not taxed, and says why.
-                    $billed = InvoiceCoverage::coversRow(
-                        (int) $entry->character_id,
-                        Carbon::parse($entry->last_updated)->toDateString()
-                    );
 
                     // Unique key columns for updateOrCreate
                     $uniqueKey = [
@@ -318,47 +290,7 @@ class ProcessMiningLedgerCommand extends Command
                     // $existing was looked up above from the chunk's prefetch,
                     // with the same match (character, day, type, observer).
 
-                    if ($existing && $billed) {
-                        // This row was on the bill, so the value and tax it was
-                        // billed at stay put, whatever --recalculate asks for.
-                        // Observer data is cumulative, though, and can still be
-                        // catching up: only what it has added since is recorded,
-                        // at today's value, with a note that it was not taxed.
-                        if ($entry->quantity > $existing->quantity) {
-                            $extraValues = $valuationService->calculateOreValue(
-                                $entry->type_id,
-                                (int) $entry->quantity - (int) $existing->quantity
-                            );
-                            $existing->update(LateMining::growth($existing, (int) $entry->quantity, $extraValues) + [
-                                'processed_at' => Carbon::now(),
-                            ]);
-                            $updated++;
-                            $lateArrivals++;
-                        } elseif ($recalculate) {
-                            $billedSkips++;
-                        } else {
-                            $skipped++;
-                        }
-                    } elseif ($existing) {
-                        // Mining from before the classification cutover keeps the
-                        // rate and categories it was given at the time. Quantity
-                        // and value still update, because observer data is
-                        // cumulative, but the rate they are multiplied by does
-                        // not move under a member retrospectively.
-                        if (ClassificationEpoch::existedBeforeCutover($existing->created_at)) {
-                            $frozenRate = (float) $existing->tax_rate;
-                            $data['tax_rate'] = $frozenRate;
-                            $data['tax_amount'] = $totalValue * ($frozenRate / 100);
-                            unset(
-                                $data['is_moon_ore'],
-                                $data['is_ice'],
-                                $data['is_gas'],
-                                $data['is_abyssal'],
-                                $data['is_triglavian'],
-                                $data['ore_category']
-                            );
-                        }
-
+                    if ($existing) {
                         // Observer data is CUMULATIVE — quantity grows as miners mine more.
                         // Always update if quantity increased or if recalculating prices.
                         if ($recalculate || $entry->quantity > $existing->quantity) {
@@ -368,39 +300,15 @@ class ProcessMiningLedgerCommand extends Command
                             $skipped++;
                         }
                     } else {
-                        if ($billed) {
-                            $data['tax_rate'] = 0;
-                            $data['tax_amount'] = 0;
-                            $data['is_taxable'] = false;
-                            $data['notes'] = LateMining::NEW_ROW_NOTE;
-                            $lateArrivals++;
-                        }
-
                         // Cross-source dedup: adjust personal ESI record if it exists
                         // Character ESI combines ALL mining of a type in a system into one entry,
                         // so if a character mined at both a corp moon and non-corp moon,
-                        // we subtract the observer quantity and keep the remainder as untaxed.
+                        // we subtract the observer quantity and keep the remainder as personal mining.
                         $personalDupe = MiningLedger::where('character_id', $entry->character_id)
                             ->whereDate('date', Carbon::parse($entry->last_updated)->toDateString())
                             ->where('type_id', $entry->type_id)
                             ->whereNull('observer_id')
                             ->first();
-
-                        // Dedup is a correction, and a correction to mining that
-                        // has already been billed is a change to the bill's
-                        // evidence. Leave those rows exactly as they were.
-                        if ($personalDupe && InvoiceCoverage::coversRow(
-                            (int) $personalDupe->character_id,
-                            $personalDupe->date
-                        )) {
-                            $billedSkips++;
-                            Log::info('Mining Manager: left a personal ledger row alone, an issued invoice covers it', [
-                                'character_id' => $personalDupe->character_id,
-                                'date' => (string) $personalDupe->date,
-                                'type_id' => $personalDupe->type_id,
-                            ]);
-                            $personalDupe = null;
-                        }
 
                         if ($personalDupe) {
                             $remainder = $personalDupe->quantity - $entry->quantity;
@@ -417,8 +325,6 @@ class ProcessMiningLedgerCommand extends Command
                                     'ore_value' => $remainderValues['ore_value'] ?? 0,
                                     'mineral_value' => $remainderValues['mineral_value'] ?? 0,
                                     'total_value' => $remainderValues['total_value'] ?? 0,
-                                    'tax_rate' => 0,
-                                    'tax_amount' => 0,
                                     'processed_at' => Carbon::now(),
                                 ]);
                                 Log::debug("Mining Manager: Adjusted personal ESI record for character {$entry->character_id}, type {$entry->type_id}: kept {$remainder} units as non-corp mining");
@@ -461,8 +367,6 @@ class ProcessMiningLedgerCommand extends Command
                 [
                     ['🆕 New entries created', $processed],
                     ['🔄 Existing entries updated', $updated],
-                    ['📌 Arrived after invoicing, not taxed', $lateArrivals],
-                    ['🔒 Left alone, already invoiced', $billedSkips],
                     ['⏭️  Entries skipped', $skipped],
                     ['❌ Errors', $errors],
                 ]
@@ -475,16 +379,10 @@ class ProcessMiningLedgerCommand extends Command
 
                 $uniqueMiners = $uniqueCharacterIds->unique()->count();
                 $uniqueStructures = $uniqueObserverIds->unique()->count();
-                // Sum actual per-entry tax amounts from database instead of using a flat rate
-                $totalTaxes = MiningLedger::where('character_id', '>', 0)
-                    ->whereIn('character_id', $uniqueCharacterIds->unique())
-                    ->where('date', '>=', $cutoffDate->toDateString())
-                    ->sum('tax_amount');
 
                 $this->line("   • Unique miners tracked: {$uniqueMiners} (including non-registered)");
                 $this->line("   • Structures: {$uniqueStructures}");
                 $this->line("   • Total quantity: " . number_format($totalQuantity) . " units");
-                $this->line("   • Total est. taxes (per settings): " . number_format($totalTaxes, 0) . " ISK");
             }
 
             if ($errors > 0) {
@@ -604,79 +502,6 @@ class ProcessMiningLedgerCommand extends Command
     private function ledgerKey($characterId, string $date, $typeId, $observerId): string
     {
         return (int) $characterId . '|' . $date . '|' . (int) $typeId . '|' . (int) $observerId;
-    }
-
-    /**
-     * Get tax rate for an ore type from corporation settings.
-     * Returns 0 if no corporation is configured or ore type is not taxable.
-     *
-     * @param SettingsManagerService $settingsService
-     * @param int $typeId
-     * @param bool $isMoonOre
-     * @param bool $isIce
-     * @param bool $isGas
-     * @param bool $isAbyssal
-     * @param bool $isTriglavian
-     * @param array $taxSelector
-     * @param int|null $structureCorpId
-     * @return float Tax rate percentage (0-100)
-     */
-    private function getTaxRateFromSettings(
-        SettingsManagerService $settingsService,
-        int $typeId,
-        bool $isMoonOre,
-        bool $isIce,
-        bool $isGas,
-        bool $isAbyssal,
-        bool $isTriglavian,
-        array $taxSelector,
-        ?int $structureCorpId
-    ): float {
-        // No corporation resolved for this structure → 0% tax (statistics only)
-        if (!$structureCorpId) {
-            return 0.0;
-        }
-
-        // Get tax rates from settings (respects active corporation context).
-        // Read once per corporation per run: getTaxRates() is about a dozen
-        // settings reads, and this runs for every changed ledger row.
-        $taxRates = $this->taxRatesByCorp[$structureCorpId] ??= $settingsService->getTaxRates();
-
-        // Check taxability via tax selector
-        if ($isMoonOre) {
-            if (!empty($taxSelector['no_moon_ore'])) {
-                return 0.0;
-            }
-            if (empty($taxSelector['all_moon_ore']) && empty($taxSelector['only_corp_moon_ore'])) {
-                return 0.0;
-            }
-            // Get rarity-specific rate
-            $rarity = TypeIdRegistry::getMoonOreRarity($typeId);
-            if ($rarity) {
-                $rarityKey = strtolower($rarity);
-                return (float) ($taxRates['moon_ore'][$rarityKey] ?? $taxRates['moon_ore']['r4'] ?? 5.0);
-            }
-            return (float) ($taxRates['moon_ore']['r4'] ?? 5.0);
-        }
-
-        if ($isIce) {
-            return ($taxSelector['ice'] ?? true) ? (float) ($taxRates['ice'] ?? 10.0) : 0.0;
-        }
-
-        if ($isGas) {
-            return ($taxSelector['gas'] ?? false) ? (float) ($taxRates['gas'] ?? 10.0) : 0.0;
-        }
-
-        if ($isAbyssal) {
-            return ($taxSelector['abyssal_ore'] ?? false) ? (float) ($taxRates['abyssal_ore'] ?? 15.0) : 0.0;
-        }
-
-        if ($isTriglavian) {
-            return ($taxSelector['triglavian_ore'] ?? false) ? (float) ($taxRates['triglavian_ore'] ?? 10.0) : 0.0;
-        }
-
-        // Regular ore
-        return ($taxSelector['ore'] ?? true) ? (float) ($taxRates['ore'] ?? 10.0) : 0.0;
     }
 
     /**

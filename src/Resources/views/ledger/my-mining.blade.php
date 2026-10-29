@@ -148,48 +148,7 @@
                         </div>
                     </div>
 
-                    {{-- TAX STATUS ROW --}}
                     <div class="row mt-3">
-                        {{-- Estimated Tax, for the period picked above --}}
-                        <div class="col-lg-3 col-md-6">
-                            <div class="small-box bg-gradient-danger">
-                                <div class="inner">
-                                    <h3>{{ number_format($stats['estimated_tax_this_month'] ?? 0, 0) }}</h3>
-                                    <p>{{ trans('mining-manager::ledger.estimated_tax_this_month') }} (ISK)
-                                        <small class="mm-tax-note">{{ trans('mining-manager::ledger.source_tax_note') }}</small></p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-file-invoice-dollar"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Tax Already Paid --}}
-                        <div class="col-lg-3 col-md-6">
-                            <div class="small-box bg-gradient-success">
-                                <div class="inner">
-                                    <h3>{{ number_format($stats['total_tax_paid'] ?? 0, 0) }}</h3>
-                                    <p>{{ trans('mining-manager::ledger.tax_paid') }} (ISK)</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-check-circle"></i>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Outstanding Balance --}}
-                        <div class="col-lg-3 col-md-6">
-                            <div class="small-box {{ ($stats['tax_outstanding'] ?? 0) > 0 ? 'bg-gradient-warning' : 'bg-gradient-success' }}">
-                                <div class="inner">
-                                    <h3>{{ number_format($stats['tax_outstanding'] ?? 0, 0) }}</h3>
-                                    <p>{{ trans('mining-manager::ledger.tax_outstanding') }} (ISK)</p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-balance-scale"></i>
-                                </div>
-                            </div>
-                        </div>
-
                         {{-- Sessions, for the period picked above --}}
                         <div class="col-lg-3 col-md-6">
                             <div class="small-box bg-gradient-info">
@@ -204,53 +163,6 @@
                         </div>
                     </div>
 
-                    {{-- EVENT DISCOUNT CALLOUT — shown only if any event waived tax this month OR all-time --}}
-                    @if(($stats['event_discount_total'] ?? 0) > 0 || ($stats['event_savings_all_time'] ?? 0) > 0)
-                    <div class="row mt-2">
-                        @if(($stats['event_discount_total'] ?? 0) > 0)
-                        <div class="col-md-8">
-                            <div class="callout callout-success">
-                                <h5><i class="fas fa-gift text-warning"></i> Event Discount Applied</h5>
-                                <p class="mb-0">
-                                    You saved <strong>{{ number_format($stats['event_discount_total'], 0) }} ISK</strong>
-                                    in taxes this period thanks to active mining events.
-                                    <small class="text-muted d-block mt-1">
-                                        The discount is already applied to your "Estimated Tax This Month" figure above.
-                                        Mining Events, My Events, shows which ones contributed.
-                                    </small>
-                                </p>
-                            </div>
-                        </div>
-                        @endif
-
-                        {{-- All-time event savings card — shown whenever user has ever saved anything --}}
-                        @if(($stats['event_savings_all_time'] ?? 0) > 0)
-                        <div class="col-md-4">
-                            <div class="small-box bg-gradient-warning">
-                                <div class="inner">
-                                    <h3>{{ number_format($stats['event_savings_all_time'], 0) }}</h3>
-                                    <p>Total Event Savings (All Time)<br><small>ISK saved from event participation</small></p>
-                                </div>
-                                <div class="icon">
-                                    <i class="fas fa-piggy-bank"></i>
-                                </div>
-                            </div>
-                        </div>
-                        @endif
-                    </div>
-                    @endif
-
-                    {{-- TAX TRANSPARENCY NOTICE --}}
-                    @if(($stats['estimated_tax_this_month'] ?? 0) > 0)
-                    <div class="row mt-2">
-                        <div class="col-12">
-                            <div class="callout callout-info">
-                                <h5><i class="fas fa-info-circle"></i> {{ trans('mining-manager::ledger.about_estimated_tax') }}</h5>
-                                <p class="mb-0">{{ trans('mining-manager::ledger.estimated_tax_notice') }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    @endif
                 </div>
             </div>
         </div>

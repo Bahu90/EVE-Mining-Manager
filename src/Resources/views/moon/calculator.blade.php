@@ -81,7 +81,7 @@
         margin-right: 6px;
     }
     .moon-simulator-page .select2-selection__choice__remove { color: #dc3545 !important; font-weight: 700; }
-    /* Notices about which figure tax uses and which prices are missing. They
+    /* Notices about which figure mining values use and which prices are missing. They
        set their own colours so a skin cannot wash them out. */
     .moon-simulator-page .mm-notice {
         border-left: 4px solid #667eea;
@@ -97,8 +97,7 @@
         background: rgba(245, 158, 11, 0.15);
     }
     .moon-simulator-page .mm-notice .btn { margin-left: 0.5rem; }
-    /* Corporation income: a refinery against a Metenox, side by side. The
-       side ahead at the chosen share gets the green edge. */
+    /* Metenox output card. */
     .moon-simulator-page .income-intro,
     .moon-simulator-page .income-note,
     .moon-simulator-page .income-per-day { color: var(--mm-text-muted) !important; }
@@ -843,7 +842,7 @@
             </div>
 
             @if($canSeeMoonIncome ?? false)
-            {{-- CORPORATION INCOME: a refinery against a Metenox. Directors and
+            {{-- METENOX: what a Moon Drill here would collect. Directors and
                  admins only, since it is the corporation's money; the server
                  sends the figures to nobody else. --}}
             <div class="card card-dark" id="incomeCard" style="display: none;">
@@ -859,37 +858,12 @@
                 <div class="card-body">
                     <p class="small mb-3 income-intro" id="incomeIntro"></p>
 
-                    <div class="form-group mb-3">
-                        <label for="incomeShare" class="mb-1">
-                            {{ trans('mining-manager::moons.income_share_label') }}
-                            <strong id="incomeShareValue"></strong>
-                        </label>
-                        <input type="range" class="custom-range" id="incomeShare" min="0" max="100" step="1" value="100">
-                        <small class="d-block income-note" id="incomeShareSource"></small>
+                    <div class="income-side mb-3" id="incomeMetenox">
+                        <div class="income-row"><span>{{ trans('mining-manager::moons.income_materials') }}</span><span id="incomeMetenoxValue"></span></div>
+                        <div class="income-row income-per-day"><span></span><span id="incomeMetenoxPerDay"></span></div>
+                        <small class="d-block income-note mt-2" id="incomeBay"></small>
                     </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <div class="income-side" id="incomeRefinery">
-                                <h6 class="income-side-title"><i class="fas fa-industry"></i> <span id="incomeRefineryTitle"></span></h6>
-                                <div class="income-row"><span>{{ trans('mining-manager::moons.income_tax') }}</span><span id="incomeRefineryTax"></span></div>
-                                <div class="income-row income-net" id="incomeRefineryNetRow"><span>{{ trans('mining-manager::moons.income_corporation') }}</span><span id="incomeRefineryNet"></span></div>
-                                <div class="income-row income-per-day"><span></span><span id="incomeRefineryPerDay"></span></div>
-                                <small class="d-block income-note mt-2" id="incomeMembers"></small>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="income-side" id="incomeMetenox">
-                                <h6 class="income-side-title"><i class="fas fa-satellite"></i> {{ trans('mining-manager::moons.income_metenox') }}</h6>
-                                <div class="income-row"><span>{{ trans('mining-manager::moons.income_materials') }}</span><span id="incomeMetenoxValue"></span></div>
-                                <div class="income-row income-net" id="incomeMetenoxNetRow"><span>{{ trans('mining-manager::moons.income_corporation') }}</span><span id="incomeMetenoxNet"></span></div>
-                                <div class="income-row income-per-day"><span></span><span id="incomeMetenoxPerDay"></span></div>
-                                <small class="d-block income-note mt-2" id="incomeBay"></small>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mm-notice" id="incomeVerdict"></div>
                     <div id="incomeNotices"></div>
 
                     <h6 class="mt-3"><i class="fas fa-flask"></i> {{ trans('mining-manager::moons.income_materials_title') }}</h6>
@@ -993,8 +967,8 @@
         'refined_headline' => trans('mining-manager::moons.refined_headline'),
         'ore_total' => trans('mining-manager::moons.ore_total'),
         'basis_ore' => trans('mining-manager::moons.basis_ore'),
-        'notice_tax_refined' => trans('mining-manager::moons.notice_tax_refined'),
-        'notice_tax_ore' => trans('mining-manager::moons.notice_tax_ore'),
+        'notice_basis_refined' => trans('mining-manager::moons.notice_basis_refined'),
+        'notice_basis_ore' => trans('mining-manager::moons.notice_basis_ore'),
         'notice_show_refined' => trans('mining-manager::moons.notice_show_refined'),
         'notice_show_ore' => trans('mining-manager::moons.notice_show_ore'),
         'notice_no_market_refined' => trans('mining-manager::moons.notice_no_market_refined'),
@@ -1050,12 +1024,8 @@
     ];
     if ($canSeeMoonIncome ?? false) {
         foreach ([
-            'income_title', 'income_intro_refined', 'income_intro_ore', 'income_share_moon',
-            'income_share_corporation', 'income_share_none', 'income_refinery', 'income_per_day',
-            'income_members_keep', 'income_bay', 'income_ahead_refinery', 'income_ahead_metenox',
-            'income_level', 'income_break_even', 'income_metenox_always', 'income_refinery_always',
-            'income_no_tax', 'income_no_moon_owner', 'income_before_fuel',
-            'income_unpriced_materials',
+            'income_title', 'income_intro', 'income_per_day', 'income_bay',
+            'income_before_fuel', 'income_unpriced_materials',
         ] as $incomeKey) {
             $moonLang[$incomeKey] = trans('mining-manager::moons.' . $incomeKey);
         }
@@ -1077,9 +1047,9 @@ let simulationBasis = @json($defaultBasis);
 // The refinery and rigs picked for the simulation. Null means "what is fitted
 // on our refinery at this moon", which is where each new moon starts.
 let rigChoice = null;
-// Which figure tax is worked out from. Separate from the one the page shows
+// Which figure mining values are worked out from. Separate from the one the page shows
 // first, so the two can disagree, and the page says so when they do.
-const TAX_BASIS = @json($taxBasis);
+const LEDGER_BASIS = @json($ledgerBasis);
 
 $(document).ready(function() {
     // Duration preset buttons
@@ -1105,7 +1075,6 @@ $(document).ready(function() {
     });
     $('#moonSelect').on('change', function() { rigChoice = null; });
 
-    $('#incomeShare').on('input change', updateIncome);
 
     // Keep preset buttons in sync with manual input
     $('#extractionDays').on('change', function() {
@@ -1338,43 +1307,26 @@ function displayResults(data) {
     toastr.success(MOON_LANG.simulation_complete);
 }
 
-// The income comparison the server sent, kept so the mined-share slider can
-// work the figures out again without another request.
-let incomeData = null;
-// The moon the slider was last set for. Re-running the same moon, say with
-// other rigs, keeps the share chosen; a new moon starts from its history.
-let incomeShareMoon = null;
-
 /**
- * Corporation income, a refinery against a Metenox. Only directors and admins
+ * What a Metenox Moon Drill here would collect. Only directors and admins
  * have the card, and only they get the figures from the server.
  */
 function renderIncome(data) {
     const $card = $('#incomeCard');
-    incomeData = data.income || null;
-    if (!$card.length || !incomeData) {
+    const income = data.income || null;
+    if (!$card.length || !income) {
         $card.hide();
         return;
     }
 
-    const income = incomeData;
-    const minedShare = income.mined_share || { share: 1, source: 'none', chunks: 0 };
-
-    if (incomeShareMoon !== data.moon_id) {
-        $('#incomeShare').val(Math.round((minedShare.share || 0) * 100));
-        incomeShareMoon = data.moon_id;
-    }
+    const metenox = income.metenox;
+    const days = income.days || 1;
 
     $('#incomeTitle').text(MOON_LANG.income_title.replace(':days', income.days));
-    $('#incomeIntro').text(income.tax_basis === 'refined' ? MOON_LANG.income_intro_refined : MOON_LANG.income_intro_ore);
-    $('#incomeShareSource').text(
-        minedShare.source === 'moon' ? MOON_LANG.income_share_moon.replace(':count', minedShare.chunks)
-            : minedShare.source === 'corporation' ? MOON_LANG.income_share_corporation.replace(':count', minedShare.chunks)
-            : MOON_LANG.income_share_none
-    );
-    $('#incomeRefineryTitle').text(MOON_LANG.income_refinery.replace(':hull', income.refinery.hull === 35836 ? 'Tatara' : 'Athanor'));
+    $('#incomeIntro').text(MOON_LANG.income_intro);
+    $('#incomeMetenoxValue').text(formatNumber(metenox.value) + ' ISK');
+    $('#incomeMetenoxPerDay').text(MOON_LANG.income_per_day.replace(':value', formatNumber(metenox.value / days)));
 
-    const metenox = income.metenox;
     if (metenox.bay_full_days) {
         $('#incomeBay').text(MOON_LANG.income_bay
             .replace(':m3', formatNumber(metenox.bay_m3))
@@ -1392,13 +1344,7 @@ function renderIncome(data) {
         </tr>
     `).join(''));
 
-    const notices = [];
-    if (!income.moon_owner_set) {
-        notices.push(['warn', MOON_LANG.income_no_moon_owner]);
-    } else if (!(income.refinery.tax > 0)) {
-        notices.push(['', MOON_LANG.income_no_tax]);
-    }
-    notices.push(['', MOON_LANG.income_before_fuel]);
+    const notices = [['', MOON_LANG.income_before_fuel]];
     if ((metenox.unpriced || []).length > 0) {
         notices.push(['warn', MOON_LANG.income_unpriced_materials.replace(':materials', metenox.unpriced.join(', '))]);
     }
@@ -1406,83 +1352,22 @@ function renderIncome(data) {
         $('<div class="mm-notice"></div>').toggleClass('mm-notice-warn', kind === 'warn').text(text)
     ));
 
-    updateIncome();
     $card.show();
 }
 
 /**
- * Work both sides out at the share on the slider, both before fuel.
- */
-function updateIncome() {
-    if (!incomeData) {
-        return;
-    }
-
-    const income = incomeData;
-    const refinery = income.refinery;
-    const metenox = income.metenox;
-    const share = (parseInt($('#incomeShare').val(), 10) || 0) / 100;
-    const percent = Math.round(share * 100);
-    const days = income.days || 1;
-    const tax = refinery.tax * share;
-    const refineryNet = tax;
-    const metenoxNet = metenox.value;
-
-    $('#incomeShareValue').text(percent + '%');
-
-    $('#incomeRefineryTax').text(formatNumber(tax) + ' ISK');
-    $('#incomeRefineryNet').text(formatNumber(refineryNet) + ' ISK');
-    $('#incomeRefineryNetRow').toggleClass('income-negative', refineryNet < 0);
-    $('#incomeRefineryPerDay').text(MOON_LANG.income_per_day.replace(':value', formatNumber(refineryNet / days)));
-    $('#incomeMembers').text(MOON_LANG.income_members_keep.replace(':value', formatNumber((refinery.value - refinery.tax) * share)));
-
-    $('#incomeMetenoxValue').text(formatNumber(metenox.value) + ' ISK');
-    $('#incomeMetenoxNet').text(formatNumber(metenoxNet) + ' ISK');
-    $('#incomeMetenoxNetRow').toggleClass('income-negative', metenoxNet < 0);
-    $('#incomeMetenoxPerDay').text(MOON_LANG.income_per_day.replace(':value', formatNumber(metenoxNet / days)));
-
-    const difference = refineryNet - metenoxNet;
-    const lines = [];
-    if (Math.abs(difference) < 1) {
-        lines.push(MOON_LANG.income_level.replace(':share', percent));
-    } else if (difference > 0) {
-        lines.push(MOON_LANG.income_ahead_refinery.replace(':share', percent).replace(':value', formatNumber(difference)));
-    } else {
-        lines.push(MOON_LANG.income_ahead_metenox.replace(':share', percent).replace(':value', formatNumber(-difference)));
-    }
-
-    // The share at which the two earn the same. The slider moves in whole
-    // percent, so rounding down names the last step where the refinery is
-    // not yet ahead; the nudge stops 0.57 * 100 = 56.99... landing a step low.
-    if (refinery.tax > 0) {
-        const breakEven = (metenoxNet + refineryFuel) / refinery.tax;
-        if (breakEven <= 0) {
-            lines.push(MOON_LANG.income_refinery_always);
-        } else if (breakEven >= 1) {
-            lines.push(MOON_LANG.income_metenox_always);
-        } else {
-            lines.push(MOON_LANG.income_break_even.replace(':share', Math.floor(breakEven * 100 + 1e-9)));
-        }
-    }
-    $('#incomeVerdict').text(lines.join(' '));
-
-    $('#incomeRefinery').toggleClass('income-ahead', difference >= 1);
-    $('#incomeMetenox').toggleClass('income-ahead', difference <= -1);
-}
-
-/**
  * The two notices under a simulation. One says when the figure shown first is
- * not the one tax uses. The other names missing prices, but only the ones that
+ * not the one mining values use. The other names missing prices, but only the ones that
  * touch the figure shown first: a raw ore with no market is normal and only
  * matters to the ore value, and a refined material with no price only matters
  * to the refined value.
  */
 function renderSimulationNotices(data) {
     const $basis = $('#basisNotice');
-    if (simulationBasis !== TAX_BASIS) {
-        const refined = TAX_BASIS === 'refined';
+    if (simulationBasis !== LEDGER_BASIS) {
+        const refined = LEDGER_BASIS === 'refined';
         $basis.empty()
-            .append(document.createTextNode(MOON_LANG[refined ? 'notice_tax_refined' : 'notice_tax_ore']))
+            .append(document.createTextNode(MOON_LANG[refined ? 'notice_basis_refined' : 'notice_basis_ore']))
             .append($('<button type="button" class="btn btn-sm btn-mm-primary switch-simulation-basis"></button>')
                 .text(MOON_LANG[refined ? 'notice_show_refined' : 'notice_show_ore']))
             .show();
@@ -1495,7 +1380,7 @@ function renderSimulationNotices(data) {
     const $prices = $('#unpricedOres');
 
     if (simulationBasis === 'ore' && unpricedOres.length > 0) {
-        const key = TAX_BASIS === 'refined' ? 'notice_no_market_refined' : 'notice_no_market_ore';
+        const key = LEDGER_BASIS === 'refined' ? 'notice_no_market_refined' : 'notice_no_market_ore';
         $prices.removeClass('mm-notice-warn')
             .text(MOON_LANG[key].replace(':ores', unpricedOres.join(', '))).show();
     } else if (simulationBasis === 'refined' && unpricedMaterials.length > 0) {
@@ -1507,34 +1392,34 @@ function renderSimulationNotices(data) {
 }
 
 /**
- * Above the Find Moons results. Ranking by ore value on an install that taxes
- * by refined value, or the other way round, compares moons on a figure tax
- * never uses.
+ * Above the Find Moons results. Ranking by ore value on an install that values
+ * mining by refined value, or the other way round, compares moons on a figure
+ * the mining pages never use.
  */
 function renderFinderNotice(basis) {
     const $notice = $('#finderBasisNotice');
 
-    if (basis === TAX_BASIS) {
+    if (basis === LEDGER_BASIS) {
         $notice.hide().empty();
         return;
     }
 
-    const refined = TAX_BASIS === 'refined';
+    const refined = LEDGER_BASIS === 'refined';
     $notice.empty()
-        .append(document.createTextNode(MOON_LANG[refined ? 'notice_tax_refined' : 'notice_tax_ore']))
+        .append(document.createTextNode(MOON_LANG[refined ? 'notice_basis_refined' : 'notice_basis_ore']))
         .append($('<button type="button" class="btn btn-sm btn-mm-primary switch-finder-basis"></button>')
             .text(MOON_LANG[refined ? 'notice_show_refined' : 'notice_show_ore']))
         .show();
 }
 
-// Switching puts the page on the figure tax uses. A simulation runs again so
+// Switching puts the page on the figure mining values use. A simulation runs again so
 // its "better moons nearby" compare on that figure too.
 $(document).on('click', '.switch-simulation-basis', function() {
-    simulationBasis = TAX_BASIS;
+    simulationBasis = LEDGER_BASIS;
     runSimulation();
 });
 $(document).on('click', '.switch-finder-basis', function() {
-    $('#finderBasis').val(TAX_BASIS);
+    $('#finderBasis').val(LEDGER_BASIS);
     runFinder(1);
 });
 

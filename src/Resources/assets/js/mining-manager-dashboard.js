@@ -375,7 +375,6 @@ MiningDashboard.updateRecentActivity = function(activities) {
 MiningDashboard.getActivityIcon = function(type) {
     const icons = {
         'mining': 'fas fa-gem',
-        'tax': 'fas fa-coins',
         'moon': 'fas fa-moon',
         'event': 'fas fa-calendar',
         'alert': 'fas fa-exclamation-triangle',

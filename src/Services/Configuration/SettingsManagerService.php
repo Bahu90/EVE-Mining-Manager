@@ -118,7 +118,7 @@ class SettingsManagerService
      *
      * Several commands set an active corporation on this service and leave it
      * set for the rest of their run. Anything written in that window lands on
-     * that corporation, which is right for a tax rate and wrong for a fact
+     * that corporation, which is right for a per-corporation setting and wrong for a fact
      * about the install, such as whether the price provider is answering:
      * those end up scattered across a row per corporation, each with its own
      * half of the story.
@@ -200,7 +200,7 @@ class SettingsManagerService
             Cache::forget($corpCacheKey);
         }
 
-        // Demoted from info to debug — bulk saves (saveTaxRates,
+        // Demoted from info to debug — bulk saves (saveNotificationSettings,
         // saveGeneralSettings) emit dozens of nearly-identical lines per
         // request. The controller-level batch-complete log line is what
         // operators actually want to see at info; per-key writes are
@@ -222,12 +222,11 @@ class SettingsManagerService
             'corporation_id' => $this->getSetting('general.corporation_id', config('mining-manager.general.corporation_id')),
             'corporation_name' => $this->getSetting('general.corporation_name', ''),
             'corporation_ticker' => $this->getSetting('general.corporation_ticker', ''),
-            // NOTE: Despite the name, this is effectively the "Tax Program Corporation ID".
-            // This corp owns the moons/structures AND runs the mining tax program.
-            // All tax invoices, theft detection, moon notifications, and ledger tracking
-            // are scoped to this corp — regardless of ore source (moon, belt, ice, gas).
-            // Webhook notifications for moon/theft/tax events are also filtered to only
-            // reach webhooks tied to this corp (see WebhookDispatchTrait::getMoonOwnerScopedWebhooks).
+            // The corporation that owns the moons and refineries. Moon
+            // notifications and ledger tracking are scoped to this corp,
+            // regardless of ore source (moon, belt, ice, gas). Webhook
+            // notifications for moon events are also filtered to only reach
+            // webhooks tied to this corp (see WebhookDispatchTrait::getMoonOwnerScopedWebhooks).
             // Other directors' corps on the same SeAT install are excluded from these notifications.
             'moon_owner_corporation_id' => $this->getSetting('general.moon_owner_corporation_id', config('mining-manager.general.moon_owner_corporation_id')),
 
@@ -242,9 +241,8 @@ class SettingsManagerService
             
             // Time Settings - Always UTC for consistency with EVE Online
             // These are hard-coded and not configurable to prevent issues with:
-            // - Moon rental bills alignment
             // - Corporation mining ledger timestamps
-            // - Tax month boundaries
+            // - Month boundaries
             'timezone' => 'UTC',
             'date_format' => 'Y-m-d',
             'time_format' => 'H:i:s',
@@ -254,104 +252,14 @@ class SettingsManagerService
             'items_per_page' => $this->getSetting('general.items_per_page', 25),
             'compact_mode' => $this->getSetting('general.compact_mode', false),
             'show_character_portraits' => $this->getSetting('general.show_character_portraits', true),
-
-            // Payment auto-match toggle. Surfaced here so the General settings
-            // blade can render the checkbox's current state. The canonical
-            // read site for runtime gating is getPaymentSettings().
-            'auto_match_payments' => (bool) $this->getSetting('payment.auto_match_payments', true),
-
-            // Accept payments from any of a player's characters (alt-aware
-            // match, v2.0.2+). Same surfacing-pattern as auto_match_payments:
-            // the canonical read site is `getPaymentSettings()`; the value
-            // is duplicated here so the General settings blade can render
-            // the checkbox without juggling two arrays. WalletTransferService
-            // consults `getPaymentSettings()['accept_alt_characters']` at
-            // match time.
-            'accept_alt_characters' => (bool) $this->getSetting('payment.accept_alt_characters', true),
-
-            // Roll the remainder of an oversized payment onto the payer's
-            // next-oldest unpaid invoice, and keep going until the money runs
-            // out. Covers the common "settles three months in one transfer"
-            // case without a director splitting it by hand. Off means a
-            // payment only ever touches the one invoice it was matched to.
-            'cascade_remainder' => (bool) $this->getSetting('payment.cascade_remainder', true),
-
-            // What to do with money left over once every open invoice is
-            // settled. On (default) parks it against the paying character and
-            // draws it down when their next invoice is calculated. Off
-            // discards it, which is the pre-allocation-ledger behaviour.
-            'hold_surplus_as_credit' => (bool) $this->getSetting('payment.hold_surplus_as_credit', true),
-
-            // A standing keyword a member can put in the transfer reason to
-            // pay ahead of being invoiced. Unlike a tax code it never expires
-            // and is the same for everyone, so it can be pinned in a corp MOTD.
-            // Empty disables the feature entirely.
-            'upfront_keyword' => trim((string) $this->getSettingForCorporation('payment.upfront_keyword', null, 'MM-UPFRONT')),
-
-            // The mirror of that, for money going the other way. A refund is a
-            // corporation_account_withdrawal to a character, and so is an SRP
-            // payout or any other reimbursement, so amount and recipient alone
-            // cannot tell them apart. Requiring this in the transfer reason
-            // means a refund only confirms against a transfer meant to be one.
-            // Global for the same reason the other is: one wallet, one keyword.
-            'refund_keyword' => trim((string) $this->getSettingForCorporation('payment.refund_keyword', null, 'MM-REFUND')),
-
-            // Surfaced here purely so the General tab can grey the keyword box
-            // out. The canonical read for runtime gating is getFeatureFlags().
-            'enable_upfront_payments' => (bool) $this->getSettingForCorporation('features.enable_upfront_payments', null, false),
-
-            // An invoice past its due date is treated as overdue for
-            // notification purposes unless this much of it is already paid.
-            // Guards the token-payment loophole: 1m against a 1b invoice is
-            // 0.1% paid, nowhere near settled, and should not buy the gentler
-            // wording forever. The default forgives rounding and price drift,
-            // which is the only honest reason to be slightly short. 0 restores
-            // the old behaviour where any payment at all softened the tone.
-            'overdue_paid_threshold_pct' => (float) $this->getSetting('payment.overdue_paid_threshold_pct', 95),
-
-            // Notification settings have moved to the dedicated Notifications tab
-            // See getNotificationSettings() for the new per-channel configuration
-
-            // Guest Miner Tax Rates (global, tied to Moon Owner Corporation)
-            // Read with Moon Owner Corp context since that's where they're stored
-            'guest_moon_ore_r64' => $this->getGuestRateSetting('guest_tax_rates.moon_ore.r64'),
-            'guest_moon_ore_r32' => $this->getGuestRateSetting('guest_tax_rates.moon_ore.r32'),
-            'guest_moon_ore_r16' => $this->getGuestRateSetting('guest_tax_rates.moon_ore.r16'),
-            'guest_moon_ore_r8' => $this->getGuestRateSetting('guest_tax_rates.moon_ore.r8'),
-            'guest_moon_ore_r4' => $this->getGuestRateSetting('guest_tax_rates.moon_ore.r4'),
-            'guest_ore_tax' => $this->getGuestRateSetting('guest_tax_rates.ore'),
-            'guest_ice_tax' => $this->getGuestRateSetting('guest_tax_rates.ice'),
-            'guest_gas_tax' => $this->getGuestRateSetting('guest_tax_rates.gas'),
-            'guest_abyssal_ore_tax' => $this->getGuestRateSetting('guest_tax_rates.abyssal_ore'),
-            'guest_triglavian_ore_tax' => $this->getGuestRateSetting('guest_tax_rates.triglavian_ore'),
         ];
     }
 
     /**
-     * Read a guest tax rate setting using Moon Owner Corp context.
-     *
-     * Guest rates are always stored under the Moon Owner Corporation's
-     * settings context, regardless of which corporation is currently active.
-     *
-     * @param string $key
-     * @return float
-     */
-    private function getGuestRateSetting(string $key): float
-    {
-        $moonOwnerCorpId = $this->getSetting('general.moon_owner_corporation_id');
-        if (!$moonOwnerCorpId) {
-            return 0;
-        }
-
-        $value = $this->getSettingForCorporation($key, (int) $moonOwnerCorpId);
-        return $value !== null ? (float) $value : 0;
-    }
-
-    /**
      * Get corporation ID (convenience method)
-     * Used throughout the plugin for tax calculations and data filtering.
+     * Used throughout the plugin for data filtering.
      *
-     * @deprecated Use getTaxProgramCorporationId() instead. This alias is kept
+     * @deprecated Use getMoonOwnerCorporationId() instead. This alias is kept
      *             for backward compatibility but delegates to the canonical
      *             accessor. The legacy `general.corporation_id` setting is no
      *             longer consulted.
@@ -359,7 +267,7 @@ class SettingsManagerService
      */
     public function getCorporationId(): ?int
     {
-        return $this->getTaxProgramCorporationId();
+        return $this->getMoonOwnerCorporationId();
     }
 
     /**
@@ -370,96 +278,23 @@ class SettingsManagerService
      */
     public function updateGeneralSettings(array $settings)
     {
-        // Map guest rate form field names to their guest_tax_rates.* setting keys
-        $guestRateKeyMap = [
-            'guest_moon_ore_r64' => 'guest_tax_rates.moon_ore.r64',
-            'guest_moon_ore_r32' => 'guest_tax_rates.moon_ore.r32',
-            'guest_moon_ore_r16' => 'guest_tax_rates.moon_ore.r16',
-            'guest_moon_ore_r8'  => 'guest_tax_rates.moon_ore.r8',
-            'guest_moon_ore_r4'  => 'guest_tax_rates.moon_ore.r4',
-            'guest_ore_tax'      => 'guest_tax_rates.ore',
-            'guest_ice_tax'      => 'guest_tax_rates.ice',
-            'guest_gas_tax'      => 'guest_tax_rates.gas',
-            'guest_abyssal_ore_tax' => 'guest_tax_rates.abyssal_ore',
-            'guest_triglavian_ore_tax' => 'guest_tax_rates.triglavian_ore',
-        ];
-
         DB::beginTransaction();
 
         try {
-            // Extract guest rates from settings before the main loop
-            $guestRates = [];
-            foreach ($guestRateKeyMap as $formKey => $settingKey) {
-                if (array_key_exists($formKey, $settings)) {
-                    $guestRates[$settingKey] = $settings[$formKey];
-                    unset($settings[$formKey]);
-                }
-            }
-
-            // Capture Moon Owner Corp ID before the loop (form value or existing DB value)
-            $moonOwnerCorpId = $settings['moon_owner_corporation_id']
-                ?? $this->getSetting('general.moon_owner_corporation_id');
-
-            // Save regular general settings
             foreach ($settings as $key => $value) {
                 // Moon Owner Corporation is ALWAYS global — single source of truth
                 // for which structures provide moon mining data, independent of
-                // corporation context (which only affects tax rates)
+                // corporation context.
                 if ($key === 'moon_owner_corporation_id') {
                     $savedContext = $this->activeCorporationId;
                     $this->activeCorporationId = null; // Force global save
                     $this->updateSetting('general.moon_owner_corporation_id', $value, 'integer');
                     $this->activeCorporationId = $savedContext;
-                } elseif ($key === 'payment_refund_keyword') {
-                    // Global, like the upfront keyword and for the same reason.
-                    $savedContext = $this->activeCorporationId;
-                    $this->activeCorporationId = null;
-                    $this->updateSetting('payment.refund_keyword', $value);
-                    $this->activeCorporationId = $savedContext;
-                } elseif ($key === 'payment_upfront_keyword') {
-                    // Global for the same reason the moon owner corp is. There
-                    // is one tax program and one wallet it reads, so one keyword
-                    // serves every configured corporation. Saved per-corp it
-                    // would land in a context the matcher never reads, and the
-                    // feature would silently do nothing.
-                    $savedContext = $this->activeCorporationId;
-                    $this->activeCorporationId = null;
-                    $this->updateSetting('payment.upfront_keyword', $value);
-                    $this->activeCorporationId = $savedContext;
-                } elseif (in_array($key, [
-                    'payment_match_tolerance',
-                    'payment_grace_period_hours',
-                    'payment_auto_match_payments',
-                    'payment_accept_alt_characters',
-                    'payment_cascade_remainder',
-                    'payment_hold_surplus_as_credit',
-                    'payment_overdue_paid_threshold_pct',
-                ])) {
-                    // Payment settings use payment. prefix instead of general.
-                    // form input `payment_<x>` → setting key `payment.<x>`.
-                    $settingKey = str_replace('payment_', 'payment.', $key);
-                    $this->updateSetting($settingKey, $value);
                 } else {
                     $this->updateSetting('general.' . $key, $value);
                 }
             }
 
-            // Save guest rates with Moon Owner Corp context
-            if (!empty($guestRates)) {
-                if ($moonOwnerCorpId) {
-                    $savedContext = $this->activeCorporationId;
-                    $this->activeCorporationId = (int) $moonOwnerCorpId;
-
-                    foreach ($guestRates as $settingKey => $value) {
-                        $this->updateSetting($settingKey, $value, 'float');
-                    }
-
-                    $this->activeCorporationId = $savedContext;
-                } else {
-                    Log::warning('Mining Manager: Cannot save guest tax rates — no Moon Owner Corporation configured');
-                }
-            }
-
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -468,575 +303,15 @@ class SettingsManagerService
     }
 
     /**
-     * Get payment settings
-     *
-     * @return array
-     */
-    public function getPaymentSettings(): array
-    {
-        // Primary source: tax_rates.tax_payment_method (set by UI)
-        // Fallback: payment.method (legacy path)
-        $method = $this->getSetting('tax_rates.tax_payment_method',
-            $this->getSetting('payment.method', 'wallet')
-        );
-
-        $division = (int) $this->getSetting('tax_rates.tax_wallet_division',
-            $this->getSetting('payment.wallet_division', 1)
-        );
-
-        // Backwards compatibility: convert 1000-1007 to 1-7
-        if ($division >= 1000) {
-            $division = $division - 999;
-        }
-
-        return [
-            'method' => $method,
-            'wallet_division' => $division,
-            'grace_period_hours' => $this->getSetting('payment.grace_period_hours', 24),
-            'match_tolerance' => $this->getSetting('payment.match_tolerance', 100),
-            'minimum_tax_amount' => (float) $this->getSetting('payment.minimum_tax_amount',
-                config('mining-manager.tax_payment.minimum_tax_amount', 1000000)),
-            // Auto-match toggle, read by the scheduled verify-payments run.
-            // true (default) applies a matched payment as soon as it is found;
-            // false detects the match and leaves it on the wallet verification
-            // page for someone to confirm. Useful for installs that want a
-            // human-review step before any invoice is updated.
-            'auto_match_payments' => (bool) $this->getSetting('payment.auto_match_payments', true),
-
-            // Read by PaymentAllocationService when deciding how far a payment
-            // reaches. Surfaced in getGeneralSettings() as well so the settings
-            // blade can render the checkboxes.
-            'cascade_remainder' => (bool) $this->getSetting('payment.cascade_remainder', true),
-            'hold_surplus_as_credit' => (bool) $this->getSetting('payment.hold_surplus_as_credit', true),
-
-            // A standing keyword a member can put in the transfer reason to
-            // pay ahead of being invoiced. Unlike a tax code it never expires
-            // and is the same for everyone, so it can be pinned in a corp MOTD.
-            // Empty disables the feature entirely.
-            'upfront_keyword' => trim((string) $this->getSettingForCorporation('payment.upfront_keyword', null, 'MM-UPFRONT')),
-
-            // The mirror of that, for money going the other way. A refund is a
-            // corporation_account_withdrawal to a character, and so is an SRP
-            // payout or any other reimbursement, so amount and recipient alone
-            // cannot tell them apart. Requiring this in the transfer reason
-            // means a refund only confirms against a transfer meant to be one.
-            // Global for the same reason the other is: one wallet, one keyword.
-            'refund_keyword' => trim((string) $this->getSettingForCorporation('payment.refund_keyword', null, 'MM-REFUND')),
-
-            // An invoice past its due date is treated as overdue for
-            // notification purposes unless this much of it is already paid.
-            // Guards the token-payment loophole: 1m against a 1b invoice is
-            // 0.1% paid, nowhere near settled, and should not buy the gentler
-            // wording forever. The default forgives rounding and price drift,
-            // which is the only honest reason to be slightly short. 0 restores
-            // the old behaviour where any payment at all softened the tone.
-            'overdue_paid_threshold_pct' => (float) $this->getSetting('payment.overdue_paid_threshold_pct', 95),
-            // Accept payments from any of a player's characters, not just
-            // the exact taxed character. Players routinely send ISK from
-            // their wallet-richest alt rather than the alt that mined the
-            // ore, so before v2.0.2 those payments dropped on the floor
-            // as 'unmatched' even though the tax code was correct. With
-            // this on (default), MM matches tax-code-bearing transactions
-            // when the paying character shares a SeAT user_id with the
-            // taxed character. Set to false for stricter per-character
-            // matching (rare; only useful in installs where each
-            // character is its own SeAT account).
-            'accept_alt_characters' => (bool) $this->getSetting('payment.accept_alt_characters', true),
-        ];
-    }
-
-    /**
-     * Get the Tax Program Corporation ID — the single source of truth for
-     * "which corporation runs this SeAT install's mining tax program".
-     *
-     * Historical note: this value lives in the `general.moon_owner_corporation_id`
-     * setting key (preserved to avoid migrations on released installs). The name
-     * `moon_owner_corporation_id` is legacy — it refers to the corp that owns
-     * the moons/structures, which in practice is also the corp collecting taxes
-     * from miners mining those structures. Use this accessor everywhere instead
-     * of reading the raw setting to make intent clear.
-     *
-     * The older `general.corporation_id` setting (used in early versions as a
-     * "currently selected" UI-state value) is no longer consulted — it was
-     * unreliable (often empty at global scope) and semantically redundant.
+     * The Moon Owner Corporation: the corporation that owns the moons and
+     * refineries this install tracks. Stored as general.moon_owner_corporation_id.
      *
      * @return int|null
      */
-    public function getTaxProgramCorporationId(): ?int
+    public function getMoonOwnerCorporationId(): ?int
     {
         $value = $this->getSetting('general.moon_owner_corporation_id');
         return $value ? (int) $value : null;
-    }
-
-    /**
-     * Get the display name for the configured wallet division.
-     *
-     * @return string
-     */
-    public function getWalletDivisionName(): string
-    {
-        $paymentSettings = $this->getPaymentSettings();
-        $division = $paymentSettings['wallet_division'];
-        $moonOwnerCorpId = $this->getSetting('general.moon_owner_corporation_id');
-
-        $defaultNames = [
-            1 => 'Master Wallet',
-            2 => '2nd Wallet Division',
-            3 => '3rd Wallet Division',
-            4 => '4th Wallet Division',
-            5 => '5th Wallet Division',
-            6 => '6th Wallet Division',
-            7 => '7th Wallet Division',
-        ];
-
-        if ($moonOwnerCorpId) {
-            try {
-                $name = DB::table('corporation_divisions')
-                    ->where('corporation_id', $moonOwnerCorpId)
-                    ->where('type', 'wallet')
-                    ->where('division', $division)
-                    ->value('name');
-
-                if (!empty($name)) {
-                    return $name;
-                }
-            } catch (\Exception $e) {
-                // Fall through to default
-            }
-        }
-
-        return $defaultNames[$division] ?? "Division {$division}";
-    }
-
-    /**
-     * Update payment settings
-     *
-     * @param array $settings
-     * @return void
-     */
-    public function updatePaymentSettings(array $settings)
-    {
-        DB::beginTransaction();
-        
-        try {
-            foreach ($settings as $key => $value) {
-                $this->updateSetting('payment.' . $key, $value);
-            }
-            
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    }
-
-    /**
-     * Get tax rates
-     * FIXED: Now retrieves correct field names matching the actual form
-     *
-     * @return array
-     */
-    public function getTaxRates(): array
-    {
-        return [
-            // Moon ore tax rates by rarity (percentage)
-            'moon_ore' => [
-                'r64' => $this->getSetting('tax_rates.moon_ore.r64', config('mining-manager.tax_rates.moon_ore.r64', 15.0)),
-                'r32' => $this->getSetting('tax_rates.moon_ore.r32', config('mining-manager.tax_rates.moon_ore.r32', 12.0)),
-                'r16' => $this->getSetting('tax_rates.moon_ore.r16', config('mining-manager.tax_rates.moon_ore.r16', 10.0)),
-                'r8' => $this->getSetting('tax_rates.moon_ore.r8', config('mining-manager.tax_rates.moon_ore.r8', 8.0)),
-                'r4' => $this->getSetting('tax_rates.moon_ore.r4', config('mining-manager.tax_rates.moon_ore.r4', 5.0)),
-            ],
-
-            // Regular ore type tax rates (percentage)
-            'ice' => $this->getSetting('tax_rates.ice', config('mining-manager.tax_rates.ice', 10.0)),
-            'ore' => $this->getSetting('tax_rates.ore', config('mining-manager.tax_rates.ore', 10.0)),
-            'gas' => $this->getSetting('tax_rates.gas', config('mining-manager.tax_rates.gas', 10.0)),
-            'abyssal_ore' => $this->getSetting('tax_rates.abyssal_ore', config('mining-manager.tax_rates.abyssal_ore', 15.0)),
-            'triglavian_ore' => $this->getSetting('tax_rates.triglavian_ore', config('mining-manager.tax_rates.triglavian_ore', 10.0)),
-
-            // Mining event bonuses (percentage reduction)
-            'event_bonus' => $this->getSetting('tax_rates.event_bonus', config('mining-manager.tax_rates.event_bonus', 2.0)),
-
-            // Tax Payment Method
-            'tax_payment_method' => $this->getSetting('tax_rates.tax_payment_method', 'wallet'),
-            'tax_payment_form' => $this->getSetting('tax_rates.payment_form', 'isk'),
-            'ore_contracts_since' => $this->getSetting('tax_rates.ore_contracts_since'),
-            'tax_wallet_division' => $this->getSetting('tax_rates.tax_wallet_division', 1000),
-
-            // Tax Code Settings
-            'tax_code_prefix' => $this->getSetting('tax_rates.tax_code_prefix', 'TAX-'),
-            'tax_code_length' => $this->getSetting('tax_rates.tax_code_length', 6),
-            'auto_generate_tax_codes' => $this->getSetting('tax_rates.auto_generate_tax_codes', true),
-
-            // Tax Period Settings
-            'tax_calculation_period' => $this->getSetting('tax_rates.tax_calculation_period', 'monthly'),
-            'tax_calculation_period_pending' => $this->getSetting('tax_rates.tax_calculation_period_pending', null),
-            'tax_calculation_period_effective_from' => $this->getSetting('tax_rates.tax_calculation_period_effective_from', null),
-            'tax_payment_deadline_days' => $this->getSetting('tax_rates.tax_payment_deadline_days', 7),
-        ];
-    }
-
-    /**
-     * Get tax rates for a specific corporation.
-     * If the character is a guest miner (not from any configured corporation),
-     * uses guest miner tax rates from the Moon Owner Corp config.
-     * Guest rate = 0 means actual 0% tax (no fallback to corp rates).
-     *
-     * @param int|null $characterCorporationId The corporation ID of the character being taxed
-     * @return array
-     */
-    public function getTaxRatesForCorporation(?int $characterCorporationId): array
-    {
-        // Get base (corp member) tax rates
-        $corpTaxRates = $this->getTaxRates();
-
-        // If no character corporation ID provided, use corp rates
-        if (!$characterCorporationId) {
-            return $corpTaxRates;
-        }
-
-        // Build list of "home" corporations: configured corps + moon owner corp
-        // Anyone NOT in this list is a guest miner
-        $homeCorporationIds = $this->getHomeCorporationIds();
-
-        // If no corporations configured at all, treat everyone as corp member
-        if (empty($homeCorporationIds)) {
-            return $corpTaxRates;
-        }
-
-        // If the character belongs to any configured corporation, use corp member rates
-        if (in_array((int) $characterCorporationId, $homeCorporationIds, true)) {
-            return $corpTaxRates;
-        }
-
-        // Character is a guest miner — guest rates from Moon Owner Corp config
-        // Guest rate = 0 means actual 0% tax, NOT "use corp rate"
-        // Only falls back to corp rate if the guest rate setting does not exist (null)
-        $moonOwnerCorpId = $this->getSetting('general.moon_owner_corporation_id');
-        $savedContext = $this->activeCorporationId;
-        if ($moonOwnerCorpId) {
-            $this->activeCorporationId = (int) $moonOwnerCorpId;
-        }
-
-        $guestRates = $corpTaxRates; // Start with corp rates as fallback for unconfigured fields
-
-        // Guest moon ore rates — null = not configured (use corp rate), 0 = actual 0%
-        foreach (['r64', 'r32', 'r16', 'r8', 'r4'] as $rarity) {
-            $guestRate = $this->getSetting("guest_tax_rates.moon_ore.{$rarity}");
-            if ($guestRate !== null) {
-                $guestRates['moon_ore'][$rarity] = (float) $guestRate;
-            }
-        }
-
-        // Guest regular ore/ice/gas/abyssal/triglavian rates
-        $guestIceRate = $this->getSetting('guest_tax_rates.ice');
-        if ($guestIceRate !== null) {
-            $guestRates['ice'] = (float) $guestIceRate;
-        }
-
-        $guestOreRate = $this->getSetting('guest_tax_rates.ore');
-        if ($guestOreRate !== null) {
-            $guestRates['ore'] = (float) $guestOreRate;
-        }
-
-        $guestGasRate = $this->getSetting('guest_tax_rates.gas');
-        if ($guestGasRate !== null) {
-            $guestRates['gas'] = (float) $guestGasRate;
-        }
-
-        $guestAbyssalRate = $this->getSetting('guest_tax_rates.abyssal_ore');
-        if ($guestAbyssalRate !== null) {
-            $guestRates['abyssal_ore'] = (float) $guestAbyssalRate;
-        }
-
-        $guestTriglavianRate = $this->getSetting('guest_tax_rates.triglavian_ore');
-        if ($guestTriglavianRate !== null) {
-            $guestRates['triglavian_ore'] = (float) $guestTriglavianRate;
-        }
-
-        // Restore context
-        $this->activeCorporationId = $savedContext;
-
-        return $guestRates;
-    }
-
-    /**
-     * Update tax rates
-     * COMPLETELY REWRITTEN: Now handles all form fields including moon ore rarities,
-     * exemptions, tax selectors, and all other settings
-     *
-     * @param array $rates
-     * @return void
-     */
-    public function updateTaxRates(array $rates)
-    {
-        DB::beginTransaction();
-
-        try {
-            // Update moon ore rarity rates (from individual form fields)
-            if (isset($rates['moon_ore_r64'])) {
-                $this->updateSetting('tax_rates.moon_ore.r64', $rates['moon_ore_r64'], 'float');
-            }
-            if (isset($rates['moon_ore_r32'])) {
-                $this->updateSetting('tax_rates.moon_ore.r32', $rates['moon_ore_r32'], 'float');
-            }
-            if (isset($rates['moon_ore_r16'])) {
-                $this->updateSetting('tax_rates.moon_ore.r16', $rates['moon_ore_r16'], 'float');
-            }
-            if (isset($rates['moon_ore_r8'])) {
-                $this->updateSetting('tax_rates.moon_ore.r8', $rates['moon_ore_r8'], 'float');
-            }
-            if (isset($rates['moon_ore_r4'])) {
-                $this->updateSetting('tax_rates.moon_ore.r4', $rates['moon_ore_r4'], 'float');
-            }
-
-            // Update regular ore type rates
-            if (isset($rates['ore_tax'])) {
-                $this->updateSetting('tax_rates.ore', $rates['ore_tax'], 'float');
-            }
-            if (isset($rates['ice_tax'])) {
-                $this->updateSetting('tax_rates.ice', $rates['ice_tax'], 'float');
-            }
-            if (isset($rates['gas_tax'])) {
-                $this->updateSetting('tax_rates.gas', $rates['gas_tax'], 'float');
-            }
-            if (isset($rates['abyssal_ore_tax'])) {
-                $this->updateSetting('tax_rates.abyssal_ore', $rates['abyssal_ore_tax'], 'float');
-            }
-            if (isset($rates['triglavian_ore_tax'])) {
-                $this->updateSetting('tax_rates.triglavian_ore', $rates['triglavian_ore_tax'], 'float');
-            }
-
-            // Guest miner tax rates have moved to General Settings (tied to Moon Owner Corporation).
-            // See updateGeneralSettings() for the new save path.
-            // Legacy support: if guest rate keys are somehow present, still save them.
-            $guestKeys = [
-                'guest_moon_ore_r64' => 'guest_tax_rates.moon_ore.r64',
-                'guest_moon_ore_r32' => 'guest_tax_rates.moon_ore.r32',
-                'guest_moon_ore_r16' => 'guest_tax_rates.moon_ore.r16',
-                'guest_moon_ore_r8'  => 'guest_tax_rates.moon_ore.r8',
-                'guest_moon_ore_r4'  => 'guest_tax_rates.moon_ore.r4',
-                'guest_ore_tax'      => 'guest_tax_rates.ore',
-                'guest_ice_tax'      => 'guest_tax_rates.ice',
-                'guest_gas_tax'      => 'guest_tax_rates.gas',
-                'guest_abyssal_ore_tax' => 'guest_tax_rates.abyssal_ore',
-                'guest_triglavian_ore_tax' => 'guest_tax_rates.triglavian_ore',
-            ];
-            foreach ($guestKeys as $formKey => $settingKey) {
-                if (isset($rates[$formKey])) {
-                    $this->updateSetting($settingKey, $rates[$formKey], 'float');
-                }
-            }
-
-            // Update exemption settings
-            if (isset($rates['exemption_enabled'])) {
-                $this->updateSetting('exemptions.enabled', $rates['exemption_enabled'], 'boolean');
-            }
-            if (isset($rates['exemption_threshold'])) {
-                $this->updateSetting('exemptions.threshold', $rates['exemption_threshold'], 'float');
-            }
-            if (isset($rates['grace_period_days'])) {
-                $this->updateSetting('exemptions.grace_period_days', $rates['grace_period_days'], 'integer');
-            }
-
-            // Minimum tax amount and behavior
-            if (isset($rates['minimum_tax_amount'])) {
-                $this->updateSetting('payment.minimum_tax_amount', $rates['minimum_tax_amount'], 'float');
-            }
-            if (isset($rates['minimum_tax_behavior'])) {
-                $this->updateSetting('payment.minimum_tax_behavior', $rates['minimum_tax_behavior'], 'string');
-            }
-
-            // Update tax selector - moon ore flags
-            if (isset($rates['all_moon_ore'])) {
-                $this->updateSetting('tax_selector.all_moon_ore', $rates['all_moon_ore'], 'boolean');
-            }
-            if (isset($rates['only_corp_moon_ore'])) {
-                $this->updateSetting('tax_selector.only_corp_moon_ore', $rates['only_corp_moon_ore'], 'boolean');
-            }
-            if (isset($rates['no_moon_ore'])) {
-                $this->updateSetting('tax_selector.no_moon_ore', $rates['no_moon_ore'], 'boolean');
-            }
-
-            // Update tax selector - ore type flags
-            if (isset($rates['tax_regular_ore'])) {
-                $this->updateSetting('tax_selector.ore', $rates['tax_regular_ore'], 'boolean');
-            }
-            if (isset($rates['tax_ice'])) {
-                $this->updateSetting('tax_selector.ice', $rates['tax_ice'], 'boolean');
-            }
-            if (isset($rates['tax_gas'])) {
-                $this->updateSetting('tax_selector.gas', $rates['tax_gas'], 'boolean');
-            }
-            if (isset($rates['tax_abyssal_ore'])) {
-                $this->updateSetting('tax_selector.abyssal_ore', $rates['tax_abyssal_ore'], 'boolean');
-            }
-            if (isset($rates['tax_triglavian_ore'])) {
-                $this->updateSetting('tax_selector.triglavian_ore', $rates['tax_triglavian_ore'], 'boolean');
-            }
-
-            // Update tax payment method
-            if (isset($rates['tax_payment_method'])) {
-                $this->updateSetting('tax_rates.tax_payment_method', $rates['tax_payment_method'], 'string');
-            }
-            if (isset($rates['tax_wallet_division'])) {
-                $this->updateSetting('tax_rates.tax_wallet_division', $rates['tax_wallet_division'], 'integer');
-            }
-
-            // Update tax code settings
-            if (isset($rates['tax_code_prefix'])) {
-                $this->updateSetting('tax_rates.tax_code_prefix', $rates['tax_code_prefix'], 'string');
-            }
-            if (isset($rates['tax_code_length'])) {
-                $this->updateSetting('tax_rates.tax_code_length', $rates['tax_code_length'], 'integer');
-            }
-            if (isset($rates['auto_generate_tax_codes'])) {
-                $this->updateSetting('tax_rates.auto_generate_tax_codes', $rates['auto_generate_tax_codes'], 'boolean');
-            }
-
-            // Update tax period settings.
-            //
-            // Period-type changes are QUEUED to the first of the next calendar
-            // month instead of applied immediately. mining_taxes unique key is
-            // (character_id, period_start) — biweekly H1 and monthly April both
-            // target period_start = 2026-04-01, so switching mid-month can
-            // orphan rows or silently overwrite period_type on --force recalc.
-            // Deferring to a month boundary sidesteps both.
-            //
-            // The "apply now" path (for power users / fresh installs with no
-            // existing taxes) uses the tax_calculation_period_apply_now flag.
-            // That bypasses the queue and writes directly to the active slot.
-            if (isset($rates['tax_calculation_period'])) {
-                $requested = $rates['tax_calculation_period'];
-
-                // Defense in depth: weekly was removed as a selectable period
-                // type in v1.0.3+. If a caller somehow passes 'weekly' (e.g.
-                // via a direct updateTaxRates() call or a bypassed form),
-                // coerce to 'monthly' and log it. Prevents the legacy value
-                // from being re-introduced into the settings store.
-                if ($requested === 'weekly') {
-                    \Illuminate\Support\Facades\Log::warning(
-                        'Mining Manager: Attempted to set tax_calculation_period to deprecated "weekly"; coerced to "monthly". Use biweekly for sub-monthly periods.'
-                    );
-                    $requested = 'monthly';
-                }
-
-                $currentActive = $this->getSetting('tax_rates.tax_calculation_period', 'monthly');
-                $applyNow = !empty($rates['tax_calculation_period_apply_now']);
-
-                if ($requested === $currentActive) {
-                    // No-op — also clear any stale pending queue.
-                    $this->updateSetting('tax_rates.tax_calculation_period_pending', null, 'string');
-                    $this->updateSetting('tax_rates.tax_calculation_period_effective_from', null, 'string');
-                } elseif ($applyNow) {
-                    // Power-user override: change takes effect immediately.
-                    $this->updateSetting('tax_rates.tax_calculation_period', $requested, 'string');
-                    $this->updateSetting('tax_rates.tax_calculation_period_pending', null, 'string');
-                    $this->updateSetting('tax_rates.tax_calculation_period_effective_from', null, 'string');
-                } else {
-                    // Queue with a lookahead effective date that lets the old
-                    // scheme finish calculating the current month before the
-                    // new scheme takes over. See TaxPeriodHelper::nextSafeEffectiveDate
-                    // for the rationale — TL;DR: day 3 of next month, not day 1,
-                    // because day 2 is when both biweekly and monthly schedule
-                    // their previous-period calcs.
-                    $periodHelper = app(\MiningManager\Services\Tax\TaxPeriodHelper::class);
-                    $effectiveFrom = $periodHelper->nextSafeEffectiveDate()->toDateString();
-                    $this->updateSetting('tax_rates.tax_calculation_period_pending', $requested, 'string');
-                    $this->updateSetting('tax_rates.tax_calculation_period_effective_from', $effectiveFrom, 'string');
-                }
-            }
-            if (isset($rates['tax_payment_deadline_days'])) {
-                $this->updateSetting('tax_rates.tax_payment_deadline_days', $rates['tax_payment_deadline_days'], 'integer');
-            }
-
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    }
-
-    /**
-     * Get tax selector settings
-     * UPDATED: Added no_moon_ore flag for completeness
-     *
-     * @return array
-     */
-    public function getTaxSelector(): array
-    {
-        return [
-            // Moon ore selector (mutually exclusive)
-            'all_moon_ore' => $this->getSetting('tax_selector.all_moon_ore', true),
-            'only_corp_moon_ore' => $this->getSetting('tax_selector.only_corp_moon_ore', false),
-            'no_moon_ore' => $this->getSetting('tax_selector.no_moon_ore', false),
-
-            // Other ore types (independent checkboxes)
-            'ore' => $this->getSetting('tax_selector.ore', true),
-            'ice' => $this->getSetting('tax_selector.ice', true),
-            'gas' => $this->getSetting('tax_selector.gas', false),
-            'abyssal_ore' => $this->getSetting('tax_selector.abyssal_ore', false),
-            'triglavian_ore' => $this->getSetting('tax_selector.triglavian_ore', false),
-        ];
-    }
-
-    /**
-     * Update tax selector
-     *
-     * @param array $selector
-     * @return void
-     */
-    public function updateTaxSelector(array $selector)
-    {
-        DB::beginTransaction();
-        
-        try {
-            foreach ($selector as $key => $value) {
-                $this->updateSetting("tax_selector.{$key}", $value, 'boolean');
-            }
-            
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
-    }
-
-    /**
-     * Get exemptions
-     *
-     * @return array
-     */
-    public function getExemptions(): array
-    {
-        return [
-            'enabled' => $this->getSetting('exemptions.enabled', false),
-            'threshold' => $this->getSetting('exemptions.threshold', 1000000),  // 1M ISK default
-            'grace_period_days' => $this->getSetting('exemptions.grace_period_days', 7),
-        ];
-    }
-
-    /**
-     * Update exemptions
-     *
-     * @param array $exemptions
-     * @return void
-     */
-    public function updateExemptions(array $exemptions)
-    {
-        DB::beginTransaction();
-        
-        try {
-            foreach ($exemptions as $key => $value) {
-                $this->updateSetting("exemptions.{$key}", $value);
-            }
-            
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            throw $e;
-        }
     }
 
     /**
@@ -1128,12 +403,10 @@ class SettingsManagerService
     /**
      * The types with a card on Settings > Notifications, which is where a
      * type's master switch and role ping are set. Saving that page writes
-     * these types only. A type with no card, such as the outstanding tax
-     * digest, keeps what is stored for it, or the defaults: on, no role ping.
+     * these types only. A type with no card keeps what is stored for it, or
+     * the defaults: on, no role ping.
      */
     public const NOTIFICATION_TYPES = [
-        // Tax
-        'tax_generated', 'tax_announcement', 'tax_invoice', 'tax_overdue', 'tax_outstanding_digest',
         // Events
         'event_created', 'event_started', 'event_completed',
         // Moon
@@ -1145,8 +418,6 @@ class SettingsManagerService
         'metenox_cargo_full',
         // Plugin health
         'price_provider', 'moon_scan_missing',
-        // Theft
-        'theft_detected', 'critical_theft', 'active_theft', 'incident_resolved',
         // Reports
         'report_generated',
     ];
@@ -1157,8 +428,6 @@ class SettingsManagerService
      * round, and a box missing from its list would save as off.
      */
     public const SLACK_NOTIFICATION_TYPES = [
-        // Tax
-        'tax_generated', 'tax_announcement', 'tax_invoice', 'tax_overdue',
         // Events
         'event_created', 'event_started', 'event_completed',
         // Moon
@@ -1167,11 +436,8 @@ class SettingsManagerService
         // Planner
         'next_extraction_planned', 'schedule_mismatch', 'refinery_gone', 'extraction_cancelled',
         'moon_not_rescheduled', 'schedule_needs_filling',
-        'tax_outstanding_digest',
         // Plugin health
         'price_provider', 'moon_scan_missing',
-        // Theft
-        'theft_detected', 'critical_theft', 'active_theft', 'incident_resolved',
         // Reports
         'report_generated',
     ];
@@ -1260,7 +526,7 @@ class SettingsManagerService
     /**
      * Get per-type notification settings for a specific type
      *
-     * @param string $type Notification type key (e.g., 'tax_invoice')
+     * @param string $type Notification type key (e.g., 'moon_ready')
      * @return array ['ping_role' => bool, 'role_id' => string|null, 'ping_user' => bool, 'show_amount' => bool]
      */
     public function getTypeNotificationSettings(string $type): array
@@ -1361,7 +627,6 @@ class SettingsManagerService
     {
         return [
             // Core features
-            'enable_tax_tracking' => (bool) $this->getSetting('features.enable_tax_tracking', true),
             'enable_ledger_tracking' => (bool) $this->getSetting('features.enable_ledger_tracking', true),
             'enable_analytics' => (bool) $this->getSetting('features.enable_analytics', true),
             'enable_reports' => (bool) $this->getSetting('features.enable_reports', true),
@@ -1381,14 +646,9 @@ class SettingsManagerService
 
             // Automation
             'auto_process_ledger' => (bool) $this->getSetting('features.auto_process_ledger', true),
-            'auto_calculate_taxes' => (bool) $this->getSetting('features.auto_calculate_taxes', true),
-            'auto_generate_invoices' => (bool) $this->getSetting('features.auto_generate_invoices', true),
-            'verify_wallet_transactions' => (bool) $this->getSetting('features.verify_wallet_transactions', true),
-            'enable_upfront_payments' => (bool) $this->getSettingForCorporation('features.enable_upfront_payments', null, false),
 
             // Data retention
             'ledger_retention_days' => (int) $this->getSetting('features.ledger_retention_days', 365),
-            'tax_record_retention_days' => (int) $this->getSetting('features.tax_record_retention_days', 730),
             'auto_cleanup_old_data' => (bool) $this->getSetting('features.auto_cleanup_old_data', false),
         ];
     }
@@ -1406,19 +666,6 @@ class SettingsManagerService
         try {
             foreach ($features as $key => $value) {
                 $type = is_bool($value) ? 'boolean' : (is_int($value) ? 'integer' : 'string');
-
-                // Upfront payments is global, for the same reason the keyword
-                // is. The wallet matcher runs as one corporation, the moon
-                // owner, so a flag saved against any other corporation is never
-                // consulted: the box would tick and nothing would change.
-                if ($key === 'enable_upfront_payments') {
-                    $savedContext = $this->activeCorporationId;
-                    $this->activeCorporationId = null;
-                    $this->updateSetting("features.{$key}", $value, $type);
-                    $this->activeCorporationId = $savedContext;
-
-                    continue;
-                }
 
                 $this->updateSetting("features.{$key}", $value, $type);
             }

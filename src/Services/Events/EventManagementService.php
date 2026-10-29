@@ -164,13 +164,12 @@ class EventManagementService
             'start_time' => $data['start_time'],
             'end_time' => $data['end_time'] ?? null,
             'solar_system_id' => $data['solar_system_id'] ?? null,
-            'tax_modifier' => $data['tax_modifier'] ?? 0,
             'corporation_id' => $data['corporation_id'] ?? null,
             'status' => $data['status'] ?? 'planned',
             'created_by' => $data['created_by'] ?? auth()->id(),
         ]);
 
-        Log::info("Mining Manager: Created mining event {$event->id}: {$event->name} (Tax Modifier: {$event->tax_modifier}%)");
+        Log::info("Mining Manager: Created mining event {$event->id}: {$event->name}");
 
         return $event;
     }
@@ -270,7 +269,7 @@ class EventManagementService
 
         $event = $event->fresh();
 
-        Log::info("Mining Manager: Event {$eventId} completed. Total mined: " . number_format($event->total_mined) . ", Participants: {$event->participant_count}, Tax Modifier: {$event->tax_modifier}%");
+        Log::info("Mining Manager: Event {$eventId} completed. Total mined: " . number_format($event->total_mined) . ", Participants: {$event->participant_count}");
 
         // Dispatch 'event_completed' webhook notification
         try {
@@ -474,8 +473,6 @@ class EventManagementService
         return [
             'total_participants' => $participants->count(),
             'total_mined' => $participants->sum('quantity_mined'),
-            'tax_modifier' => $event->tax_modifier,
-            'tax_modifier_label' => $event->getTaxModifierLabel(),
             'average_per_participant' => $participants->count() > 0
                 ? $participants->sum('quantity_mined') / $participants->count()
                 : 0,
@@ -623,13 +620,6 @@ class EventManagementService
             }
         }
 
-        // Check tax modifier range
-        if (isset($data['tax_modifier'])) {
-            if ($data['tax_modifier'] < -100 || $data['tax_modifier'] > 100) {
-                $errors[] = "Tax modifier must be between -100 and +100";
-            }
-        }
-
         return $errors;
     }
 
@@ -652,8 +642,6 @@ class EventManagementService
                 'system' => $event->solarSystem?->name,
                 'corporation' => $event->corporation?->name,
                 'status' => $event->status,
-                'tax_modifier' => $event->tax_modifier,
-                'tax_modifier_label' => $event->getTaxModifierLabel(),
             ],
             'statistics' => $this->getEventStatistics($eventId),
             'participants' => $event->participants->map(function ($participant) {

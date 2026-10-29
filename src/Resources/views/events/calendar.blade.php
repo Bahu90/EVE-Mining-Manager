@@ -333,10 +333,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         html += '<p><strong>{{ trans("mining-manager::events.participants") }}:</strong> ' + escapeHtml(props.participants) + '</p>';
         
-        html += '<p><strong>{{ trans("mining-manager::events.tax_modifier") }}:</strong> ';
-        html += '<span class="badge badge-' + (props.tax_modifier < 0 ? 'success' : (props.tax_modifier > 0 ? 'warning' : 'secondary')) + '">';
-        html += escapeHtml(props.tax_modifier_label) + '</span></p>';
-        
         if (props.description) {
             html += '<hr><p><strong>{{ trans("mining-manager::events.description") }}:</strong></p>';
             html += '<p style="white-space: pre-line;">' + escapeHtml(props.description) + '</p>';
@@ -347,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
         $('#eventModalBody').html(html);
         // appendTo('body') escapes AdminLTE's CSS stacking context so the
         // modal-backdrop (inserted at body level by Bootstrap) doesn't end
-        // up above the modal-dialog. See the same fix in taxes/index.blade.php.
+        // up above the modal-dialog.
         $('#eventModal').appendTo('body').modal('show');
     }
 });

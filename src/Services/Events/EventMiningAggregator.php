@@ -93,20 +93,6 @@ class EventMiningAggregator
             return ['created' => 0, 'updated' => 0, 'skipped' => 0, 'deleted' => $deleted];
         }
 
-        // Narrow the event's ore-category set to what the plugin is
-        // actually taxing. Tracking participation for categories that
-        // have tax_selector = false would produce misleading "won the
-        // event, got 0 tax discount" outcomes. Moon categories pass
-        // through unchanged here — aggregateFromObserver applies its
-        // own moon-specific gate (no_moon_ore / only_corp_moon_ore /
-        // all_moon_ore) which is more nuanced than a boolean toggle.
-        $allowedCategories = $this->filterCategoriesByTaxSettings($event, $allowedCategories);
-
-        if (empty($allowedCategories)) {
-            Log::info("Mining Manager: EventMiningAggregator event {$event->id} — every category for event type '{$event->type}' is untaxed per current tax_selector; nothing to aggregate");
-            return ['created' => 0, 'updated' => 0, 'skipped' => 0, 'deleted' => $deleted];
-        }
-
         // Split categories by which source they come from.
         $moonCategories = array_values(array_filter(
             $allowedCategories,
@@ -155,17 +141,7 @@ class EventMiningAggregator
      * as the placeholder mining_time. The ore_category already lives on
      * mining_ledger (populated at ingestion).
      *
-     * Source pool follows the plugin's tax_selector setting
-     * ===================================================
-     * Event moon data should reflect what the plugin is taxing:
-     *
-     *   no_moon_ore          → no moon rows at all (plugin doesn't tax moon ore)
-     *   only_corp_moon_ore   → only observer rows where corporation_id =
-     *                           general.moon_owner_corporation_id. This
-     *                           matches what LedgerSummaryService::shouldTaxType
-     *                           enforces during tax calculation.
-     *   all_moon_ore         → all observer rows, regardless of which corp
-     *                           owns the moon / installed the observer.
+     * Every observer row counts, whichever corporation owns the moon.
      *
      * Miner-corp filter
      * =================
@@ -178,8 +154,7 @@ class EventMiningAggregator
      * Note: no "miner corp must equal moon owner corp" constraint. A
      * Corp-B miner mining at a Corp-A moon legitimately counts for a
      * Corp-B event (because the miner is a Corp B member) and for any
-     * global event — as long as the moon row is in the source pool per
-     * the tax-scope setting above.
+     * global event.
      *
      * @param MiningEvent $event
      * @param array $allowedCategories Moon categories to include.
@@ -187,35 +162,12 @@ class EventMiningAggregator
      */
     private function aggregateFromObserver(MiningEvent $event, array $allowedCategories): array
     {
-        // Honour the plugin's moon-ore tax scope setting so event data
-        // reflects the same pool the tax engine operates on.
-        $taxSelector = $this->settingsService->getTaxSelector();
-
-        if (!empty($taxSelector['no_moon_ore'])) {
-            Log::debug("Mining Manager: EventMiningAggregator event {$event->id} — plugin has no_moon_ore set, skipping observer pass");
-            return ['created' => 0, 'updated' => 0, 'skipped' => 0];
-        }
-
         $startDate = $event->start_time->toDateString();
         $endDate = ($event->end_time ?? Carbon::now())->toDateString();
 
         $query = MiningLedger::whereNotNull('observer_id')
             ->whereBetween('date', [$startDate, $endDate])
             ->whereIn('ore_category', $allowedCategories);
-
-        // only_corp_moon_ore narrows the source pool to the moon-owner
-        // corp's observers — same restriction shouldTaxType() applies.
-        if (!empty($taxSelector['only_corp_moon_ore'])) {
-            $moonOwnerCorpId = $this->settingsService->getSetting('general.moon_owner_corporation_id');
-
-            if (!$moonOwnerCorpId) {
-                Log::warning("Mining Manager: EventMiningAggregator event {$event->id} — only_corp_moon_ore is set but moon_owner_corporation_id is unconfigured; observer pass skipped");
-                return ['created' => 0, 'updated' => 0, 'skipped' => 0];
-            }
-
-            $query->where('corporation_id', (int) $moonOwnerCorpId);
-        }
-        // all_moon_ore (the default) needs no extra filter — any observer row qualifies.
 
         // Location scope — resolves constellation/region to system IDs.
         $event->applyLocationFilter($query, 'solar_system_id');
@@ -488,71 +440,6 @@ class EventMiningAggregator
         }
 
         return $map;
-    }
-
-    /**
-     * Narrow an event's allowed ore categories to those the plugin is
-     * currently taxing, so event participation never tracks ore the
-     * plugin ignores.
-     *
-     * Non-moon categories map 1:1 to boolean tax_selector keys:
-     *   ore          → tax_selector.ore
-     *   ice          → tax_selector.ice
-     *   gas          → tax_selector.gas
-     *   abyssal      → tax_selector.abyssal_ore
-     *   triglavian   → tax_selector.triglavian_ore
-     *
-     * Moon categories (moon_r4 through moon_r64) are NOT filtered here —
-     * the moon scope is more nuanced (no_moon_ore / only_corp_moon_ore /
-     * all_moon_ore) and is enforced inside aggregateFromObserver().
-     *
-     * Any category that got dropped is logged so organisers can see in
-     * the log why a "gas_huffing" event is empty on a gas-untaxed install.
-     */
-    private function filterCategoriesByTaxSettings(MiningEvent $event, array $categories): array
-    {
-        $taxSelector = $this->settingsService->getTaxSelector();
-
-        $map = [
-            'ore' => 'ore',
-            'ice' => 'ice',
-            'gas' => 'gas',
-            'abyssal' => 'abyssal_ore',
-            'triglavian' => 'triglavian_ore',
-        ];
-
-        $kept = [];
-        $dropped = [];
-
-        foreach ($categories as $category) {
-            if (str_starts_with($category, 'moon_')) {
-                // Moon categories handled by aggregateFromObserver's own tax gate.
-                $kept[] = $category;
-                continue;
-            }
-
-            $settingKey = $map[$category] ?? null;
-            if ($settingKey === null) {
-                $kept[] = $category; // Unknown category — let it through
-                continue;
-            }
-
-            if (!empty($taxSelector[$settingKey])) {
-                $kept[] = $category;
-            } else {
-                $dropped[] = $category;
-            }
-        }
-
-        if (!empty($dropped)) {
-            Log::info(sprintf(
-                'Mining Manager: EventMiningAggregator event %d — dropped untaxed categories [%s] per tax_selector; configure tax settings or adjust event type to resolve',
-                $event->id,
-                implode(', ', $dropped)
-            ));
-        }
-
-        return $kept;
     }
 
     /**

@@ -16,7 +16,7 @@ use Seat\Eveapi\Models\Universe\UniverseStructure;
  * which contains ALL mining activity from corporation-owned structures.
  * 
  * This includes miners who are NOT registered in SeAT, giving complete
- * visibility into moon mining activity for taxation purposes.
+ * visibility into moon mining activity.
  */
 class CorporationObserverMining extends Model
 {

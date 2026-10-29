@@ -19,7 +19,7 @@ use Illuminate\Http\Request;
  * that decides.
  *
  * Settings export is deliberately not covered. Backing up your own
- * configuration is not the same act as taking mining and tax records out of the
+ * configuration is not the same act as taking mining records out of the
  * plugin, and an admin locked out of their own config backup by a data setting
  * would be a worse surprise than the bug this fixes.
  */

@@ -190,19 +190,6 @@
     </div>
     @endif
 
-    @if($classificationCutover)
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-info py-2">
-                <i class="fas fa-clock"></i>
-                {{ trans('mining-manager::analytics.classification_cutover_note', [
-                    'date' => $classificationCutover->format('j M Y'),
-                ]) }}
-            </div>
-        </div>
-    </div>
-    @endif
-
     {{-- MINING TRENDS --}}
     <div class="row">
         <div class="col-12">

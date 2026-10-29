@@ -92,7 +92,7 @@ class MoonPlannerController extends Controller
      */
     protected function plannerCorporationId(): ?int
     {
-        return $this->settings->getTaxProgramCorporationId();
+        return $this->settings->getMoonOwnerCorporationId();
     }
 
     /**

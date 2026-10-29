@@ -640,35 +640,35 @@ class DiagnosePricesCommand extends Command
 
         // Define all categories with type IDs
         $categories = [
-            // RAW ORES (Ore Value Taxation)
+            // RAW ORES (Ore Valuation)
             'Regular Ores' => [
                 'type_ids' => TypeIdRegistry::REGULAR_ORES,
-                'purpose' => 'Ore value taxation',
+                'purpose' => 'Ore valuation',
             ],
             'Compressed Ores' => [
                 'type_ids' => TypeIdRegistry::COMPRESSED_REGULAR_ORES,
-                'purpose' => 'Hauler ore taxation',
+                'purpose' => 'Compressed ore valuation',
             ],
             'Moon Ores (All Variants)' => [
                 'type_ids' => TypeIdRegistry::MOON_ORES,
-                'purpose' => 'Moon ore taxation (all variants)',
+                'purpose' => 'Moon ore valuation (all variants)',
             ],
             'Compressed Moon Ores (All Variants)' => [
                 'type_ids' => TypeIdRegistry::COMPRESSED_MOON_ORES,
-                'purpose' => 'Compressed moon ore taxation',
+                'purpose' => 'Compressed moon ore valuation',
             ],
             // NOTE: Jackpot ores are already included in moon ore counts above
             // They are tracked for detection purposes but not counted separately
             'Ice (Raw + Compressed)' => [
                 'type_ids' => TypeIdRegistry::getAllIce(),
-                'purpose' => 'Ice value taxation',
+                'purpose' => 'Ice valuation',
             ],
             'Gas' => [
                 'type_ids' => TypeIdRegistry::getAllGas(),
-                'purpose' => 'Gas value taxation',
+                'purpose' => 'Gas valuation',
             ],
             
-            // REFINED MATERIALS (Refined Value Taxation)
+            // REFINED MATERIALS (Refined Valuation)
             'Minerals' => [
                 'type_ids' => TypeIdRegistry::MINERALS,
                 'purpose' => 'Refined ore value',
@@ -747,18 +747,18 @@ class DiagnosePricesCommand extends Command
             $this->warn("  ⚠️  Missing {$missing} items from complete coverage!");
             $this->line("  Run: php artisan mining-manager:cache-prices --type=all --force");
         } else {
-            $this->info("  ✅ Excellent coverage! All taxation models supported!");
+            $this->info("  ✅ Excellent coverage! All valuation models supported!");
         }
         
         // Show what's enabled
         $this->newLine();
-        $this->line("  <fg=cyan>Taxation Models Supported:</>");
+        $this->line("  <fg=cyan>Valuation Models Supported:</>");
         
         $oreValueReady = true;
         $refinedValueReady = true;
         $jackpotDetectionReady = true;
         
-        // Check ore value taxation readiness
+        // Check ore valuation readiness
         foreach (['Regular Ores', 'Moon Ores (All Variants)', 'Ice (Raw + Compressed)', 'Gas'] as $cat) {
             foreach ($results as $result) {
                 if ($result[0] == $cat && str_replace('%', '', $result[2]) < 80) {
@@ -767,7 +767,7 @@ class DiagnosePricesCommand extends Command
             }
         }
         
-        // Check refined value taxation readiness
+        // Check refined valuation readiness
         foreach (['Minerals', 'Moon Materials', 'Ice Products'] as $cat) {
             foreach ($results as $result) {
                 if ($result[0] == $cat && str_replace('%', '', $result[2]) < 80) {

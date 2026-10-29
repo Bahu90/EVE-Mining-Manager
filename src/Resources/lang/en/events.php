@@ -46,23 +46,11 @@ return [
     'duration' => 'Duration',
     'location' => 'Location',
     'description' => 'Description',
-    'tax_modifier' => 'Tax Modifier',
-    'tax_modifier_help' => 'Adjust tax rates during this event. Negative = discount, Positive = increase.',
     'corporation_scope' => 'Corporation Scope',
     'all_corporations' => 'All Corporations (Global Event)',
     'corporation_scope_help' => 'Leave empty for global event (applies to all corps), or select specific corporation.',
     'completed_on' => 'Completed On',
 
-    // Tax Modifier Presets
-    'modifier_tax_free' => 'Tax Free (-100%)',
-    'modifier_reduced_75' => 'Reduced Tax (-75%)',
-    'modifier_reduced_50' => 'Half Tax (-50%)',
-    'modifier_reduced_25' => 'Light Discount (-25%)',
-    'modifier_normal' => 'Normal Tax (0%)',
-    'modifier_increase_25' => 'Slight Increase (+25%)',
-    'modifier_increase_50' => 'Heavy Tax (+50%)',
-    'modifier_increase_75' => 'Punitive Tax (+75%)',
-    'modifier_double' => 'Double Tax (+100%)',
     
     // Participants
     'participants' => 'Participants',

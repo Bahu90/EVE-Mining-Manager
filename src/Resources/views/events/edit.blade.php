@@ -84,10 +84,8 @@
                             </select>
                             <small class="form-text text-info">
                                 <i class="fas fa-info-circle"></i>
-                                Tax modifier applies to: <strong>Mining Op</strong> = ore · <strong>Moon Extraction</strong> = moon ore · <strong>Ice Mining</strong> = ice · <strong>Gas Huffing</strong> = gas · <strong>Special Event</strong> = <em>all currently-taxed ore categories</em>.
+                                The event counts: <strong>Mining Op</strong> = ore · <strong>Moon Extraction</strong> = moon ore · <strong>Ice Mining</strong> = ice · <strong>Gas Huffing</strong> = gas · <strong>Special Event</strong> = <em>everything</em>.
                             </small>
-
-                            @include('mining-manager::events._tax_compatibility_panel')
                         </div>
 
                         <div class="row">
@@ -186,25 +184,6 @@
                                     <input type="number" class="form-control" id="max_participants" name="max_participants" value="{{ old('max_participants', $event->max_participants) }}">
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="tax_modifier">{{ trans('mining-manager::events.tax_modifier') }}</label>
-                            <select class="form-control @error('tax_modifier') is-invalid @enderror" id="tax_modifier" name="tax_modifier" required>
-                                <option value="-100" {{ old('tax_modifier', $event->tax_modifier) == -100 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_tax_free') }}</option>
-                                <option value="-75" {{ old('tax_modifier', $event->tax_modifier) == -75 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_75') }}</option>
-                                <option value="-50" {{ old('tax_modifier', $event->tax_modifier) == -50 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_50') }}</option>
-                                <option value="-25" {{ old('tax_modifier', $event->tax_modifier) == -25 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_25') }}</option>
-                                <option value="0" {{ old('tax_modifier', $event->tax_modifier) == 0 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_normal') }}</option>
-                                <option value="25" {{ old('tax_modifier', $event->tax_modifier) == 25 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_25') }}</option>
-                                <option value="50" {{ old('tax_modifier', $event->tax_modifier) == 50 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_50') }}</option>
-                                <option value="75" {{ old('tax_modifier', $event->tax_modifier) == 75 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_75') }}</option>
-                                <option value="100" {{ old('tax_modifier', $event->tax_modifier) == 100 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_double') }}</option>
-                            </select>
-                            @error('tax_modifier')
-                            <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                            <small class="form-text text-muted">{{ trans('mining-manager::events.tax_modifier_help') }}</small>
                         </div>
 
                         <div class="form-group">

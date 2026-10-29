@@ -122,51 +122,6 @@
             margin-top: 3px;
         }
 
-        /* Tax Summary */
-        .tax-summary {
-            background-color: #f8f9fa;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 12px;
-        }
-
-        .tax-row {
-            display: block;
-            margin-bottom: 6px;
-            overflow: hidden;
-        }
-
-        .tax-label {
-            float: left;
-            font-weight: bold;
-            color: #555;
-        }
-
-        .tax-value {
-            float: right;
-            color: #2c3e50;
-            font-weight: bold;
-        }
-
-        .collection-rate {
-            text-align: center;
-            margin-top: 10px;
-            padding-top: 8px;
-            border-top: 1px solid #ddd;
-        }
-
-        .rate-value {
-            font-size: 20px;
-            font-weight: bold;
-            color: #27ae60;
-        }
-
-        .rate-label {
-            font-size: 9px;
-            color: #7f8c8d;
-            text-transform: uppercase;
-        }
-
         /* Footer */
         .report-footer {
             margin-top: 30px;
@@ -300,35 +255,6 @@
                 @endforeach
             </tbody>
         </table>
-    </div>
-    @endif
-
-    {{-- TAX SUMMARY --}}
-    @if(isset($data['taxes']))
-    <div class="section">
-        <div class="section-title">Tax Summary</div>
-        <div class="tax-summary">
-            <div class="tax-row">
-                <span class="tax-label">Total Owed:</span>
-                <span class="tax-value">{{ number_format($data['taxes']['total_owed'] ?? 0, 2) }} ISK</span>
-            </div>
-            <div class="tax-row">
-                <span class="tax-label">Total Paid:</span>
-                <span class="tax-value">{{ number_format($data['taxes']['total_paid'] ?? 0, 2) }} ISK</span>
-            </div>
-            <div class="tax-row">
-                <span class="tax-label">Unpaid:</span>
-                <span class="tax-value" style="color: #e74c3c;">{{ number_format($data['taxes']['unpaid'] ?? 0, 2) }} ISK</span>
-            </div>
-            <div class="tax-row">
-                <span class="tax-label">Overdue:</span>
-                <span class="tax-value" style="color: #c0392b;">{{ number_format($data['taxes']['overdue'] ?? 0, 2) }} ISK</span>
-            </div>
-            <div class="collection-rate">
-                <span class="rate-value">{{ number_format($data['taxes']['collection_rate'] ?? 0, 1) }}%</span><br>
-                <span class="rate-label">Collection Rate</span>
-            </div>
-        </div>
     </div>
     @endif
 

@@ -106,7 +106,7 @@ class BackfillExtractionHistoryCommand extends Command
         // by this corp. Other directors' private moons on the same SeAT install
         // appear in character_notifications but must NOT be imported.
         $settings = app(\MiningManager\Services\Configuration\SettingsManagerService::class);
-        $moonOwnerCorpId = $settings->getTaxProgramCorporationId();
+        $moonOwnerCorpId = $settings->getMoonOwnerCorporationId();
 
         if ($moonOwnerCorpId === null) {
             $this->error("  Moon Owner Corporation is not configured. Set it in Settings > General before running backfill.");
@@ -561,10 +561,10 @@ class BackfillExtractionHistoryCommand extends Command
             return (int) $corpId;
         }
 
-        // Fall back to the configured tax program corp
+        // Fall back to the configured moon owner corp
         try {
             $settings = app(\MiningManager\Services\Configuration\SettingsManagerService::class);
-            return $settings->getTaxProgramCorporationId();
+            return $settings->getMoonOwnerCorporationId();
         } catch (\Exception $e) {
             return null;
         }

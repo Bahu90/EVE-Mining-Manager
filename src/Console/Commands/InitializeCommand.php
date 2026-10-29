@@ -120,9 +120,8 @@ class InitializeCommand extends Command
         $this->info('Next steps:');
         $this->line('  1. Open SeAT and navigate to Mining Manager from the sidebar');
         $this->line('  2. Check Settings > General to verify your Moon Owner Corporation');
-        $this->line('  3. Check Settings > Tax Rates to configure per-corporation tax rates');
-        $this->line('  4. Set up webhooks in Settings > Webhooks for Discord/Slack notifications');
-        $this->line('  5. The scheduled tasks will keep everything updated automatically');
+        $this->line('  3. Set up webhooks in Settings > Webhooks for Discord/Slack notifications');
+        $this->line('  4. The scheduled tasks will keep everything updated automatically');
         $this->newLine();
         $this->line('  For help, visit the built-in Help & Documentation page in Settings.');
         $this->newLine();
@@ -143,7 +142,7 @@ class InitializeCommand extends Command
 
         // Check 1: Moon Owner Corporation
         $this->newLine();
-        $this->info('  [1/4] Checking Moon Owner Corporation...');
+        $this->info('  [1/3] Checking Moon Owner Corporation...');
         $moonOwnerCorpId = $settingsService->getSetting('general.moon_owner_corporation_id');
         if ($moonOwnerCorpId) {
             $corpName = DB::table('corporation_infos')->where('corporation_id', $moonOwnerCorpId)->value('name') ?? 'Unknown';
@@ -154,7 +153,7 @@ class InitializeCommand extends Command
         }
 
         // Check 2: Price Provider
-        $this->info('  [2/4] Checking Price Provider...');
+        $this->info('  [2/3] Checking Price Provider...');
         $priceProvider = $settingsService->getSetting('price_provider', 'eve_market');
         $this->line("         ✅ Using: {$priceProvider}");
 
@@ -166,56 +165,8 @@ class InitializeCommand extends Command
             $this->warn('         ⚠️  Price cache is empty — will be populated during setup');
         }
 
-        // Check 3: Tax Rates
-        $this->info('  [3/4] Checking Tax Rates...');
-        $configuredCorps = DB::table('mining_manager_settings')
-            ->whereNotNull('corporation_id')
-            ->distinct()
-            ->pluck('corporation_id');
-
-        if ($configuredCorps->isNotEmpty()) {
-            foreach ($configuredCorps as $corpId) {
-                $corpName = DB::table('corporation_infos')->where('corporation_id', $corpId)->value('name') ?? "Corp #{$corpId}";
-                $settingsService->setActiveCorporation((int) $corpId);
-                $taxRates = $settingsService->getTaxRates();
-                $taxSelector = $settingsService->getTaxSelector();
-
-                $moonR64 = $taxRates['moon_ore']['r64'] ?? 0;
-                $moonR32 = $taxRates['moon_ore']['r32'] ?? 0;
-                $oreRate = $taxRates['ore'] ?? 0;
-                $iceRate = $taxRates['ice'] ?? 0;
-                $gasRate = $taxRates['gas'] ?? 0;
-                $abyssalRate = $taxRates['abyssal_ore'] ?? 0;
-                $triglavianRate = $taxRates['triglavian_ore'] ?? 0;
-
-                $this->line("         ✅ {$corpName}:");
-                $this->line("            Moon: R64={$moonR64}% R32={$moonR32}% | Ore={$oreRate}% Ice={$iceRate}% Gas={$gasRate}% Abyssal={$abyssalRate}% Triglavian={$triglavianRate}%");
-
-                // Show what's being taxed
-                $taxedTypes = [];
-                $moonMode = ($taxSelector['all_moon_ore'] ?? false) ? 'All Moon' : (($taxSelector['only_corp_moon_ore'] ?? false) ? 'Corp Moon Only' : (($taxSelector['no_moon_ore'] ?? false) ? 'No Moon' : 'Default'));
-                $taxedTypes[] = "Moon: {$moonMode}";
-                if ($taxSelector['ore'] ?? false) $taxedTypes[] = 'Ore';
-                if ($taxSelector['ice'] ?? false) $taxedTypes[] = 'Ice';
-                if ($taxSelector['gas'] ?? false) $taxedTypes[] = 'Gas';
-                if ($taxSelector['abyssal_ore'] ?? false) $taxedTypes[] = 'Abyssal';
-                if ($taxSelector['triglavian_ore'] ?? false) $taxedTypes[] = 'Triglavian';
-                $this->line("            Taxing: " . implode(', ', $taxedTypes));
-            }
-            $settingsService->setActiveCorporation(null);
-        } else {
-            // Check global defaults
-            $r64 = $settingsService->getSetting('tax_rates.moon_ore.r64', 0);
-            if ($r64 > 0) {
-                $this->line("         ✅ Global defaults configured (R64={$r64}%)");
-            } else {
-                $this->warn('         ⚠️  No tax rates configured yet. You can set them in Settings > Tax Rates.');
-                $issues[] = 'Tax rates are at 0% — set your rates in Settings > Tax Rates before calculating taxes.';
-            }
-        }
-
         // Check 4: ESI Data
-        $this->info('  [4/4] Checking available ESI data...');
+        $this->info('  [3/3] Checking available ESI data...');
         $observerCount = DB::table('corporation_industry_mining_observers')->count();
         $characterCount = DB::table('character_minings')->count();
         $this->line("         Mining observers: {$observerCount} entries");
@@ -278,9 +229,6 @@ class InitializeCommand extends Command
             ['Calculate dashboard statistics', 'mining-manager:calculate-monthly-stats', ['--current-month' => true]],
         ];
 
-        // Note: Tax records (MiningTax) and tax codes are NOT generated here.
-        // The admin should review data first, then use Calculate Taxes in the UI.
-
         $this->totalSteps = count($steps);
 
         foreach ($steps as $index => $step) {
@@ -325,10 +273,8 @@ class InitializeCommand extends Command
         $this->newLine();
 
         $this->warn('  ╔═══════════════════════════════════════════════════════════╗');
-        $this->warn('  ║  Historical backfill is for DISPLAY PURPOSES ONLY.       ║');
-        $this->warn('  ║  Past tax calculations may not reflect the rates that     ║');
-        $this->warn('  ║  were active at the time. Only current month taxes are    ║');
-        $this->warn('  ║  accurate. Processing time depends on data volume and     ║');
+        $this->warn('  ║  Historical backfill rebuilds past mining history.        ║');
+        $this->warn('  ║  Processing time depends on data volume and               ║');
         $this->warn('  ║  server performance — large datasets may take 10-30 min.  ║');
         $this->warn('  ╚═══════════════════════════════════════════════════════════╝');
         $this->newLine();

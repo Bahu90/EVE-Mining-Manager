@@ -138,212 +138,6 @@ Route::group([
         ]);
     });
 
-    // Tax Management Routes
-    // 3-tier: member (view own) < director (toggle all, verify) < admin (full management)
-    Route::group(['prefix' => 'tax'], function () {
-
-        // --- Member routes (view own data) ---
-        Route::get('/', [
-            'as' => 'mining-manager.taxes.index',
-            'uses' => 'TaxController@index',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/my-taxes', [
-            'as' => 'mining-manager.taxes.my-taxes',
-            'uses' => 'TaxController@myTaxes',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/my-taxes/breakdown/{month?}', [
-            'as' => 'mining-manager.taxes.my-breakdown',
-            'uses' => 'TaxController@myTaxBreakdown',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/codes', [
-            'as' => 'mining-manager.taxes.codes',
-            'uses' => 'TaxController@codes',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/details/{taxId}', [
-            'as' => 'mining-manager.taxes.details',
-            'uses' => 'TaxController@details',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/balances', [
-            'as' => 'mining-manager.taxes.balances',
-            'uses' => 'TaxController@balances',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        // Handing money back is a director's call, not a member's, so this is
-        // gated harder than the page it lives on.
-        Route::post('/balances/refund', [
-            'as' => 'mining-manager.taxes.balances.refund',
-            'uses' => 'TaxController@refundBalance',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        // A refund the wallet will never match, because the keyword was left
-        // off or the ISK went out some other way. Same gate: saying money was
-        // paid is the same weight of decision as agreeing to pay it.
-        Route::post('/balances/refund/{refundId}/sent', [
-            'as' => 'mining-manager.taxes.balances.refund-sent',
-            'uses' => 'TaxController@markRefundSent',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/balances/refund/{refundId}/reopen', [
-            'as' => 'mining-manager.taxes.balances.refund-reopen',
-            'uses' => 'TaxController@reopenRefund',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::get('/wallet', [
-            'as' => 'mining-manager.taxes.wallet',
-            'uses' => 'TaxController@wallet',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/my-taxes/export', [
-            'as' => 'mining-manager.taxes.export-personal',
-            'uses' => 'TaxController@exportPersonal',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        Route::get('/{id}/receipt', [
-            'as' => 'mining-manager.taxes.download-receipt',
-            'uses' => 'TaxController@downloadReceipt',
-            'middleware' => 'can:mining-manager.member',
-        ]);
-
-        // --- Director routes (toggle view, verify payments, export all) ---
-        Route::post('/toggle-view', [
-            'as' => 'mining-manager.taxes.toggle-view',
-            'uses' => 'TaxController@toggleView',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/wallet/verify', [
-            'as' => 'mining-manager.taxes.wallet.verify',
-            'uses' => 'TaxController@verifyPayments',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/wallet/dismiss', [
-            'as' => 'mining-manager.taxes.wallet.dismiss',
-            'uses' => 'TaxController@dismissTransaction',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/wallet/assign', [
-            'as' => 'mining-manager.taxes.wallet.assign',
-            'uses' => 'TaxController@assignPayment',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/wallet/unassign', [
-            'as' => 'mining-manager.taxes.wallet.unassign',
-            'uses' => 'TaxController@unassignPayment',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::get('/export', [
-            'as' => 'mining-manager.taxes.export',
-            'uses' => 'TaxController@export',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        // --- Admin routes (full tax management) ---
-        Route::get('/calculate', [
-            'as' => 'mining-manager.taxes.calculate',
-            'uses' => 'TaxController@showCalculateForm',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/calculate/process', [
-            'as' => 'mining-manager.taxes.process-calculation',
-            'uses' => 'TaxController@processCalculation',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::get('/calculate/live-tracking', [
-            'as' => 'mining-manager.taxes.live-tracking',
-            'uses' => 'TaxController@liveTracking',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        // The Calculate Taxes page no longer has a Regenerate Codes button, but a
-        // copy of the page compiled before an update still asks for this route by
-        // name, and a missing route name stops the whole page rendering. Keeping
-        // it means such a page still loads, and its old button does what it
-        // always did, which is the same as Recalculate.
-        Route::post('/calculate/regenerate', [
-            'as' => 'mining-manager.taxes.regenerate-payments',
-            'uses' => 'TaxController@regeneratePayments',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/codes/generate', [
-            'as' => 'mining-manager.taxes.codes.generate',
-            'uses' => 'TaxController@generateCodes',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/codes', [
-            'as' => 'mining-manager.taxes.codes.store',
-            'uses' => 'TaxController@storeCode',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::delete('/codes/{id}', [
-            'as' => 'mining-manager.taxes.codes.destroy',
-            'uses' => 'TaxController@destroyCode',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        // Closing off a code whose invoice was settled some other way, usually
-        // a payment assigned by hand. Same gate as deleting one.
-        Route::post('/codes/{id}/mark-used', [
-            'as' => 'mining-manager.taxes.codes.mark-used',
-            'uses' => 'TaxController@markCodeUsed',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/mark-paid', [
-            'as' => 'mining-manager.taxes.mark-paid',
-            'uses' => 'TaxController@markPaid',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/manual-entry', [
-            'as' => 'mining-manager.taxes.manual-entry',
-            'uses' => 'TaxController@createManualEntry',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::post('/bulk/mark-paid', [
-            'as' => 'mining-manager.taxes.bulk-mark-paid',
-            'uses' => 'TaxController@bulkMarkPaid',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/{id}/status', [
-            'as' => 'mining-manager.taxes.update-status',
-            'uses' => 'TaxController@updateStatus',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::delete('/{id}', [
-            'as' => 'mining-manager.taxes.destroy',
-            'uses' => 'TaxController@destroy',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-    });
-
     // Mining Events Routes
     Route::group(['prefix' => 'events'], function () {
         // Member - view, join/leave
@@ -702,7 +496,7 @@ Route::group([
     });
 
     // =====================================================================
-    // DIRECTOR ROUTES - View all corp data, analytics, reports, theft
+    // DIRECTOR ROUTES - View all corp data, analytics, reports
     // =====================================================================
 
     // Analytics Routes
@@ -856,41 +650,6 @@ Route::group([
         ]);
     });
 
-    // Theft Detection Routes
-    Route::group(['prefix' => 'theft'], function () {
-        // Director - view
-        Route::get('/', [
-            'as' => 'mining-manager.theft.index',
-            'uses' => 'TheftIncidentController@index',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::get('/export/csv', [
-            'as' => 'mining-manager.theft.export',
-            'uses' => 'TheftIncidentController@export',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        Route::get('/{id}', [
-            'as' => 'mining-manager.theft.show',
-            'uses' => 'TheftIncidentController@show',
-            'middleware' => 'can:mining-manager.director',
-        ]);
-
-        // Admin - resolve, update status
-        Route::post('/{id}/status', [
-            'as' => 'mining-manager.theft.update-status',
-            'uses' => 'TheftIncidentController@updateStatus',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/{id}/resolve', [
-            'as' => 'mining-manager.theft.resolve',
-            'uses' => 'TheftIncidentController@resolve',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-    });
-
     // =====================================================================
     // ADMIN ROUTES - Settings, diagnostics, API
     // =====================================================================
@@ -912,12 +671,6 @@ Route::group([
         Route::post('/general', [
             'as' => 'mining-manager.settings.update-general',
             'uses' => 'SettingsController@updateGeneral',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/tax-rates', [
-            'as' => 'mining-manager.settings.update-tax-rates',
-            'uses' => 'SettingsController@updateTaxRates',
             'middleware' => 'can:mining-manager.admin',
         ]);
 
@@ -1027,13 +780,6 @@ Route::group([
         'middleware' => 'can:mining-manager.view',
     ]);
 
-    // Configured Corporations Route - Admin
-    Route::get('/configured-corporations', [
-        'as' => 'mining-manager.settings.configured-corporations',
-        'uses' => 'SettingsController@configuredCorporations',
-        'middleware' => 'can:mining-manager.admin',
-    ]);
-
     // Diagnostic Routes - Admin only
     Route::group(['prefix' => 'diagnostic'], function () {
         Route::get('/ping', [
@@ -1050,7 +796,7 @@ Route::group([
 
         // One-click "Master Test" — runs the full read-only smoke chain
         // (schema, settings, pricing, notifications,
-        // lifecycle, tax, security). Returns structured JSON for the UI.
+        // lifecycle, security). Returns structured JSON for the UI.
         Route::post('/master-test', [
             'as' => 'mining-manager.diagnostic.master-test',
             'uses' => 'DiagnosticController@runMasterTest',
@@ -1117,21 +863,9 @@ Route::group([
             'middleware' => 'can:mining-manager.admin',
         ]);
 
-        Route::post('/test-webhook/{id}', [
-            'as' => 'mining-manager.diagnostic.test-webhook',
-            'uses' => 'DiagnosticController@testWebhook',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
         Route::get('/settings-health', [
             'as' => 'mining-manager.diagnostic.settings-health',
             'uses' => 'DiagnosticController@settingsHealth',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::get('/tax-diagnostic', [
-            'as' => 'mining-manager.diagnostic.tax-diagnostic',
-            'uses' => 'DiagnosticController@taxDiagnostic',
             'middleware' => 'can:mining-manager.admin',
         ]);
 
@@ -1172,20 +906,6 @@ Route::group([
             'middleware' => 'can:mining-manager.admin',
         ]);
 
-        // Tax Pipeline Diagnostic
-        Route::get('/tax-pipeline', [
-            'as' => 'mining-manager.diagnostic.tax-pipeline',
-            'uses' => 'DiagnosticController@taxPipelineDiagnostic',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        // Theft Detection Diagnostic
-        Route::get('/theft-diagnostic', [
-            'as' => 'mining-manager.diagnostic.theft-diagnostic',
-            'uses' => 'DiagnosticController@theftDiagnostic',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
         // Event Lifecycle Diagnostic
         Route::get('/event-diagnostic', [
             'as' => 'mining-manager.diagnostic.event-diagnostic',
@@ -1206,11 +926,6 @@ Route::group([
         Route::get('/ledger', [
             'as' => 'mining-manager.api.ledger',
             'uses' => 'ApiController@ledger',
-        ]);
-
-        Route::get('/taxes', [
-            'as' => 'mining-manager.api.taxes',
-            'uses' => 'ApiController@taxes',
         ]);
 
         Route::get('/events', [

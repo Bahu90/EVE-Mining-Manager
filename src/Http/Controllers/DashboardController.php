@@ -12,7 +12,6 @@ use MiningManager\Services\Character\CharacterInfoService;
 use MiningManager\Services\Configuration\SettingsManagerService;
 use MiningManager\Services\TypeIdRegistry;
 use MiningManager\Models\MiningLedger;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MiningEvent;
 use MiningManager\Models\MoonExtraction;
 use MiningManager\Models\MonthlyStatistic;
@@ -56,8 +55,8 @@ class DashboardController extends Controller
      * personal and director dashboards are under details().
      *
      * Everyone with the member role sees the corporation's totals, its
-     * refineries and each player's volume. ISK and tax per player are shown
-     * to directors, and to members for their own card only.
+     * refineries and each player's volume. ISK per player is shown to
+     * directors, and to members for their own card only.
      */
     public function metrics(\Illuminate\Http\Request $request, \MiningManager\Services\Metrics\MiningMetricsService $metrics)
     {
@@ -87,7 +86,6 @@ class DashboardController extends Controller
                 $player['own'] = in_array((int) $player['character_id'], $own, true);
                 if (!$seesCorporation && !$player['own']) {
                     $player['isk'] = null;
-                    $player['tax'] = null;
                 }
             }
             unset($player);
@@ -118,7 +116,6 @@ class DashboardController extends Controller
             'month' => $month,
             'isDirector' => $isDirector,
             'canSeeIsk' => $seesCorporation,
-            'taxBanner' => $this->taxBanner($user),
         ]);
     }
 
@@ -214,8 +211,6 @@ class DashboardController extends Controller
             ];
         });
 
-        $dashboardData['taxBanner'] = $this->taxBanner($user);
-
         return view('mining-manager::dashboard.member', $dashboardData);
     }
 
@@ -296,7 +291,6 @@ class DashboardController extends Controller
         // Pass corporation tab AJAX URL to view
         $dashboardData['corpTabUrl'] = route('mining-manager.dashboard.tab.corporation');
         $dashboardData['guestTabUrl'] = route('mining-manager.dashboard.tab.guest-miners');
-        $dashboardData['taxBanner'] = $this->taxBanner(auth()->user());
 
         return view('mining-manager::dashboard.combined-director', $dashboardData);
     }
@@ -334,8 +328,6 @@ class DashboardController extends Controller
             $moonMiningPerformanceChart = $this->getCorpMoonMiningPerformanceLast12Months($corporationId);
             $corpMiningByGroupChart = $this->getCorpMiningByGroup($corporationId, $last12MonthsStart);
             $corpMiningByTypeChart = $this->getCorpMiningByType($corporationId, $last12MonthsStart);
-            $miningTaxChart = $this->getMiningTaxLast12Months($corporationId);
-            $eventTaxChart = $this->getEventTaxLast12Months($corporationId);
 
             return [
                 'corpCurrentMonthStats' => $corpCurrentMonthStats,
@@ -347,8 +339,6 @@ class DashboardController extends Controller
                 'moonMiningPerformanceChart' => $moonMiningPerformanceChart,
                 'corpMiningByGroupChart' => $corpMiningByGroupChart,
                 'corpMiningByTypeChart' => $corpMiningByTypeChart,
-                'miningTaxChart' => $miningTaxChart,
-                'eventTaxChart' => $eventTaxChart,
             ];
         });
 
@@ -396,7 +386,6 @@ class DashboardController extends Controller
                     SUM(total_value) as total_value,
                     SUM(moon_ore_value) as moon_ore_value,
                     SUM(total_quantity) as total_quantity,
-                    SUM(total_tax) as total_tax,
                     MIN(date) as first_seen,
                     MAX(date) as last_seen,
                     COUNT(DISTINCT date) as active_days
@@ -422,7 +411,6 @@ class DashboardController extends Controller
                     'total_value' => (float) $stat->total_value,
                     'moon_ore_value' => (float) $stat->moon_ore_value,
                     'total_quantity' => (float) $stat->total_quantity,
-                    'total_tax' => (float) $stat->total_tax,
                     'first_seen' => $stat->first_seen,
                     'last_seen' => $stat->last_seen,
                     'active_days' => $stat->active_days,
@@ -604,7 +592,6 @@ class DashboardController extends Controller
                 'total_isk' => $storedStats->total_value,
                 'ore_value' => $storedStats->ore_value,
                 'mineral_value' => $storedStats->mineral_value,
-                'tax_isk' => $storedStats->tax_owed,
                 'mining_days' => $storedStats->mining_days,
                 'moon_ore_value' => $storedStats->moon_ore_value,
                 'ice_value' => $storedStats->ice_value,
@@ -630,14 +617,12 @@ class DashboardController extends Controller
             ->selectRaw('
                 SUM(total_quantity) as total_quantity,
                 SUM(total_value) as total_value,
-                SUM(total_tax) as tax_isk,
                 COUNT(DISTINCT date) as mining_days
             ')
             ->first();
 
         $totalQuantity = $stats->total_quantity ?? 0;
         $totalValue = $stats->total_value ?? 0;
-        $taxIsk = $stats->tax_isk ?? 0;
         $miningDays = $stats->mining_days ?? 0;
 
         // Supplement: if today has no daily summary yet, add today's MiningLedger data.
@@ -655,7 +640,6 @@ class DashboardController extends Controller
                     ->selectRaw('
                         SUM(quantity) as total_quantity,
                         SUM(total_value) as total_value,
-                        SUM(tax_amount) as tax_isk,
                         COUNT(DISTINCT date) as mining_days
                     ')
                     ->first();
@@ -663,7 +647,6 @@ class DashboardController extends Controller
                 if (($todayStats->total_value ?? 0) > 0) {
                     $totalQuantity += $todayStats->total_quantity ?? 0;
                     $totalValue += $todayStats->total_value ?? 0;
-                    $taxIsk += $todayStats->tax_isk ?? 0;
                     $miningDays += $todayStats->mining_days ?? 0;
                 }
             }
@@ -676,7 +659,6 @@ class DashboardController extends Controller
             'total_volume' => $totalVolume,
             'total_value' => $totalValue,
             'total_isk' => $totalValue,
-            'tax_isk' => $taxIsk,
             'mining_days' => $miningDays,
         ];
     }
@@ -765,41 +747,11 @@ class DashboardController extends Controller
             }
         }
 
-        // Tax estimate from daily summaries (single source of truth)
-        $taxAmount = (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->sum('total_tax');
-
-        // Supplement today's tax from ledger if no summary
-        if (isset($todayHasSummary) && !$todayHasSummary && !empty($characterIds)) {
-            $todayTax = (float) \MiningManager\Models\MiningLedger::whereIn('character_id', $characterIds)
-                ->where('date', $today)
-                ->whereNotNull('processed_at')
-                ->sum('tax_amount');
-            $taxAmount += $todayTax;
-        }
-
-        // If still no tax data, fall back to mining_taxes
-        if ($taxAmount <= 0) {
-            $taxAmount = MiningTax::whereIn('character_id', $characterIds)
-                ->where('month', $startDate->format('Y-m-01'))
-                ->sum('amount_owed');
-        }
-
-        // Everything paid on the month's bills, instalments on bills not yet
-        // settled included. Fully paid bills alone would leave every part
-        // payment out.
-        $taxCollected = MiningTax::whereIn('character_id', $characterIds)
-            ->where('month', $startDate->format('Y-m-01'))
-            ->sum('amount_paid');
-
         return [
             'all_ore_value' => $allOreValue,
             'all_ore_quantity' => $allOreQuantity,
             'moon_ore_value' => $moonOreValue,
             'moon_ore_quantity' => 0, // Not tracked separately in daily summaries
-            'tax_amount' => $taxAmount,
-            'tax_collected' => $taxCollected,
             'active_miners' => $activeMiners,
         ];
     }
@@ -824,12 +776,6 @@ class DashboardController extends Controller
         $allOreValue = $stats->all_ore_value ?? 0;
         $moonOreValue = $stats->moon_ore_value ?? 0;
 
-        // Part payments included, as for the current month above.
-        $endDate = Carbon::now();
-        $taxCollected = MiningTax::whereIn('character_id', $characterIds)
-            ->whereBetween('month', [$startDate->format('Y-m-01'), $endDate->format('Y-m-01')])
-            ->sum('amount_paid');
-
         return [
             'all_ore_value' => $allOreValue,
             'all_ore_total_value' => $allOreValue,
@@ -837,7 +783,6 @@ class DashboardController extends Controller
             'moon_ore_value' => $moonOreValue,
             'moon_ore_total_value' => $moonOreValue,
             'moon_ore_quantity' => 0, // Not tracked separately in daily summaries
-            'tax_collected' => $taxCollected,
             'active_miners' => $stats->active_miners ?? 0,
         ];
     }
@@ -1455,16 +1400,14 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get mining income chart data with refined value, tax, and events (refined
-     * value from stored data for closed months)
+     * Get mining income chart data (refined value from stored data for closed
+     * months)
      */
     private function getMiningIncomeLast12Months($characterIds)
     {
         $user = auth()->user();
         $months = [];
         $refinedValue = [];
-        $taxPaid = [];
-        $eventBonus = [];
 
         // Get stored statistics for closed months
         $storedStats = MonthlyStatistic::where('user_id', $user->id)
@@ -1490,35 +1433,13 @@ class DashboardController extends Controller
                     ->sum('total_value');
             }
 
-            // Tax paid on the month's bills, part payments included, read from
-            // the bills for every month. The stored monthly figure only counts
-            // bills paid in full.
-            $tax = MiningTax::whereIn('character_id', $characterIds)
-                ->where('month', $month->format('Y-m-01'))
-                ->sum('amount_paid');
-
-            // Event bonus = ISK saved this month via event tax modifiers.
-            // Previously this computed $event->total_mined × hardcoded 10% ×
-            // modifier — but total_mined is a UNIT count, not ISK, and the
-            // hardcoded 10% ignored the actual per-ore-category tax rates.
-            // Authoritative source now lives in
-            // mining_ledger_daily_summaries.event_discount_total, populated
-            // per-row by Phase 2 attribution against event_mining_records.
-            $eventBonusAmount = (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-                ->whereBetween('date', [$month->copy()->toDateString(), $monthEnd->copy()->toDateString()])
-                ->sum('event_discount_total');
-
             $months[] = $monthKey;
             $refinedValue[] = $value;
-            $taxPaid[] = $tax;
-            $eventBonus[] = $eventBonusAmount;
         }
 
         return [
             'labels' => $months,
             'refined_value' => $refinedValue,
-            'tax_paid' => $taxPaid,
-            'event_bonus' => $eventBonus,
         ];
     }
 
@@ -1629,119 +1550,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * Get mining tax chart for last 12 months
-     * Past months: use mining_taxes table (formally calculated)
-     * Current month: use mining_taxes if calculated, otherwise estimate from daily summaries
-     */
-    private function getMiningTaxLast12Months($corporationId)
-    {
-        $characterIds = $this->getCorporationCharacterIds($corporationId);
-
-        $months = [];
-        $collected = [];
-        $owed = [];
-
-        for ($i = 11; $i >= 0; $i--) {
-            $month = Carbon::now()->startOfMonth()->subMonths($i);
-
-            // Part payments included: what has come in on the month's bills.
-            $collectedAmount = MiningTax::whereIn('character_id', $characterIds)
-                ->where('month', $month->format('Y-m-01'))
-                ->sum('amount_paid');
-
-            $owedAmount = MiningTax::whereIn('character_id', $characterIds)
-                ->where('month', $month->format('Y-m-01'))
-                ->sum('amount_owed');
-
-            // For current month, always use daily summaries as the estimate
-            // (single source of truth for tax), falling back to mining_taxes if available
-            if ($i === 0) {
-                $dailySummaryTax = (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-                    ->where('date', '>=', $month->format('Y-m-d'))
-                    ->where('date', '<=', Carbon::now()->format('Y-m-d'))
-                    ->sum('total_tax');
-
-                if ($dailySummaryTax > 0) {
-                    $owedAmount = $dailySummaryTax;
-                }
-                // If daily summaries have no data yet, keep mining_taxes amount_owed as fallback
-            }
-
-            $months[] = $month->format('Y-m');
-            $collected[] = $collectedAmount;
-            $owed[] = $owedAmount;
-        }
-
-        return [
-            'labels' => $months,
-            'collected' => $collected,
-            'owed' => $owed,
-        ];
-    }
-
-    /**
-     * Get event tax chart for last 12 months
-     * Shows the tax impact from mining events (tax modifier adjustments)
-     * Events with negative modifiers reduce tax, positive modifiers increase tax
-     * Current month shows running total as events progress
-     */
-    private function getEventTaxLast12Months($corporationId)
-    {
-        $months = [];
-        $data = [];
-
-        // The same members as every other chart on the tab, so the discount
-        // total covers the members SeAT has no record of too (daily summaries
-        // don't always carry a stable corp_id).
-        $characterIds = $this->getCorporationCharacterIds($corporationId);
-
-        for ($i = 11; $i >= 0; $i--) {
-            $month = Carbon::now()->startOfMonth()->subMonths($i);
-            $monthEnd = $month->copy()->endOfMonth();
-
-            if ($i === 0) {
-                $monthEnd = Carbon::now();
-            }
-
-            // Pull the authoritative event-discount total straight from
-            // Phase 3's mining_ledger_daily_summaries.event_discount_total.
-            // That column is populated per-row by LedgerSummaryService as the
-            // sum of event_discount_amount across all ore entries that day,
-            // which in turn comes from the per-row Phase 2 attribution against
-            // event_mining_records. No hardcoded tax rate, no assumptions about
-            // which ore categories were in scope — all that math is already done.
-            //
-            // The chart label says "Event Tax Impact (ISK)" and the value is
-            // ISK waived / added by events this month. Positive modifiers
-            // (tax increases) show up as zero in event_discount_total by
-            // design; if you want to visualise those, wire up a separate
-            // "event_surcharge_total" field later.
-            if (empty($characterIds)) {
-                $eventDiscount = 0.0;
-            } else {
-                $eventDiscount = (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-                    ->whereBetween('date', [$month->copy()->toDateString(), $monthEnd->copy()->toDateString()])
-                    ->sum('event_discount_total');
-            }
-
-            $months[] = $month->format('Y-m');
-            $data[] = $eventDiscount;
-        }
-
-        return [
-            'labels' => $months,
-            'data' => $data,
-        ];
-    }
-
-    // ==================== UTILITY METHODS (ALL FIXED FOR SeAT v5.x) ====================
-
-    private function hasDirectorPermissions()
-    {
-        return auth()->user()->can('mining-manager.director');
-    }
-
-    /**
      * Whether the person looking may see the corporation's and the guest
      * miners' figures: directors, admins and "See all data (read-only)".
      */
@@ -1754,146 +1562,6 @@ class DashboardController extends Controller
      * FIXED: Get user's character IDs with multiple fallback methods
      * Addresses SeAT v5.x relationship issues
      */
-    /**
-     * What the person looking still owes in mining tax, for the banner at the top
-     * of the dashboard, or null when they owe nothing.
-     *
-     * Worked out on every load rather than inside the dashboard cache, so the
-     * banner goes as soon as a payment is matched instead of minutes later. Bills
-     * sit under the main character, the same lookup Tax Overview uses.
-     */
-    private function taxBanner($user): ?array
-    {
-        try {
-            if (!$user || !($this->settingsService->getFeatureFlags()['enable_tax_tracking'] ?? true)) {
-                return null;
-            }
-
-            $billingIds = $user->main_character_id
-                ? [(int) $user->main_character_id]
-                : $this->getUserCharacterIds($user);
-
-            if (empty($billingIds)) {
-                return null;
-            }
-
-            $bills = MiningTax::whereIn('character_id', $billingIds)
-                ->outstanding()
-                ->get()
-                ->filter(fn ($bill) => $bill->getRemainingBalance() > 0)
-                ->sortBy(fn ($bill) => $bill->effectiveDueDate()->getTimestamp())
-                ->values();
-
-            if ($bills->isEmpty()) {
-                return null;
-            }
-
-            // In ore mode, the ore the most urgent bill comes to.
-            $ore = [];
-            try {
-                $oreTax = app(\MiningManager\Services\Tax\Ore\OreTaxService::class);
-                if ($oreTax->formForCharacter((int) $bills->first()->character_id) === \MiningManager\Services\Tax\Ore\OreTaxService::FORM_ORE) {
-                    $ore = array_values($oreTax->linesForBill($bills->first()));
-                }
-            } catch (\Throwable $e) {
-                $ore = [];
-            }
-
-            return [
-                // The first to fall due sets the countdown; any late bill turns it red.
-                'first' => $bills->first(),
-                'ore' => $ore,
-                'late' => $bills->contains(fn ($bill) => $bill->isOverdue()),
-                'count' => $bills->count(),
-                'remaining' => round($bills->sum(fn ($bill) => $bill->getRemainingBalance()), 2),
-                'billed' => round($bills->sum(fn ($bill) => (float) $bill->amount_owed), 2),
-                'paid' => round($bills->sum(fn ($bill) => (float) $bill->amount_paid), 2),
-            ];
-        } catch (\Exception $e) {
-            // A missing banner is better than a dashboard that will not load.
-            \Log::warning('DashboardController: could not work out the tax banner', [
-                'user_id' => $user->id ?? null,
-                'error' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-    }
-
-    private function getUserCharacterIds($user)
-    {
-        if (!$user) {
-            \Log::warning('getUserCharacterIds: No user provided');
-            return [];
-        }
-        
-        // Method 1: Try the characters relationship (preferred)
-        try {
-            if (method_exists($user, 'characters')) {
-                $characters = $user->characters;
-                if ($characters && $characters->count() > 0) {
-                    $ids = $characters->pluck('character_id')->toArray();
-                    \Log::debug('getUserCharacterIds: Found via characters relationship', [
-                        'user_id' => $user->id,
-                        'count' => count($ids)
-                    ]);
-                    return $ids;
-                }
-            }
-        } catch (\Exception $e) {
-            \Log::warning('getUserCharacterIds: Failed to load characters via relationship', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-        
-        // Method 2: Try to load the relationship explicitly
-        try {
-            $user->load('characters');
-            if ($user->relationLoaded('characters') && $user->characters->count() > 0) {
-                $ids = $user->characters->pluck('character_id')->toArray();
-                \Log::debug('getUserCharacterIds: Found via explicit relationship load', [
-                    'user_id' => $user->id,
-                    'count' => count($ids)
-                ]);
-                return $ids;
-            }
-        } catch (\Exception $e) {
-            \Log::warning('getUserCharacterIds: Failed to explicitly load characters', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-        
-        // Method 3: Direct database query via refresh_tokens (SeAT v5 stores
-        // the user↔character link in refresh_tokens, NOT character_infos)
-        try {
-            $characterIds = DB::table('refresh_tokens')
-                ->where('user_id', $user->id)
-                ->pluck('character_id')
-                ->toArray();
-
-            if (!empty($characterIds)) {
-                \Log::debug('getUserCharacterIds: Found via refresh_tokens table query', [
-                    'user_id' => $user->id,
-                    'count' => count($characterIds)
-                ]);
-                return $characterIds;
-            }
-        } catch (\Exception $e) {
-            \Log::error('getUserCharacterIds: Failed to get user characters from refresh_tokens', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
-        }
-        
-        \Log::warning('getUserCharacterIds: No characters found for user', [
-            'user_id' => $user->id
-        ]);
-        
-        return [];
-    }
-
     /**
      * FIXED: Get main character ID for a user
      */
@@ -2154,13 +1822,6 @@ class DashboardController extends Controller
         }
     }
 
-    private function calculateTaxForPeriod($characterIds, $startDate, $endDate)
-    {
-        return MiningTax::whereIn('character_id', $characterIds)
-            ->whereBetween('month', [$startDate->format('Y-m-01'), $endDate->format('Y-m-01')])
-            ->sum('amount_owed');
-    }
-
     private function isMoonOre($typeId)
     {
         return TypeIdRegistry::isMoonOre($typeId);
@@ -2223,10 +1884,6 @@ class DashboardController extends Controller
                 return $this->getCorpMiningPerformanceLast12Months($corporationId);
             case 'moon_mining_performance':
                 return $this->getCorpMoonMiningPerformanceLast12Months($corporationId);
-            case 'mining_tax':
-                return $this->getMiningTaxLast12Months($corporationId);
-            case 'event_tax':
-                return $this->getEventTaxLast12Months($corporationId);
             default:
                 return [];
         }

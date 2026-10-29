@@ -256,27 +256,6 @@
                             </div>
                         </div>
 
-                        {{-- Total Tax --}}
-                        <div class="col-lg col-md-6">
-                            <div class="info-box bg-gradient-warning">
-                                <span class="info-box-icon">
-                                    <i class="fas fa-percent"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">{{ trans('mining-manager::ledger.total_tax') }}</span>
-                                    <span class="info-box-number">{{ number_format($totals['total_tax'], 0) }}</span>
-                                    <small>ISK</small>
-                                    <small class="mm-tax-note" title="{{ trans('mining-manager::ledger.source_tax_note') }}">{{ trans('mining-manager::ledger.source_tax_short') }}</small>
-                                    @if(!empty($totals['event_discount_total']) && $totals['event_discount_total'] > 0)
-                                        <small class="d-block text-light" title="ISK waived this month due to active event modifiers. Already included in total_tax — shown here for transparency.">
-                                            <i class="fas fa-gift"></i>
-                                            incl. &minus;{{ number_format($totals['event_discount_total'], 0) }} ISK event discount
-                                        </small>
-                                    @endif
-                                </div>
-                            </div>
-                        </div>
-
                         {{-- Total Quantity --}}
                         <div class="col-lg col-md-6">
                             <div class="info-box bg-gradient-info">

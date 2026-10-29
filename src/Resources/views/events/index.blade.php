@@ -301,15 +301,6 @@
                         </p>
                         @endif
                     </div>
-
-                    {{-- Tax Bonus/Penalty --}}
-                    @if($event->tax_modifier != 0)
-                    <div class="alert alert-{{ $event->tax_modifier < 0 ? 'success' : 'warning' }} mt-2 mb-0">
-                        <i class="fas fa-percentage"></i>
-                        <strong>{{ trans('mining-manager::events.tax_modifier') }}:</strong>
-                        {{ $event->tax_modifier > 0 ? '+' : '' }}{{ $event->tax_modifier }}%
-                    </div>
-                    @endif
                 </div>
                 <div class="card-footer">
                     <div class="row">

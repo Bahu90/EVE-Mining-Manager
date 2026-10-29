@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use MiningManager\Http\Controllers\Concerns\GuardsDataExport;
 use MiningManager\Services\Analytics\ChartFilter;
-use MiningManager\Services\Tax\Concerns\ResolvesCharacterOwnership;
-use MiningManager\Services\Tax\ClassificationEpoch;
+use MiningManager\Services\Character\Concerns\ResolvesCharacterOwnership;
 
 class AnalyticsController extends Controller
 {
@@ -258,17 +257,10 @@ class AnalyticsController extends Controller
             $playerOptions = $this->analyticsService
                 ->getTopMinersByAccount($startDate, $endDate, 500, $corporationId);
 
-            // Mining before the classification cutover carries the flags it was
-            // billed on, right or wrong. A chart reading those flags says so
-            // rather than quietly averaging the two eras together.
-            $classificationCutover = $filter->dependsOnClassification()
-                ? ClassificationEpoch::get()
-                : null;
-
             return view('mining-manager::analytics.charts', array_merge(compact(
                 'chartData', 'startDate', 'endDate',
                 'corporationId', 'corporations', 'userCorporationId',
-                'filter', 'playerOptions', 'playerId', 'classificationCutover'
+                'filter', 'playerOptions', 'playerId'
             ), ['features' => $settings->getFeatureFlags()]));
         } catch (\Exception $e) {
             Log::error('Mining Manager: Analytics error: ' . $e->getMessage());

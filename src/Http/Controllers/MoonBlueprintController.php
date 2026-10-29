@@ -522,6 +522,6 @@ class MoonBlueprintController extends Controller
      */
     protected function corporationId(): ?int
     {
-        return $this->settings->getTaxProgramCorporationId();
+        return $this->settings->getMoonOwnerCorporationId();
     }
 }

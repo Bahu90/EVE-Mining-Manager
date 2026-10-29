@@ -6,8 +6,8 @@
  * 4-tier permission model:
  *   view     - Base access (help page only)
  *   member   - Corp miners: view own data, join events, view moon schedules
- *   director - Corp management: view all corp data, manage operations, analytics, reports, theft
- *   admin    - Full control: settings, tax management, delete actions, API, diagnostics
+ *   director - Corp management: view all corp data, manage operations, analytics, reports
+ *   admin    - Full control: settings, delete actions, API, diagnostics
  *
  * Higher tiers inherit all lower tier permissions via controller logic.
  */

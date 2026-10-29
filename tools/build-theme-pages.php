@@ -64,7 +64,6 @@ final class ThemePagesBuilder
     {
         $sources = [
             'assets/css/mining-manager-dashboard.css' => file_get_contents("{$this->root}/src/Resources/assets/css/mining-manager-dashboard.css"),
-            'assets/css/tax-management.css' => file_get_contents("{$this->root}/src/Resources/assets/css/tax-management.css"),
         ];
 
         $views = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator("{$this->root}/src/Resources/views"));

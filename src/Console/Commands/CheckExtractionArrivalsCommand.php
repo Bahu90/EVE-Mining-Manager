@@ -78,7 +78,7 @@ class CheckExtractionArrivalsCommand extends Command
             //  - within the hours-back window (prevents notifying for ancient data)
             //  - notification_sent = false (idempotent — already-notified rows skipped)
             //  - corporation_id matches moon owner (safety: don't notify for other corps)
-            $moonOwnerCorpId = $this->settingsService->getTaxProgramCorporationId();
+            $moonOwnerCorpId = $this->settingsService->getMoonOwnerCorporationId();
 
             $query = MoonExtraction::query()
                 ->where('chunk_arrival_time', '<=', $now)

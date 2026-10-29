@@ -359,7 +359,7 @@ class ReportController extends Controller
             
             // Write headers based on data structure
             if (!empty($data['miners'])) {
-                CsvSafe::put($file, ['Character', 'Quantity Mined', 'Value (ISK)', 'Tax Owed']);
+                CsvSafe::put($file, ['Character', 'Quantity Mined', 'Value (ISK)']);
                 foreach ($data['miners'] as $miner) {
                     CsvSafe::put($file, $miner);
                 }
@@ -608,7 +608,6 @@ class ReportController extends Controller
 
         $exportTypes = [
             'mining_activity' => 'Mining Activity',
-            'tax_records' => 'Tax Records',
             'miner_stats' => 'Miner Statistics',
             'system_stats' => 'System Statistics',
             'ore_breakdown' => 'Ore Breakdown',
@@ -632,7 +631,7 @@ class ReportController extends Controller
 
         try {
             $validated = $request->validate([
-                'export_type' => 'required|in:mining_activity,tax_records,miner_stats,system_stats,ore_breakdown,event_data',
+                'export_type' => 'required|in:mining_activity,miner_stats,system_stats,ore_breakdown,event_data',
                 'format' => 'required|in:csv,json,pdf',
                 'start_date' => 'required|date',
                 'end_date' => 'required|date|after:start_date',

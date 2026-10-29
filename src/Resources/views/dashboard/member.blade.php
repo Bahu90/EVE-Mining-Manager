@@ -50,8 +50,6 @@
 @section('full')
 @include('mining-manager::partials.toastr')
 <div class="mining-dashboard member-dashboard">
-    @include('mining-manager::dashboard.partials._tax_banner')
-    
     {{-- CURRENT MONTH STATISTICS --}}
     <div class="row">
         <div class="col-12">
@@ -70,7 +68,7 @@
                 <div class="card-body">
                     <div class="row">
                         {{-- Total Mined Quantity --}}
-                        <div class="col-lg-3 col-md-6">
+                        <div class="col-lg-4 col-md-6">
                             <div class="info-box bg-gradient-warning">
                                 <span class="info-box-icon">
                                     <i class="fas fa-gem"></i>
@@ -84,7 +82,7 @@
                         </div>
 
                         {{-- Total Mined Volume --}}
-                        <div class="col-lg-3 col-md-6">
+                        <div class="col-lg-4 col-md-6">
                             <div class="info-box bg-gradient-info">
                                 <span class="info-box-icon">
                                     <i class="fas fa-cube"></i>
@@ -98,7 +96,7 @@
                         </div>
 
                         {{-- Total Mined ISK --}}
-                        <div class="col-lg-3 col-md-6">
+                        <div class="col-lg-4 col-md-6">
                             <div class="info-box bg-gradient-success">
                                 <span class="info-box-icon">
                                     <i class="fas fa-coins"></i>
@@ -106,20 +104,6 @@
                                 <div class="info-box-content">
                                     <span class="info-box-text">{{ trans('mining-manager::dashboard.total_mined_isk') }}</span>
                                     <span class="info-box-number">{{ number_format($currentMonthStats['total_isk'], 0) }}</span>
-                                    <small>ISK</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        {{-- Total Tax ISK --}}
-                        <div class="col-lg-3 col-md-6">
-                            <div class="info-box bg-gradient-danger">
-                                <span class="info-box-icon">
-                                    <i class="fas fa-receipt"></i>
-                                </span>
-                                <div class="info-box-content">
-                                    <span class="info-box-text">{{ trans('mining-manager::dashboard.tax_isk') }}</span>
-                                    <span class="info-box-number">{{ number_format($currentMonthStats['tax_isk'], 0) }}</span>
                                     <small>ISK</small>
                                 </div>
                             </div>
@@ -361,14 +345,6 @@
     </div>
 
     {{-- CHARTS ROW 3 --}}
-    @php
-        // Tax-related 12-month chart uses calendar-month aggregation regardless
-        // of period type. On biweekly setups the Event Bonus series sums both
-        // H1 and H2 event discounts for each month — which is correct, but
-        // worth flagging so miners don't wonder why a month has more than one
-        // period's worth of savings.
-        $__chartPeriodType = app(\MiningManager\Services\Tax\TaxPeriodHelper::class)->getConfiguredPeriodType();
-    @endphp
     <div class="row">
         {{-- Mining Income Chart --}}
         <div class="col-lg-12">
@@ -384,12 +360,6 @@
                         <canvas id="miningIncomeChart"></canvas>
                     </div>
                     <small class="text-muted d-block mt-2"><i class="fas fa-info-circle"></i> {{ trans('mining-manager::dashboard.note_mining_income') }}</small>
-                    @if($__chartPeriodType !== 'monthly')
-                        <small class="text-muted d-block mt-1"><i class="fas fa-calendar-alt"></i>
-                            <strong>{{ ucfirst($__chartPeriodType) }} setup:</strong>
-                            taxes and event bonuses from all periods within each calendar month are summed into that month's bar.
-                        </small>
-                    @endif
                 </div>
             </div>
         </div>
@@ -579,20 +549,6 @@ const miningIncomeChart = new Chart(miningIncomeCtx, {
                 data: chartData.miningIncome.refined_value,
                 backgroundColor: 'rgba(0, 210, 255, 0.8)',
                 borderColor: 'rgba(0, 210, 255, 1)',
-                borderWidth: 1
-            },
-            {
-                label: '{{ trans("mining-manager::dashboard.tax_paid") }}',
-                data: chartData.miningIncome.tax_paid,
-                backgroundColor: 'rgba(255, 0, 132, 0.8)',
-                borderColor: 'rgba(255, 0, 132, 1)',
-                borderWidth: 1
-            },
-            {
-                label: '{{ trans("mining-manager::dashboard.event_bonus") }}',
-                data: chartData.miningIncome.event_bonus,
-                backgroundColor: 'rgba(161, 198, 60, 0.8)',
-                borderColor: 'rgba(161, 198, 60, 1)',
                 borderWidth: 1
             }
         ]

@@ -5,7 +5,6 @@ return [
     'settings' => 'Settings',
     'settings_menu' => 'Settings Menu',
     'general' => 'General',
-    'tax_rates' => 'Tax Rates',
     'pricing' => 'Pricing',
     'features' => 'Features',
     'advanced' => 'Advanced',
@@ -59,66 +58,9 @@ return [
     'compact_mode' => 'Compact Mode',
     'compact_mode_help' => 'Use a more compact layout with less spacing',
 
-    // Payment Settings
-    'payment_settings' => 'Payment Settings',
-    'payment_match_tolerance' => 'Payment Match Tolerance',
-    'payment_match_tolerance_help' => 'ISK tolerance when matching wallet payments to tax amounts. Default: 100 ISK',
-    'payment_grace_period' => 'ESI Wallet Lag Buffer',
-    'payment_grace_period_help' => 'Extra hours to wait before marking a tax as overdue, allowing ESI wallet data to arrive from CCP. EVE wallet journal entries can be delayed — this buffer prevents false "overdue" flags when a player has already paid but ESI hasn\'t delivered the data yet. Default: 24 hours',
-
     // Notification Settings (moved to dedicated Notifications tab)
     'notification_settings' => 'Notification Settings',
     'notifications' => 'Notifications',
-    
-    // Tax Rate Settings
-    'tax_rate_settings' => 'Tax Rate Settings',
-    'tax_rate_info' => 'Configure default tax rates for different types of mining activities.',
-    'default_tax_rates' => 'Default Tax Rates',
-    'ore_tax_rate' => 'Ore Tax Rate',
-    'ore_tax_rate_help' => 'Default tax percentage for standard ore mining',
-    'ice_tax_rate' => 'Ice Tax Rate',
-    'ice_tax_rate_help' => 'Default tax percentage for ice harvesting',
-    'gas_tax_rate' => 'Gas Tax Rate',
-    'gas_tax_rate_help' => 'Default tax percentage for gas huffing',
-    'moon_tax_rate' => 'Moon Ore Tax Rate',
-    'moon_tax_rate_help' => 'Default tax percentage for moon ore mining',
-    'mercoxit_tax_rate' => 'Mercoxit Tax Rate',
-    'mercoxit_tax_rate_help' => 'Default tax percentage for mercoxit mining',
-    
-    // Tax Payment Method
-    'tax_payment_method' => 'Tax Payment Method',
-    'payment_method' => 'Payment Method',
-    'wallet_method' => 'Direct ISK Transfer',
-    'wallet_method_desc' => 'Members send ISK directly to corporation wallet',
-    'tax_wallet_division' => 'Tax Wallet Division',
-    'master_wallet' => 'Master Wallet',
-    'division_1' => 'Division 1',
-    'division_2' => 'Division 2',
-    'division_3' => 'Division 3',
-    'division_4' => 'Division 4',
-    'division_5' => 'Division 5',
-    'division_6' => 'Division 6',
-    'division_7' => 'Division 7',
-    'tax_wallet_division_help' => 'Which wallet division should receive tax payments',
-    
-    // Tax Code Settings
-    'tax_code_settings' => 'Tax Code Settings',
-    'tax_code_prefix' => 'Tax Code Prefix',
-    'tax_code_prefix_help' => 'Prefix for generated tax codes (e.g., TAX-)',
-    'tax_code_length' => 'Tax Code Length',
-    'tax_code_length_help' => 'Number of characters in generated tax codes',
-    'auto_generate_tax_codes' => 'Use Tax Codes',
-    'auto_generate_tax_codes_help' => 'Each bill gets a code that members put in the ISK transfer reason or the ore contract description, so the payment is matched to the bill on its own. Off: no codes are made or shown, ore contracts are matched to the pilot\'s open bills, and ISK transfers are matched by hand on the Wallet page.',
-    
-    // Tax Period Settings
-    'tax_period_settings' => 'Tax Period Settings',
-    'tax_calculation_period' => 'Tax Calculation Period',
-    'monthly' => 'Monthly',
-    'weekly' => 'Weekly',
-    'biweekly' => 'Bi-weekly',
-    'tax_calculation_period_help' => 'How often taxes are calculated',
-    'tax_payment_deadline' => 'Payment Deadline',
-    'tax_payment_deadline_help' => 'Number of days members have to pay taxes after calculation',
     
     // Pricing Settings
     'pricing_settings' => 'Pricing Settings',
@@ -155,7 +97,6 @@ return [
     
     // Pricing Adjustments
     'pricing_adjustments' => 'Pricing Adjustments',
-    'pricing_adjustment_warning' => 'Price adjustments affect all tax calculations. Use carefully.',
     'price_adjustment' => 'Price Adjustment Percentage',
     'price_adjustment_help' => 'Adjust all prices by this percentage (positive or negative)',
     'minimum_ore_value' => 'Minimum Ore Value',
@@ -181,8 +122,6 @@ return [
     
     // Core Features
     'core_features' => 'Core Features',
-    'enable_tax_tracking' => 'Enable Tax Tracking',
-    'enable_tax_tracking_help' => 'Track and calculate mining taxes',
     'enable_ledger_tracking' => 'Enable Ledger Tracking',
     'enable_ledger_tracking_help' => 'Track individual mining activities',
     'enable_analytics' => 'Enable Analytics',
@@ -213,7 +152,7 @@ return [
     'show_character_names' => 'Show Character Names',
     'show_character_names_help' => 'Display full character names in public areas',
     'allow_export_data' => 'Allow Data Export',
-    'allow_export_data_help' => 'Exporting is off for everyone when this is off, directors and admins included. Covers mining, tax, analytics, theft, report and moon downloads. Your settings backup is separate and always available.',
+    'allow_export_data_help' => 'Exporting is off for everyone when this is off, directors and admins included. Covers mining, analytics, report and moon downloads. Your settings backup is separate and always available.',
     'data_export_disabled' => 'Exporting is switched off. An administrator can turn it back on under Settings, Features, Allow Data Export.',
     
     // Automation & Processing
@@ -222,20 +161,12 @@ return [
     'auto_process_ledger_help' => 'Automatically process mining ledger data',
     'ledger_processing_interval' => 'Processing Interval',
     'ledger_processing_interval_help' => 'How often to process ledger data (in minutes). Note: Changing this value requires manually updating the scheduled task interval in SeAT\'s scheduler.',
-    'auto_calculate_taxes' => 'Auto-Calculate Taxes',
-    'auto_calculate_taxes_help' => 'Automatically calculate taxes at end of period',
-    'auto_generate_invoices' => 'Auto-Generate Invoices',
-    'auto_generate_invoices_help' => 'Automatically create tax invoices',
-    'verify_wallet_transactions' => 'Verify Wallet Transactions',
-    'verify_wallet_transactions_help' => 'Automatically verify tax payments in wallet',
     
     // Data Retention
     'data_retention' => 'Data Retention',
     'data_retention_warning' => 'Changing retention periods will not immediately delete old data. Run cleanup manually.',
     'ledger_retention_days' => 'Ledger Retention Period',
     'ledger_retention_days_help' => 'How long to keep mining ledger records',
-    'tax_record_retention_days' => 'Tax Record Retention',
-    'tax_record_retention_days_help' => 'How long to keep tax records and invoices',
     'auto_cleanup_old_data' => 'Auto-Cleanup Old Data',
     'auto_cleanup_old_data_help' => 'Automatically delete data older than retention period',
     
@@ -276,11 +207,6 @@ return [
     'help_general_1' => 'Set your corporation name and ticker for display',
     'help_general_2' => 'Choose timezone and date/time formats',
     'help_general_3' => 'Customize notification preferences',
-    'help_tax' => 'Tax Settings',
-    'help_tax_desc' => 'Set up tax rates and payment methods:',
-    'help_tax_1' => 'Configure default tax rates for different ore types',
-    'help_tax_2' => 'Set up wallet transfer payment with tax codes',
-    'help_tax_3' => 'Set payment deadlines',
     'help_pricing' => 'Pricing Settings',
     'help_pricing_desc' => 'Control how ore values are calculated:',
     'help_pricing_1' => 'Select price provider and market hub',
@@ -288,7 +214,7 @@ return [
     'help_pricing_3' => 'Apply refining efficiency and adjustments',
     'help_features' => 'Feature Settings',
     'help_features_desc' => 'Enable or disable specific features:',
-    'help_features_1' => 'Toggle tax tracking, events, and moon mining',
+    'help_features_1' => 'Toggle events, moon mining and other features',
     'help_features_2' => 'Configure automation and processing',
     'help_features_3' => 'Set data retention periods',
     'need_more_help' => 'Need More Help?',
@@ -297,7 +223,6 @@ return [
     
     // Messages
     'choose_payment_method' => 'Choose Payment Method',
-    'payment_method_description' => 'Select how members should pay their mining taxes.',
     
     // Additional Settings Terms
     'clear_cache' => 'Clear Cache',
@@ -306,7 +231,7 @@ return [
     // Webhook Settings
     'webhooks' => 'Webhooks',
     'webhook_notifications' => 'Webhook Notifications',
-    'webhooks_info' => 'Configure webhooks to receive real-time theft detection notifications in Discord, Slack, or custom endpoints.',
+    'webhooks_info' => 'Configure webhooks to receive real-time moon, event and report notifications in Discord, Slack, or custom endpoints.',
     'webhook_statistics' => 'Webhook Statistics',
     'webhooks_configured' => 'Configured',
     'webhooks_enabled' => 'Enabled',
@@ -334,14 +259,10 @@ return [
     'discord_webhook_help' => 'Go to Discord Server Settings → Integrations → Webhooks to get your webhook URL',
     'webhook_corporation' => 'Assign to Corporation',
     'webhook_corporation_global' => 'Global (admin — sees all corps)',
-    'webhook_corporation_help' => 'Which corporation should this webhook receive notifications for? "Global" receives everything. The Tax Program Corp receives everything regardless. A specific corp receives: moon/theft/broadcast tax for its own operations, plus individual tax reminders / invoices / overdue only for miners who belong to that corp. Use this to let each mining-group director see only their own members\' tax activity.',
+    'webhook_corporation_help' => 'Which corporation should this webhook receive notifications for? "Global" receives everything. The moon owner corporation receives everything regardless. A specific corp receives the moon and event notifications for its own operations.',
     'slack_webhook_help' => 'Go to Slack App Settings → Incoming Webhooks to get your webhook URL',
     'custom_webhook_help' => 'Enter your custom webhook endpoint URL',
     'notify_on_events' => 'Notify On Events',
-    'theft_detected' => 'Theft Detected',
-    'critical_theft' => 'Critical Theft',
-    'active_theft' => 'Active Theft in Progress',
-    'incident_resolved' => 'Incident Resolved',
 
     // Discord Settings
     'discord_settings' => 'Discord Settings',
@@ -359,9 +280,9 @@ return [
 
     // Custom Webhook Settings
     'custom_webhook_settings' => 'Custom Webhook Settings',
-    'custom_webhook_info' => 'Custom webhooks receive a JSON payload with theft incident data. You can customize the payload structure below.',
+    'custom_webhook_info' => 'Custom webhooks receive a JSON payload with the notification data. You can customize the payload structure below.',
     'custom_payload_template' => 'Custom Payload Template',
-    'custom_payload_help' => 'JSON template with variables: {{event_type}}, {{character_id}}, {{character_name}}, {{ore_value}}, {{tax_owed}}, {{severity}}, {{status}}',
+    'custom_payload_help' => 'JSON template with variables: {{event_type}}, {{character_id}}, {{character_name}}',
 
     // Report Notifications
     'reports_category' => 'Reports',
@@ -371,13 +292,4 @@ return [
     'optional' => 'Optional',
     'cancel' => 'Cancel',
     'save_webhook' => 'Save Webhook',
-
-    // How members pay their mining tax
-    'tax_payment_form' => 'Members pay their tax in',
-    'tax_payment_form_isk' => 'ISK',
-    'tax_payment_form_isk_desc' => ': an ISK transfer to the corporation wallet, matched by tax code.',
-    'tax_payment_form_ore' => 'Ore',
-    'tax_payment_form_ore_desc' => ': an item exchange contract to the corporation with their share of the ore. Accepted contracts are credited against their bill every hour.',
-    'tax_payment_form_help' => 'Bills are still worked out in ISK. In ore mode members see the ore their bill comes to, each ore at its own rate, and ISK transfers are still accepted too. Needs a director token with the corporation contracts scope on SeAT.',
-    'tax_payment_form_since' => 'Contracts made from :date on are checked.',
 ];

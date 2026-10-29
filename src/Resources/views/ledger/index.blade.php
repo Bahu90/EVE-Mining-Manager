@@ -531,7 +531,7 @@ $(document).ready(function() {
         
         // appendTo('body') escapes AdminLTE's CSS stacking context so the
         // modal-backdrop (inserted at body level by Bootstrap) doesn't end
-        // up above the modal-dialog. See the same fix in taxes/index.blade.php.
+        // up above the modal-dialog.
         $('#entryDetailsModal').appendTo('body').modal('show');
         $('#entryDetailsContent').html('<div class="text-center"><i class="fas fa-spinner fa-spin fa-3x"></i></div>');
         

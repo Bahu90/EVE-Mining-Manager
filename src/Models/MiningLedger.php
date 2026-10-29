@@ -52,11 +52,8 @@ class MiningLedger extends Model
         'ore_value',
         'mineral_value',
         'total_value',
-        'tax_rate',
-        'tax_amount',
         'ore_type',
         'corporation_id',
-        'is_taxable',
         'notes',
         'is_moon_ore',
         'is_ice',
@@ -79,9 +76,6 @@ class MiningLedger extends Model
         'ore_value' => 'decimal:2',
         'mineral_value' => 'decimal:2',
         'total_value' => 'decimal:2',
-        'tax_rate' => 'decimal:2',
-        'tax_amount' => 'decimal:2',
-        'is_taxable' => 'boolean',
         'is_moon_ore' => 'boolean',
         'is_ice' => 'boolean',
         'is_gas' => 'boolean',
@@ -327,17 +321,6 @@ class MiningLedger extends Model
     }
 
     /**
-     * Scope a query to only include taxable entries.
-     *
-     * @param \Illuminate\Database\Eloquent\Builder $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeTaxable($query)
-    {
-        return $query->where('is_taxable', true);
-    }
-
-    /**
      * Scope a query to filter by corporation.
      *
      * @param \Illuminate\Database\Eloquent\Builder $query
@@ -428,19 +411,4 @@ class MiningLedger extends Model
         }
     }
 
-    /**
-     * Calculate and apply tax.
-     * 
-     * @param float $taxRate
-     * @return void
-     */
-    public function applyTax(float $taxRate)
-    {
-        if (!$this->is_taxable) {
-            return;
-        }
-
-        $this->tax_rate = $taxRate;
-        $this->tax_amount = $this->total_value * ($taxRate / 100);
-    }
 }

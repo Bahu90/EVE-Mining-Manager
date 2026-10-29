@@ -3,7 +3,7 @@
 
    The look of the corporation's own mining page (eve-ro.com/tools/mining)
    and of Ratting Manager: a black ground, flat dark tiles with a clipped
-   corner, the Oxanium typeface, electric blue for ISK, green for tax, and
+   corner, the Oxanium typeface, electric blue for ISK, and
    small spaced capitals over large numbers.
 
    Loaded on every Mining Manager page after mining-manager-dashboard.css
@@ -796,8 +796,7 @@ body .mining-manager-wrapper .small-box h3,
 body .mining-dashboard .info-box .info-box-number,
 body .mining-manager-wrapper .info-box .info-box-number,
 body .mining-dashboard .isk-value,
-body .mining-manager-wrapper .isk-value,
-body .tax-code-value {
+body .mining-manager-wrapper .isk-value {
     font-family: var(--mmx-font) !important;
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.01em;

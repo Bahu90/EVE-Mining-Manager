@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Services\Configuration\SettingsManagerService;
-use MiningManager\Services\Tax\InvoiceCoverage;
 
 /**
  * Clears out personal mining rows that our own corporation observer has
@@ -17,8 +16,7 @@ use MiningManager\Services\Tax\InvoiceCoverage;
  * one ore in one system that day; the corporation observer reports what came
  * off our refinery. The importer subtracts one from the other the first time
  * it meets an observer entry, and only then, so a single missed match leaves
- * the same mining in the ledger twice: a taxed observer row and an untaxed
- * personal copy, with nothing to notice or correct it afterwards.
+ * the same mining in the ledger twice: an observer row and a personal copy, with nothing to notice or correct it afterwards.
  *
  * This is the second attempt, and unlike the first it can run as often as it
  * likes without doing damage.
@@ -54,14 +52,13 @@ class PersonalMiningReconciler
     }
 
     /**
-     * @return array{examined:int,removed:int,billed_skipped:int,quantity:int,value:float,summaries:int,rows:array,moon_owner:?int}
+     * @return array{examined:int,removed:int,quantity:int,value:float,summaries:int,rows:array,moon_owner:?int}
      */
     public function reconcile(int $days = self::DEFAULT_DAYS, bool $dryRun = false): array
     {
         $result = [
             'examined' => 0,
             'removed' => 0,
-            'billed_skipped' => 0,
             'quantity' => 0,
             'value' => 0.0,
             'summaries' => 0,
@@ -120,13 +117,6 @@ class PersonalMiningReconciler
             ->chunkById(500, function ($rows) use (&$result, &$touched, $dryRun, $moonOwnerCorpId) {
                 foreach ($rows as $row) {
                     $result['examined']++;
-
-                    // A day somebody has already been billed for is evidence,
-                    // not working data. Never touched, whatever it holds.
-                    if (InvoiceCoverage::coversRow((int) $row->character_id, $row->date)) {
-                        $result['billed_skipped']++;
-                        continue;
-                    }
 
                     if ((int) $row->quantity !== $this->observerTotal($row, $moonOwnerCorpId)) {
                         continue;

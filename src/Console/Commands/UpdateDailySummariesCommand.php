@@ -14,12 +14,11 @@ use Illuminate\Support\Facades\Log;
  * Daily summary update command.
  *
  * Rebuilds daily mining summaries with rich per-ore breakdowns and
- * estimated tax calculations. This enables live tax tracking — players
- * see their estimated tax obligation accumulate throughout the month.
+ * values, so the dashboards and ledger stay current through the month.
  *
  * By default rebuilds today and yesterday to catch late ESI data.
  *
- * Schedule: Run daily after mining-manager:calculate-taxes (e.g. 2:30 AM)
+ * Schedule: runs on the plugin's own schedule (see ScheduleSeeder).
  */
 class UpdateDailySummariesCommand extends Command
 {
@@ -30,7 +29,7 @@ class UpdateDailySummariesCommand extends Command
                             {--today-only : Only rebuild today (fast mode for frequent cron runs)}
                             {--character_id= : Only process specific character}';
 
-    protected $description = 'Update daily mining ledger summaries with estimated tax calculations';
+    protected $description = 'Update daily mining ledger summaries with per-ore values';
 
     public function handle(LedgerSummaryService $summaryService)
     {

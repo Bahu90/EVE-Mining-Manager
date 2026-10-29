@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\DB;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Models\MiningPriceCache;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\Setting;
 use Seat\Eveapi\Models\Industry\CharacterMining;
 use MiningManager\Services\Character\CharacterInfoService;
@@ -418,7 +417,6 @@ class LedgerController extends Controller
             ->selectRaw('
                 SUM(total_quantity) as total_quantity,
                 SUM(total_value) as total_value,
-                SUM(total_tax) as total_tax,
                 COUNT(DISTINCT character_id) as unique_miners,
                 COUNT(DISTINCT date) as mining_days
             ')
@@ -427,7 +425,6 @@ class LedgerController extends Controller
         return [
             'total_quantity' => (float) ($agg->total_quantity ?? 0),
             'total_value' => (float) ($agg->total_value ?? 0),
-            'total_tax' => (float) ($agg->total_tax ?? 0),
             'unique_miners' => (int) ($agg->unique_miners ?? 0),
             'mining_days' => (int) ($agg->mining_days ?? 0),
         ];
@@ -449,52 +446,8 @@ class LedgerController extends Controller
         // What was mined, from the ledger, for the picked source.
         $mined = app(SourceTotals::class)->totals($picked, $startDate, $endDate, $source);
 
-        // Tax and event discounts stay with the daily summaries: they cover all
-        // the mining the tax settings charge, whatever source is picked.
-        $agg = MiningLedgerDailySummary::whereIn('character_id', $picked)
-            ->whereBetween('date', [$startDate, $endDate])
-            ->selectRaw('
-                SUM(total_tax) as total_tax,
-                SUM(event_discount_total) as event_discount_total
-            ')
-            ->first();
-
         $totalValue = $mined['value'];
         $activeDays = $mined['active_days'];
-
-        // Tax paid from mining_taxes (for selected date range): everything
-        // paid, part payments included, on the same bills as the owed figure
-        // below, so the outstanding figure compares like with like.
-        $paidTaxAmount = MiningTax::whereIn('character_id', $picked)
-            ->whereBetween('month', [$startDate, $endDate])
-            ->sum('amount_paid');
-
-        // Tax owed from mining_taxes (authoritative, for selected date range)
-        $taxOwed = (float) MiningTax::whereIn('character_id', $picked)
-            ->whereBetween('month', [$startDate, $endDate])
-            ->sum('amount_owed');
-
-        // Estimated tax: daily summaries first, then the raw ledger. When both
-        // say nothing is due, nothing is: mining can be untaxed (exempt, a 0%
-        // rate), and a guess at the ore rate would show tax nobody is billed.
-        $estimatedTax = (float) ($agg->total_tax ?? 0);
-
-        if ($estimatedTax <= 0) {
-            // Fallback: calculate from raw mining_ledger tax_amount
-            $estimatedTax = (float) MiningLedger::whereIn('character_id', $picked)
-                ->whereBetween('date', [$startDate, $endDate])
-                ->sum('tax_amount');
-        }
-
-        // Use authoritative tax_owed if available, otherwise fall back to estimated
-        $effectiveTaxOwed = $taxOwed > 0 ? $taxOwed : $estimatedTax;
-
-        // All-time event tax savings — every discount the user has accrued
-        // from event participation, across all events the daily summaries
-        // have seen. Cheap one-column sum from mining_ledger_daily_summaries.
-        $eventSavingsAllTime = $this->summaryService->getTotalEventSavings(
-            is_array($characterIds) ? $characterIds : $characterIds->toArray()
-        );
 
         return [
             'total_quantity' => $mined['quantity'],
@@ -504,12 +457,6 @@ class LedgerController extends Controller
             'active_days' => $activeDays,
             'best_day_value' => $mined['best_day'],
             'daily_average' => $activeDays > 0 ? round($totalValue / $activeDays, 0) : 0,
-            'estimated_tax_this_month' => $estimatedTax,
-            'total_tax_owed' => $effectiveTaxOwed,
-            'total_tax_paid' => $paidTaxAmount,
-            'tax_outstanding' => max(0, $effectiveTaxOwed - $paidTaxAmount),
-            'event_discount_total' => (float) ($agg->event_discount_total ?? 0),
-            'event_savings_all_time' => $eventSavingsAllTime,
             'mining_days' => $activeDays,
             'favorite_ore' => $this->getFavoriteOre($characterIds, $startDate, $endDate, $specificCharacterId, $source),
             'corp_rank' => $this->calculateCorpRank($characterIds, $startDate, $endDate, $source),
@@ -574,36 +521,6 @@ class LedgerController extends Controller
     }
 
     /**
-     * Get tax rate for an ore type using settings service.
-     * Respects per-rarity moon ore rates (R4-R64), ore, ice, gas rates.
-     *
-     * @param int $typeId
-     * @return float Tax rate as percentage (0-100)
-     */
-    protected function getOreTaxRate(int $typeId): float
-    {
-        $taxRates = $this->settingsService->getTaxRates();
-
-        // Check if it's moon ore
-        if (TypeIdRegistry::isMoonOre($typeId)) {
-            $rarity = TypeIdRegistry::getMoonOreRarity($typeId);
-            return (float) ($taxRates['moon_ore'][$rarity] ?? $taxRates['moon_ore']['r4'] ?? 5.0);
-        }
-
-        // Check other categories
-        if (TypeIdRegistry::isIce($typeId)) {
-            return (float) ($taxRates['ice'] ?? 10.0);
-        }
-
-        if (TypeIdRegistry::isGas($typeId)) {
-            return (float) ($taxRates['gas'] ?? 10.0);
-        }
-
-        // Regular ore
-        return (float) ($taxRates['ore'] ?? 10.0);
-    }
-
-    /**
      * Get empty statistics array
      *
      * @return array
@@ -617,12 +534,6 @@ class LedgerController extends Controller
             'active_days' => 0,
             'best_day_value' => 0,
             'daily_average' => 0,
-            'estimated_tax_this_month' => 0,
-            'total_tax_owed' => 0,
-            'total_tax_paid' => 0,
-            'tax_outstanding' => 0,
-            'event_discount_total' => 0,
-            'event_savings_all_time' => 0,
             'mining_days' => 0,
             'favorite_ore' => [
                 'name' => trans('mining-manager::ledger.no_data'),
@@ -630,24 +541,6 @@ class LedgerController extends Controller
             ],
             'corp_rank' => null,
         ];
-    }
-
-    /**
-     * Get estimated tax from daily summaries for a month.
-     *
-     * @param \Illuminate\Support\Collection $characterIds
-     * @param string $month YYYY-MM format
-     * @param int|null $specificCharacterId
-     * @return float
-     */
-    protected function getEstimatedTaxFromDailySummaries($characterIds, string $month, ?int $specificCharacterId = null): float
-    {
-        $monthDate = Carbon::parse($month)->startOfMonth();
-
-        return (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->forMonth($monthDate)
-            ->when($specificCharacterId, fn($q) => $q->where('character_id', $specificCharacterId))
-            ->sum('total_tax');
     }
 
     /**
@@ -813,7 +706,7 @@ class LedgerController extends Controller
         // permission only checks the user is *some* member — not that this
         // particular ledger row belongs to a character they're allowed to
         // see. Without this check, a member can iterate $id values and view
-        // any character's per-row mining (system, ore, value, tax). Other
+        // any character's per-row mining (system, ore, value). Other
         // character-scoped endpoints in this controller (showCharacterDetails,
         // getCharacterDailySummary, getDetailedEntries, getCharacterSystemDetails)
         // all call canViewCharacter() — this one was the lone outlier.
@@ -824,13 +717,7 @@ class LedgerController extends Controller
             abort(403, 'You do not have permission to view this character.');
         }
 
-        // Get related tax record if exists
-        $taxRecord = MiningTax::where('character_id', $entry->character_id)
-            ->whereYear('month', Carbon::parse($entry->date)->year)
-            ->whereMonth('month', Carbon::parse($entry->date)->month)
-            ->first();
-
-        return view('mining-manager::ledger.partials.details', compact('entry', 'taxRecord'));
+        return view('mining-manager::ledger.partials.details', compact('entry'));
     }
 
     /**
@@ -957,8 +844,6 @@ class LedgerController extends Controller
                 'Quantity',
                 'Price',
                 'Total Value',
-                'Tax Rate',
-                'Tax Amount',
             ]);
 
             $names = app(\MiningManager\Services\Character\CharacterNames::class);
@@ -972,8 +857,6 @@ class LedgerController extends Controller
                         number_format($entry->quantity, 2),
                         number_format($entry->price, 2),
                         number_format($entry->total_value, 2),
-                        number_format($entry->tax_rate, 2) . '%',
-                        number_format($entry->tax_amount, 2),
                     ]);
                 }
             });
@@ -1027,8 +910,6 @@ class LedgerController extends Controller
                 'Quantity',
                 'Price',
                 'Total Value',
-                'Tax Rate',
-                'Tax Amount',
             ]);
 
             $names = app(\MiningManager\Services\Character\CharacterNames::class);
@@ -1042,8 +923,6 @@ class LedgerController extends Controller
                         number_format($entry->quantity, 2),
                         number_format($entry->price, 2),
                         number_format($entry->total_value, 2),
-                        number_format($entry->tax_rate, 2) . '%',
-                        number_format($entry->tax_amount, 2),
                     ]);
                 }
             });
@@ -1117,8 +996,6 @@ class LedgerController extends Controller
         // Calculate totals
         $totals = [
             'total_value' => $summaries->sum('total_value'),
-            'total_tax' => $summaries->sum('total_tax'),
-            'event_discount_total' => $summaries->sum('event_discount_total'),
             'total_quantity' => $summaries->sum('total_quantity'),
             'total_volume_m3' => $summaries->sum('total_volume_m3'),
             'moon_ore_value' => $summaries->sum('moon_ore_value'),
@@ -1323,12 +1200,6 @@ class LedgerController extends Controller
             ')
             ->first();
 
-        // Get total_tax from daily summaries (single source of truth)
-        $totals->total_tax = (float) MiningLedgerDailySummary::whereIn('character_id', $characterIds)
-            ->whereYear('date', $monthDate->year)
-            ->whereMonth('date', $monthDate->month)
-            ->sum('total_tax');
-
         $split = app(SourceTotals::class)->split(
             array_map('intval', $characterIds),
             $monthDate->format('Y-m-d'),
@@ -1400,7 +1271,6 @@ class LedgerController extends Controller
                     'date' => $date->format('Y-m-d'),
                     'total_quantity' => number_format($summary->total_quantity, 2),
                     'total_value' => number_format($summary->total_value, 2),
-                    'total_tax' => number_format($summary->total_tax, 2),
                     'moon_ore_value' => number_format($summary->moon_ore_value, 2),
                     'regular_ore_value' => number_format($summary->regular_ore_value, 2),
                     'ice_value' => number_format($summary->ice_value, 2),
@@ -1457,7 +1327,6 @@ class LedgerController extends Controller
                     'date' => $entry->date->format('Y-m-d H:i:s'),
                     'quantity' => number_format($entry->quantity, 2),
                     'total_value' => number_format($entry->total_value, 2),
-                    'tax_amount' => number_format($entry->tax_amount, 2),
                     'ore_type' => $entry->ore_type,
                     'type_name' => $entry->type->typeName ?? 'Unknown',
                     'system_name' => $entry->solarSystem->name ?? 'Unknown',
@@ -1504,7 +1373,6 @@ class LedgerController extends Controller
                     'date' => $entry->date->format('Y-m-d H:i:s'),
                     'quantity' => number_format($entry->quantity, 2),
                     'total_value' => number_format($entry->total_value, 2),
-                    'tax_amount' => number_format($entry->tax_amount, 2),
                     'ore_type' => $entry->ore_type,
                     'type_name' => $entry->type->typeName ?? 'Unknown',
                     'type_id' => $entry->type_id,

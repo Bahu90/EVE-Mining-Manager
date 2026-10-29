@@ -36,18 +36,12 @@ return [
     'quantity' => 'Quantity',
     'price_per_unit' => 'Price/Unit',
     'total_value' => 'Total Value',
-    'tax_rate' => 'Tax Rate',
-    'tax_amount' => 'Tax Amount',
     'actions' => 'Actions',
 
     // Statistics
     'statistics' => 'Statistics',
     'total_mined' => 'Total Mined',
     'total_value' => 'Total Value',
-    'total_tax' => 'Total Tax',
-    'tax_owed' => 'Tax Owed',
-    'tax_paid' => 'Tax Paid',
-    'tax_outstanding' => 'Tax Outstanding',
     'unique_characters' => 'Unique Miners',
     'unique_ores' => 'Unique Ore Types',
     'unique_systems' => 'Unique Systems',
@@ -114,7 +108,6 @@ return [
 
     // Help
     'help_title' => 'Mining Ledger Help',
-    'help_description' => 'The mining ledger tracks all mining activity from your characters. Data is imported from the EVE ESI API and automatically calculates values and taxes based on your settings.',
     'help_filtering' => 'Use the filters to narrow down your results by character, date range, or ore type.',
     'help_processing' => 'Click "Process Ledger" to import new mining data from ESI. This should be done regularly to keep your ledger up to date.',
     
@@ -206,7 +199,6 @@ return [
     'started' => 'Started',
     'status' => 'Status',
     'summary_statistics' => 'Summary Statistics',
-    'tax_record' => 'Tax Record',
     'this_month' => 'This Month',
     'top_ore_type' => 'Top Ore Type',
     'total_value_mined' => 'Total Value Mined',
@@ -242,7 +234,6 @@ return [
     'error_loading_data' => 'Error loading data',
     'unknown_error' => 'Unknown error',
     'ore_types' => 'Ore Types',
-    'tax' => 'Tax',
 
     // Enhanced Summary View
     'advanced_view' => 'Advanced View',
@@ -260,11 +251,8 @@ return [
     'live' => 'Live',
     'not_registered' => 'Not Registered in SeAT',
 
-    // Daily Session Tax Tracking
-    'estimated_tax_this_month' => 'Estimated Tax',
+    // Daily sessions
     'mining_sessions_this_month' => 'Sessions',
-    'about_estimated_tax' => 'About Your Estimated Tax',
-    'estimated_tax_notice' => 'This estimate is calculated daily using the market price at the time of mining. Final tax is calculated at month end using the same per-day pricing. The estimate may differ slightly from the final amount.',
 
     // Chart labels
     'daily_value' => 'Daily Value',
@@ -286,10 +274,6 @@ return [
     'note_ore_distribution' => 'Breakdown of ore types you mined, by ISK value.',
     'note_monthly_comparison' => 'Side-by-side comparison of your mining across recent months.',
 
-    // Reprocessing: names invTypes could not place
-
-    'not_taxed' => 'Not taxed',
-
     // Where the mining happened: the Moon / Anomalies / All switch
     'source_label' => 'Where it was mined',
     'source_moon' => 'Moon',
@@ -303,6 +287,4 @@ return [
     'source_col_anomalies' => 'Anomalies ISK',
     'show_all_pilots' => 'Show all :count pilots',
     'show_top_pilots' => 'Show the top 25',
-    'source_tax_short' => 'Covers all taxed mining',
-    'source_tax_note' => 'Tax covers all your mining under the tax settings, whichever view is picked.',
 ];

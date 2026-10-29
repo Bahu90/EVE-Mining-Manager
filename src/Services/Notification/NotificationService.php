@@ -8,11 +8,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use MiningManager\Services\Configuration\SettingsManagerService;
 use MiningManager\Services\Notification\Concerns\WebhookDispatchTrait;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MiningEvent;
 use MiningManager\Models\MiningReport;
-use MiningManager\Models\TaxInvoice;
-use MiningManager\Models\TheftIncident;
 use Seat\Eseye\Cache\NullCache;
 use Seat\Eseye\Configuration;
 use Seat\Eseye\Containers\EsiAuthentication;
@@ -24,15 +21,13 @@ use Exception;
  * Single consolidated notification dispatcher for Mining Manager.
  *
  * Supported channels:
- *  - ESI (EVE in-game mail — tax + event notifications)
+ *  - ESI (EVE in-game mail — event notifications)
  *  - Slack (legacy global webhook URL)
  *  - Discord / Slack / Custom (per-webhook configurations table)
  *
  * Supported notification types:
- *  - Tax: tax_invoice, tax_overdue, tax_generated, tax_announcement
  *  - Event: event_created, event_started, event_completed
  *  - Moon: moon_ready (chunk arrival), jackpot_detected
- *  - Theft: theft_detected, critical_theft, active_theft, incident_resolved
  *  - Report: report_generated
  *  - Custom (ad-hoc message)
  *
@@ -54,11 +49,6 @@ class NotificationService
     /**
      * Notification types
      */
-    const TYPE_TAX_GENERATED = 'tax_generated';
-    const TYPE_TAX_ANNOUNCEMENT = 'tax_announcement';
-    const TYPE_TAX_INVOICE = 'tax_invoice';
-    const TYPE_TAX_OVERDUE = 'tax_overdue';
-    const TYPE_TAX_OUTSTANDING_DIGEST = 'tax_outstanding_digest';
     const TYPE_PRICE_PROVIDER = 'price_provider';
     const TYPE_MOON_SCAN_MISSING = 'moon_scan_missing';
     const TYPE_EVENT_CREATED = 'event_created';
@@ -76,10 +66,6 @@ class NotificationService
     const TYPE_EXTRACTION_CANCELLED = 'extraction_cancelled';
     const TYPE_MOON_NOT_RESCHEDULED = 'moon_not_rescheduled';
     const TYPE_SCHEDULE_NEEDS_FILLING = 'schedule_needs_filling';
-    const TYPE_THEFT_DETECTED = 'theft_detected';
-    const TYPE_CRITICAL_THEFT = 'critical_theft';
-    const TYPE_ACTIVE_THEFT = 'active_theft';
-    const TYPE_INCIDENT_RESOLVED = 'incident_resolved';
     const TYPE_REPORT_GENERATED = 'report_generated';
     const TYPE_CUSTOM = 'custom';
 
@@ -154,84 +140,6 @@ class NotificationService
     }
 
     /**
-     * Send tax invoice created notification
-     *
-     * @param TaxInvoice $invoice
-     * @return array
-     */
-    public function sendTaxInvoice(TaxInvoice $invoice): array
-    {
-        $typeSettings = $this->settings->getTypeNotificationSettings('tax_invoice');
-
-        // Resolve the deadline: prefer the underlying mining_tax's due_date
-        // (the authoritative source), fall back to the invoice's expires_at
-        // mirror (GenerateTaxInvoicesCommand copies due_date there), fall
-        // back to 'N/A' if neither is set. The tax_invoices table has no
-        // due_date column of its own — that's why expires_at is the mirror
-        // field. Earlier versions read $invoice->due_date and crashed with
-        // a null-format error (fixed 2026-04-23).
-        $miningTaxDueDate = $invoice->miningTax?->due_date;
-        $dueDateDisplay = $miningTaxDueDate
-            ? $miningTaxDueDate->format('Y-m-d')
-            : ($invoice->expires_at ? $invoice->expires_at->format('Y-m-d') : 'N/A');
-
-        $data = [
-            'invoice_id' => $invoice->id,
-            'amount' => $invoice->amount,
-            'due_date' => $dueDateDisplay,
-            'formatted_amount' => number_format($invoice->amount, 2) . ' ISK',
-            'show_amount' => $typeSettings['show_amount'],
-            'tax_page_url' => $this->getTaxPageUrl(),
-            'my_taxes_url' => $this->getMyTaxesUrl(),
-            'help_url' => $this->getHelpPayUrl(),
-            'is_personal' => true,
-            'miner_corporation_id' => $this->resolveMinerCorporationId((int) $invoice->character_id),
-        ];
-
-        return $this->send(self::TYPE_TAX_INVOICE, [$invoice->character_id], $data);
-    }
-
-    /**
-     * Send overdue tax notification
-     *
-     * @param int $characterId
-     * @param float $amount
-     * @param Carbon $dueDate
-     * @param int $daysOverdue
-     * @return array
-     */
-    public function sendTaxOverdue(int $characterId, float $amount, Carbon $dueDate, int $daysOverdue, array $context = []): array
-    {
-        $typeSettings = $this->settings->getTypeNotificationSettings('tax_overdue');
-
-        $data = [
-            'amount' => $amount,
-            'due_date' => $dueDate->format('Y-m-d'),
-            'days_overdue' => $daysOverdue,
-            'formatted_amount' => number_format($amount, 2) . ' ISK',
-            'show_amount' => $typeSettings['show_amount'],
-            'tax_page_url' => $this->getTaxPageUrl(),
-            'my_taxes_url' => $this->getMyTaxesUrl(),
-            'help_url' => $this->getHelpPayUrl(),
-            'is_personal' => true,
-            'miner_corporation_id' => $this->resolveMinerCorporationId($characterId),
-        ];
-
-        // Money already met from the member's balance. Passed by the caller
-        // because only it knows which invoices this figure covers. Without it a
-        // member sees a smaller number than the invoice they remember and has
-        // no way to tell whether it is a discount, an error, or their own money.
-        $creditApplied = round((float) ($context['credit_applied'] ?? 0), 2);
-
-        if ($creditApplied > 0) {
-            $data['credit_applied'] = $creditApplied;
-            $data['formatted_credit_applied'] = number_format($creditApplied, 2) . ' ISK';
-        }
-
-        return $this->send(self::TYPE_TAX_OVERDUE, [$characterId], $data);
-    }
-
-    /**
      * Price provider trouble: it stopped answering, its fallback took over or
      * stopped too, or it is answering again.
      *
@@ -282,118 +190,6 @@ class NotificationService
     }
 
     /**
-     * Send the outstanding-tax digest to directors.
-     *
-     * Every other tax notification speaks to one member about one debt. This is
-     * the only one that shows the whole picture, which is what makes it the
-     * backstop: an invoice missed by the per-member notifications (no Discord
-     * on that member, a delivery that failed quietly, a gap in matching we have
-     * not found yet) still surfaces here.
-     *
-     * Corp-scoped rather than personal, so it goes to director webhooks and
-     * never to the members it names.
-     *
-     * Expected keys in $data:
-     *   member_count, formatted_total, rows (each: character_name,
-     *   formatted_outstanding, percent_paid, invoice_count), tax_page_url
-     *
-     * @param array $data
-     * @return array
-     */
-    public function sendOutstandingDigest(array $data): array
-    {
-        $data['description'] = $data['description']
-            ?? 'Mining tax still outstanding. Amounts are what is left to pay, not what was originally charged.';
-
-        return $this->send(self::TYPE_TAX_OUTSTANDING_DIGEST, [], $data);
-    }
-
-    /**
-     * Look up a character's current corporation_id from SeAT's authoritative
-     * `character_affiliations` table. Returns null on fake IDs (e.g. the
-     * diagnostic tool's 123456789 placeholder) or if the character hasn't
-     * been loaded into SeAT yet. When null, per-corp webhook routing is
-     * skipped — the notification still fires to global + tax-program-corp
-     * webhooks.
-     */
-    protected function resolveMinerCorporationId(int $characterId): ?int
-    {
-        if ($characterId <= 0) {
-            return null;
-        }
-        $corpId = DB::table('character_affiliations')
-            ->where('character_id', $characterId)
-            ->value('corporation_id');
-        return $corpId ? (int) $corpId : null;
-    }
-
-    /**
-     * Send tax generated notification (broadcast)
-     *
-     * Sent when taxes are calculated for a period, notifying all members
-     * with general payment info and instructions.
-     *
-     * @param string $periodLabel Human-readable period (e.g., "March 2026")
-     * @param int $taxCount Number of tax records created
-     * @param float $totalAmount Total ISK across all tax records
-     * @param string $periodType monthly|biweekly|weekly
-     * @param string|null $dueDate Due date for the taxes
-     * @return array
-     */
-    public function sendTaxGenerated(string $periodLabel, int $taxCount, float $totalAmount, string $periodType = 'monthly', ?string $dueDate = null): array
-    {
-        $divisionName = $this->settings->getWalletDivisionName();
-        $corpName = $this->getCorpName();
-
-        $data = [
-            'period_label' => $periodLabel,
-            'period_type' => $periodType,
-            'tax_count' => $taxCount,
-            'total_amount' => $totalAmount,
-            'formatted_amount' => number_format($totalAmount, 2) . ' ISK',
-            'due_date' => $dueDate,
-            'corp_name' => $corpName,
-            'wallet_division' => $divisionName,
-            'tax_code_prefix' => $this->settings->getSetting('tax_rates.tax_code_prefix', 'TAX-'),
-            'my_taxes_url' => $this->getMyTaxesUrl(),
-            'help_url' => $this->getHelpPayUrl(),
-            'collect_url' => $this->getHelpCollectUrl(),
-            'wallet_url' => $this->getBaseUrl() . '/mining-manager/tax/wallet',
-        ];
-
-        // This is a broadcast — no specific recipients, goes to all configured channels
-        return $this->send(self::TYPE_TAX_GENERATED, [], $data);
-    }
-
-    /**
-     * Send tax announcement notification (member-facing broadcast)
-     *
-     * General channel announcement informing members that new invoices are ready.
-     * Shows due date and payment links — no ISK amounts or director details.
-     *
-     * @param string $periodLabel Human-readable period (e.g., "March 2026")
-     * @param string $periodType monthly|biweekly|weekly
-     * @param string|null $dueDate Due date for the taxes
-     * @return array
-     */
-    public function sendTaxAnnouncement(string $periodLabel, string $periodType = 'monthly', ?string $dueDate = null): array
-    {
-        $corpName = $this->getCorpName();
-
-        $data = [
-            'period_label' => $periodLabel,
-            'period_type' => $periodType,
-            'due_date' => $dueDate,
-            'corp_name' => $corpName,
-            'my_taxes_url' => $this->getMyTaxesUrl(),
-            'help_url' => $this->getHelpPayUrl(),
-        ];
-
-        // This is a broadcast — no specific recipients, goes to all configured channels
-        return $this->send(self::TYPE_TAX_ANNOUNCEMENT, [], $data);
-    }
-
-    /**
      * Send event created notification
      *
      * @param MiningEvent $event
@@ -408,11 +204,9 @@ class NotificationService
             'event_type_key' => $event->type,
             'start_date' => $event->start_time->format('Y-m-d H:i'),
             'end_date' => $event->end_time ? $event->end_time->format('Y-m-d H:i') : null,
-            'tax_modifier' => $event->tax_modifier,
-            'tax_modifier_label' => $event->getTaxModifierLabel(),
             'location' => $event->getLocationName() ?? $event->getLocationScopeLabel(),
             // Event's target corp — lets sendViaWebhooks scope the notification
-            // to webhooks bound to that corp (plus NULL admin + tax program
+            // to webhooks bound to that corp (plus NULL admin + moon owner
             // corp). Null for "universal" events → admin-only delivery.
             'event_corporation_id' => $event->corporation_id ? (int) $event->corporation_id : null,
         ];
@@ -436,8 +230,6 @@ class NotificationService
             'event_type_key' => $event->type,
             'start_date' => $event->start_time->format('Y-m-d H:i'),
             'end_date' => $event->end_time ? $event->end_time->format('Y-m-d H:i') : null,
-            'tax_modifier' => $event->tax_modifier,
-            'tax_modifier_label' => $event->getTaxModifierLabel(),
             'location' => $event->getLocationName() ?? $event->getLocationScopeLabel(),
             'event_corporation_id' => $event->corporation_id ? (int) $event->corporation_id : null,
         ];
@@ -465,8 +257,6 @@ class NotificationService
             'event_type' => $event->getTypeLabel(),
             'total_mined' => $event->total_mined ?? 0,
             'participants' => $event->participant_count ?? 0,
-            'tax_modifier' => $event->tax_modifier,
-            'tax_modifier_label' => $event->getTaxModifierLabel(),
             'location' => $event->getLocationName() ?? $event->getLocationScopeLabel(),
             'event_corporation_id' => $event->corporation_id ? (int) $event->corporation_id : null,
         ];
@@ -487,20 +277,18 @@ class NotificationService
      * path.
      *
      * @param MiningReport $report The report that was just generated
-     * @param array $reportData The aggregated report payload (summary, taxes, period, ...)
+     * @param array $reportData The aggregated report payload (summary, period, ...)
      * @return array Result map from send() — webhook IDs sent vs failed
      */
     public function sendReportGenerated(MiningReport $report, array $reportData): array
     {
         $summary = $reportData['summary'] ?? [];
-        $taxes = $reportData['taxes'] ?? [];
         $period = $reportData['period'] ?? [];
 
         $periodStr = isset($period['start'], $period['end'])
             ? "{$period['start']} to {$period['end']}"
             : 'N/A';
 
-        $isCurrentMonth = $taxes['is_current_month'] ?? false;
         $generatedAt = $report->generated_at ? $report->generated_at : Carbon::now();
 
         $data = [
@@ -511,16 +299,9 @@ class NotificationService
             'period' => $period,
             'unique_miners' => $summary['unique_miners'] ?? 0,
             'total_value' => $summary['total_value'] ?? 0,
-            'is_current_month' => $isCurrentMonth,
-            'estimated_tax' => $taxes['estimated_tax'] ?? 0,
-            'total_paid' => $taxes['total_paid'] ?? 0,
-            'unpaid' => $taxes['unpaid'] ?? 0,
-            'collection_rate' => $taxes['collection_rate'] ?? null,
 
             // Discord embed extras (description + custom footer suffix)
-            'description' => $isCurrentMonth
-                ? 'A new mining report has been generated. Tax values are estimated (month in progress).'
-                : 'A new mining report has been generated and is ready for review.',
+            'description' => 'A new mining report has been generated and is ready for review.',
             'footer_extra' => ' | Generated ' . $generatedAt->format('Y-m-d H:i:s'),
 
             // Custom webhook payload extras (formatCustomPayload reads these)
@@ -528,7 +309,6 @@ class NotificationService
             'generated_at_iso' => $generatedAt->toIso8601String(),
             'generated_by' => $report->generated_by ?? null,
             'raw_summary' => $summary,
-            'raw_taxes' => $taxes,
             'raw_report_data' => $reportData,
         ];
 
@@ -584,8 +364,7 @@ class NotificationService
      *   time_until_unstable (display string e.g. '1h 47m'),
      *   estimated_value     (int ISK — helps pilots decide whether to linger)
      *
-     * Unlike tax_invoice (which fires N times per batched cron run), this
-     * fires ONCE per extraction — role pings are appropriate and desired
+     * This fires ONCE per extraction — role pings are appropriate and desired
      * here so Rorqual pilots get a fast high-visibility alert.
      *
      * @param array $data
@@ -809,76 +588,17 @@ class NotificationService
     }
 
     /**
-     * Send a theft-detected notification.
-     *
-     * @param TheftIncident $incident
-     * @param array $additionalData Extra keys merged into custom webhook payload; optional `incident_url`.
-     * @return array Result map from send()
-     */
-    public function sendTheftDetected(TheftIncident $incident, array $additionalData = []): array
-    {
-        return $this->send(self::TYPE_THEFT_DETECTED, [], $this->buildTheftData($incident, $additionalData));
-    }
-
-    /**
-     * Send a critical-theft notification (high-severity escalation).
-     *
-     * @param TheftIncident $incident
-     * @param array $additionalData
-     * @return array Result map from send()
-     */
-    public function sendCriticalTheft(TheftIncident $incident, array $additionalData = []): array
-    {
-        return $this->send(self::TYPE_CRITICAL_THEFT, [], $this->buildTheftData($incident, $additionalData));
-    }
-
-    /**
-     * Send an active-theft-in-progress notification (character continues
-     * mining while unpaid).
-     *
-     * $additionalData should include `new_mining_value` (float — ISK value
-     * of the new mining since the incident was first detected) and
-     * optionally `last_activity` (display-formatted timestamp string).
-     *
-     * @param TheftIncident $incident
-     * @param array $additionalData
-     * @return array Result map from send()
-     */
-    public function sendActiveTheft(TheftIncident $incident, array $additionalData = []): array
-    {
-        return $this->send(self::TYPE_ACTIVE_THEFT, [], $this->buildTheftData($incident, $additionalData));
-    }
-
-    /**
-     * Send an "incident resolved" notification when a director marks a theft
-     * incident resolved or false-alarm in the UI.
-     *
-     * @param TheftIncident $incident
-     * @param array $additionalData Optional keys: `resolved_by`, `incident_url`
-     * @return array Result map from send()
-     */
-    public function sendIncidentResolved(TheftIncident $incident, array $additionalData = []): array
-    {
-        return $this->send(self::TYPE_INCIDENT_RESOLVED, [], $this->buildTheftData($incident, $additionalData));
-    }
-
-    /**
      * Public helper — returns the human-readable title string for an event
      * type, matching what Discord/Slack embed formatters use. Convenient
      * for diagnostic / preview UIs that want the title without building
      * the whole embed.
      *
-     * @param string $eventType Webhook event-column key (e.g. 'theft_detected')
+     * @param string $eventType Webhook event-column key (e.g. 'moon_ready')
      * @return string
      */
     public function getEventTitle(string $eventType): string
     {
         $typeConst = match ($eventType) {
-            'tax_generated' => self::TYPE_TAX_GENERATED,
-            'tax_announcement' => self::TYPE_TAX_ANNOUNCEMENT,
-            'tax_invoice' => self::TYPE_TAX_INVOICE,
-            'tax_overdue' => self::TYPE_TAX_OVERDUE,
-            'tax_outstanding_digest' => self::TYPE_TAX_OUTSTANDING_DIGEST,
             'price_provider' => self::TYPE_PRICE_PROVIDER,
             'moon_scan_missing' => self::TYPE_MOON_SCAN_MISSING,
             'event_created' => self::TYPE_EVENT_CREATED,
@@ -888,10 +608,6 @@ class NotificationService
             'jackpot_detected' => self::TYPE_JACKPOT_DETECTED,
             'moon_chunk_unstable' => self::TYPE_MOON_CHUNK_UNSTABLE,
             'metenox_cargo_full' => self::TYPE_METENOX_CARGO_FULL,
-            'theft_detected' => self::TYPE_THEFT_DETECTED,
-            'critical_theft' => self::TYPE_CRITICAL_THEFT,
-            'active_theft' => self::TYPE_ACTIVE_THEFT,
-            'incident_resolved' => self::TYPE_INCIDENT_RESOLVED,
             'report_generated' => self::TYPE_REPORT_GENERATED,
             'extraction_started' => self::TYPE_EXTRACTION_STARTED,
             'next_extraction_planned' => self::TYPE_NEXT_EXTRACTION_PLANNED,
@@ -914,7 +630,7 @@ class NotificationService
      * Bypasses the full broadcast pipeline — POSTs directly to the target
      * webhook only, with no scope filtering and no per-type toggles. The
      * message itself is deliberately generic ("✅ Webhook Active") so the
-     * user can tell the wiring works without seeing sample incident/tax
+     * user can tell the wiring works without seeing sample
      * data they'd only want to see in a real notification.
      *
      * Used by Settings → Webhooks "Test" button and the Diagnostic tool's
@@ -1014,68 +730,6 @@ class NotificationService
     }
 
     /**
-     * Shared builder — flattens a TheftIncident model + caller-supplied
-     * additionalData into the single $data shape the theft formatters
-     * consume (character_name, severity_label, ore_value, tax_owed,
-     * detected_at_display, status_label, new_mining_value, last_activity,
-     * incident_url). All optional — missing keys get gracefully filtered.
-     *
-     * @param TheftIncident $incident
-     * @param array $additionalData
-     * @return array
-     */
-    /**
-     * Build the canonical theft notification data payload.
-     *
-     * Public so the diagnostic preview UI can call it directly rather
-     * than via reflection. No side effects — pure data shape construction.
-     */
-    public function buildTheftData(TheftIncident $incident, array $additionalData): array
-    {
-        $severityLabel = ucfirst((string) ($incident->severity ?? 'medium'));
-        $severityEmoji = match ($incident->severity ?? 'medium') {
-            'critical' => '🔴',
-            'high' => '🟠',
-            'medium' => '🟡',
-            'low' => '🟢',
-            default => '⚪',
-        };
-        $statusEmoji = match ($incident->status ?? 'detected') {
-            'detected' => '🔓',
-            'investigating' => '🔍',
-            'resolved' => '✅',
-            'false_alarm' => '❌',
-            'removed_paid' => '💰',
-            default => '❓',
-        };
-
-        $incidentDate = $incident->incident_date ?? Carbon::now();
-
-        $data = [
-            'incident_id' => $incident->id,
-            'character_id' => $incident->character_id,
-            'character_name' => $incident->character_name ?? ('Character ID: ' . $incident->character_id),
-            'severity' => $incident->severity,
-            'severity_label' => $severityEmoji . ' ' . $severityLabel,
-            'ore_value' => $incident->ore_value ?? 0,
-            'tax_owed' => $incident->tax_owed ?? 0,
-            'status' => $incident->status,
-            'status_label' => $statusEmoji . ' ' . ucfirst((string) ($incident->status ?? 'detected')),
-            'detected_at_display' => $incidentDate->format('Y-m-d H:i:s'),
-            'detected_at_iso' => $incidentDate->toIso8601String(),
-            'activity_count' => $incident->activity_count ?? 1,
-            // Custom webhook payload passes additionalData verbatim at the
-            // top level (matches old sendToCustomWebhook behaviour).
-            '_additional_data' => $additionalData,
-        ];
-
-        // Merge everything else (e.g. new_mining_value, last_activity,
-        // incident_url, resolved_by) directly into $data so the Discord
-        // + Slack formatters can read them.
-        return array_merge($data, $additionalData);
-    }
-
-    /**
      * Send a "jackpot moon detected" notification.
      *
      * Corp-scoped. Replaces the previous WebhookService::sendMoonNotification(
@@ -1125,10 +779,10 @@ class NotificationService
      */
     public function sendBroadcast(string $type, array $data): array
     {
-        $corpId = $this->settings->getTaxProgramCorporationId();
+        $corpId = $this->settings->getMoonOwnerCorporationId();
 
         if (!$corpId) {
-            Log::warning("NotificationService::sendBroadcast — tax program corporation is not configured, type={$type}");
+            Log::warning("NotificationService::sendBroadcast — moon owner corporation is not configured, type={$type}");
             return ['error' => 'Corporation ID not configured'];
         }
 
@@ -1303,20 +957,6 @@ class NotificationService
     }
 
     /**
-     * Check if a notification type is a tax-related type
-     *
-     * @param string $type
-     * @return bool
-     */
-    protected function isTaxNotificationType(string $type): bool
-    {
-        return in_array($type, [
-            self::TYPE_TAX_INVOICE,
-            self::TYPE_TAX_OVERDUE,
-        ]);
-    }
-
-    /**
      * Check if a notification type is globally enabled (master toggle).
      * Stored in notifications.enabled_types setting. Public so work that only
      * exists to feed one notification can stop before it starts.
@@ -1331,11 +971,6 @@ class NotificationService
         }
 
         $typeKey = match ($type) {
-            self::TYPE_TAX_GENERATED => 'tax_generated',
-            self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_INVOICE => 'tax_invoice',
-            self::TYPE_TAX_OVERDUE => 'tax_overdue',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
             self::TYPE_PRICE_PROVIDER => 'price_provider',
             self::TYPE_MOON_SCAN_MISSING => 'moon_scan_missing',
             self::TYPE_EVENT_CREATED => 'event_created',
@@ -1345,10 +980,6 @@ class NotificationService
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
-            self::TYPE_THEFT_DETECTED => 'theft_detected',
-            self::TYPE_CRITICAL_THEFT => 'critical_theft',
-            self::TYPE_ACTIVE_THEFT => 'active_theft',
-            self::TYPE_INCIDENT_RESOLVED => 'incident_resolved',
             self::TYPE_REPORT_GENERATED => 'report_generated',
             self::TYPE_EXTRACTION_STARTED => 'extraction_started',
             self::TYPE_NEXT_EXTRACTION_PLANNED => 'next_extraction_planned',
@@ -1377,11 +1008,6 @@ class NotificationService
     protected function isTypeEnabledForChannel(string $type, string $channel): bool
     {
         $typeKey = match ($type) {
-            self::TYPE_TAX_GENERATED => 'tax_generated',
-            self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_INVOICE => 'tax_invoice',
-            self::TYPE_TAX_OVERDUE => 'tax_overdue',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
             self::TYPE_PRICE_PROVIDER => 'price_provider',
             self::TYPE_MOON_SCAN_MISSING => 'moon_scan_missing',
             self::TYPE_EVENT_CREATED => 'event_created',
@@ -1391,10 +1017,6 @@ class NotificationService
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
-            self::TYPE_THEFT_DETECTED => 'theft_detected',
-            self::TYPE_CRITICAL_THEFT => 'critical_theft',
-            self::TYPE_ACTIVE_THEFT => 'active_theft',
-            self::TYPE_INCIDENT_RESOLVED => 'incident_resolved',
             self::TYPE_REPORT_GENERATED => 'report_generated',
             self::TYPE_EXTRACTION_STARTED => 'extraction_started',
             self::TYPE_NEXT_EXTRACTION_PLANNED => 'next_extraction_planned',
@@ -1544,7 +1166,7 @@ class NotificationService
      *
      * Uses per-webhook configuration from webhook_configurations table.
      * Each webhook has its own toggles for which notification types to send.
-     * Supports Discord user pinging for tax notifications via seat-connector.
+     * Supports Discord user pinging (per-type setting) via seat-connector.
      *
      * @param string $type
      * @param array $recipients
@@ -1555,11 +1177,6 @@ class NotificationService
     {
         // Map notification type to webhook event column
         $eventType = match ($type) {
-            self::TYPE_TAX_GENERATED => 'tax_generated',
-            self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_INVOICE => 'tax_invoice',
-            self::TYPE_TAX_OVERDUE => 'tax_overdue',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
             self::TYPE_PRICE_PROVIDER => 'price_provider',
             self::TYPE_MOON_SCAN_MISSING => 'moon_scan_missing',
             self::TYPE_EVENT_CREATED => 'event_created',
@@ -1579,10 +1196,6 @@ class NotificationService
             self::TYPE_JACKPOT_DETECTED => 'jackpot_detected',
             self::TYPE_MOON_CHUNK_UNSTABLE => 'moon_chunk_unstable',
             self::TYPE_METENOX_CARGO_FULL => 'metenox_cargo_full',
-            self::TYPE_THEFT_DETECTED => 'theft_detected',
-            self::TYPE_CRITICAL_THEFT => 'critical_theft',
-            self::TYPE_ACTIVE_THEFT => 'active_theft',
-            self::TYPE_INCIDENT_RESOLVED => 'incident_resolved',
             self::TYPE_REPORT_GENERATED => 'report_generated',
             self::TYPE_EXTRACTION_STARTED => 'extraction_started',
             self::TYPE_NEXT_EXTRACTION_PLANNED => 'next_extraction_planned',
@@ -1601,33 +1214,20 @@ class NotificationService
         // Webhook scoping rules:
         //  - Report notifications (report_generated): GLOBAL — reports
         //    aggregate across the install, not a single corp.
-        //  - Individual tax notifications (tax_invoice / tax_overdue): scoped to NULL + Tax Program Corp + the MINER'S
-        //    OWN corp. Lets each mining-group director see their own
-        //    members' notifications.
         //  - Event notifications (event_created / event_started /
-        //    event_completed): scoped to NULL + Tax Program Corp + the
+        //    event_completed): scoped to NULL + Moon Owner Corp + the
         //    EVENT'S TARGET CORP. Events with corporation_id=null go admin-
-        //    only (NULL + tax program). Corp-specific events additionally
-        //    reach that corp's webhook. Parallel to the tax-routing model.
-        //  - Everything else (broadcast tax_*, moon_*, theft_*): scoped to
-        //    the Tax Program / Moon Owner Corporation only.
+        //    only (NULL + Moon Owner Corporation). Corp-specific events
+        //    additionally reach that corp's webhook.
+        //  - Everything else (moon_*, ...): scoped to the Moon Owner
+        //    Corporation only.
         $eventTypesThatAreGlobal = ['report_generated'];
-        $individualTaxEventTypes = ['tax_invoice', 'tax_overdue'];
         $eventDispatchTypes = ['event_created', 'event_started', 'event_completed'];
 
         if (in_array($eventType, $eventTypesThatAreGlobal, true)) {
             $webhooks = \MiningManager\Models\WebhookConfiguration::enabled()
                 ->forEvent($eventType)
                 ->get();
-        } elseif (in_array($eventType, $individualTaxEventTypes, true)) {
-            // Individual tax notifications — include the miner's corp in the
-            // scope filter if available. The wrapper methods (sendTaxInvoice,
-            // sendTaxOverdue) resolve the miner's current corp
-            // via character_affiliations and inject miner_corporation_id.
-            $minerCorpId = isset($data['miner_corporation_id']) && $data['miner_corporation_id']
-                ? (int) $data['miner_corporation_id']
-                : null;
-            $webhooks = $this->getMoonOwnerScopedWebhooks($eventType, $minerCorpId);
         } elseif (in_array($eventType, $eventDispatchTypes, true)) {
             // Event notifications — include the event's target corp in the
             // scope filter if the event has one. sendEventCreated/Started/
@@ -1656,7 +1256,7 @@ class NotificationService
                     // Existing Discord logic — keep as-is
                     $message = $this->formatMessageForDiscord($type, $data);
 
-                    // Add Discord user pings for tax notifications (per-type setting)
+                    // Add Discord user pings (per-type setting)
                     $pingContent = $this->buildDiscordPingContent($type, $recipients, $data);
                     if ($pingContent) {
                         $message['content'] = $pingContent;
@@ -1754,7 +1354,7 @@ class NotificationService
     }
 
     /**
-     * Build Discord ping content for tax notifications
+     * Build Discord ping content for the notified characters
      *
      * Resolves character IDs to Discord user IDs via seat-connector
      * and builds mention strings based on settings.
@@ -1768,11 +1368,6 @@ class NotificationService
     {
         // Map notification type constant to settings key
         $typeKey = match ($type) {
-            self::TYPE_TAX_GENERATED => 'tax_generated',
-            self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_INVOICE => 'tax_invoice',
-            self::TYPE_TAX_OVERDUE => 'tax_overdue',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
             self::TYPE_PRICE_PROVIDER => 'price_provider',
             self::TYPE_EVENT_CREATED => 'event_created',
             self::TYPE_EVENT_STARTED => 'event_started',
@@ -1807,9 +1402,11 @@ class NotificationService
         $mentionStr = implode(' ', $mentions);
 
         $action = match ($type) {
-            self::TYPE_TAX_INVOICE => 'A new tax invoice has been created for you.',
-            self::TYPE_TAX_OVERDUE => 'Your tax payment is overdue!',
-            default => 'You have a pending tax notification.',
+            self::TYPE_EVENT_CREATED => 'A new mining event has been announced.',
+            self::TYPE_EVENT_STARTED => 'A mining event has started.',
+            self::TYPE_EVENT_COMPLETED => 'A mining event has finished.',
+            self::TYPE_MOON_READY => 'A moon chunk is ready to mine.',
+            default => 'You have a new Mining Manager notification.',
         };
 
         if ($typeSettings['show_amount'] && isset($data['formatted_amount'])) {
@@ -1820,13 +1417,6 @@ class NotificationService
     }
 
     /**
-     * Format message for ESI (EVE Mail)
-     *
-     * @param string $type
-     * @param array $data
-     * @return array
-     */
-    /**
      * Build ESI-mail subject + body for the given notification type.
      *
      * Public so the diagnostic preview UI can call it directly rather
@@ -1835,42 +1425,16 @@ class NotificationService
     public function formatMessageForESI(string $type, array $data): array
     {
         return match ($type) {
-            self::TYPE_TAX_INVOICE => [
-                'subject' => 'Mining Tax Invoice',
-                'body' => sprintf(
-                    "Hello,\n\nA new mining tax invoice has been created for you.\n\n" .
-                    "Amount: %s\nDue Date: %s\n" .
-                    "Please use direct wallet transfer with your tax code.\n\n" .
-                    "Thank you,\n%s Management",
-                    $data['formatted_amount'],
-                    $data['due_date'],
-                    $this->getCorpName()
-                )
-            ],
-            self::TYPE_TAX_OVERDUE => [
-                'subject' => 'Overdue Mining Tax Payment',
-                'body' => sprintf(
-                    "Hello,\n\nYour mining tax payment is now overdue.\n\n" .
-                    "Amount: %s\nDue Date: %s\nDays Overdue: %d\n\n" .
-                    "Please make your payment as soon as possible.\n\n" .
-                    "Thank you,\n%s Management",
-                    $data['formatted_amount'],
-                    $data['due_date'],
-                    $data['days_overdue'],
-                    $this->getCorpName()
-                )
-            ],
             self::TYPE_EVENT_CREATED => [
                 'subject' => 'New Mining Event: ' . $data['event_name'],
                 'body' => sprintf(
                     "A new mining event has been scheduled!\n\n" .
-                    "Event: %s\nType: %s\nTax Modifier: %s\n" .
+                    "Event: %s\nType: %s\n" .
                     "Location: %s\nStart: %s\n%s\n\n" .
                     "Mark your calendars and get ready to mine!\n\n" .
                     "%s Management",
                     $data['event_name'],
                     $data['event_type'],
-                    $data['tax_modifier_label'],
                     $data['location'],
                     $data['start_date'],
                     $data['end_date'] ? "End: {$data['end_date']}" : '',
@@ -1881,13 +1445,12 @@ class NotificationService
                 'subject' => 'Mining Event Started: ' . $data['event_name'],
                 'body' => sprintf(
                     "A mining event has started!\n\n" .
-                    "Event: %s\nType: %s\nTax Modifier: %s\n" .
+                    "Event: %s\nType: %s\n" .
                     "Location: %s\nStart: %s\n%s\n\n" .
                     "Get mining now!\n\n" .
                     "%s Management",
                     $data['event_name'],
                     $data['event_type'],
-                    $data['tax_modifier_label'],
                     $data['location'],
                     $data['start_date'],
                     $data['end_date'] ? "End: {$data['end_date']}" : '',
@@ -1898,15 +1461,13 @@ class NotificationService
                 'subject' => 'Mining Event Completed: ' . $data['event_name'],
                 'body' => sprintf(
                     "Mining event has completed!\n\n" .
-                    "Event: %s\nType: %s\nTotal Mined: %s ISK\nParticipants: %d\n" .
-                    "Tax Modifier: %s\n\n" .
+                    "Event: %s\nType: %s\nTotal Mined: %s ISK\nParticipants: %d\n\n" .
                     "Thank you for your participation!\n\n" .
                     "%s Management",
                     $data['event_name'],
                     $data['event_type'],
                     number_format($data['total_mined'], 0),
                     $data['participants'],
-                    $data['tax_modifier_label'],
                     $this->getCorpName()
                 )
             ],
@@ -2114,43 +1675,6 @@ class NotificationService
                     $this->getCorpName()
                 )
             ],
-            self::TYPE_THEFT_DETECTED,
-            self::TYPE_CRITICAL_THEFT,
-            self::TYPE_ACTIVE_THEFT,
-            self::TYPE_INCIDENT_RESOLVED => [
-                'subject' => sprintf(
-                    '%s: %s',
-                    match ($type) {
-                        self::TYPE_CRITICAL_THEFT => 'CRITICAL THEFT DETECTED',
-                        self::TYPE_ACTIVE_THEFT => 'ACTIVE THEFT IN PROGRESS',
-                        self::TYPE_INCIDENT_RESOLVED => 'Theft Incident Resolved',
-                        default => 'Theft Incident Detected',
-                    },
-                    $data['character_name'] ?? 'Unknown Character'
-                ),
-                'body' => sprintf(
-                    "A theft incident has %s.\n\n" .
-                    "Character: %s\nSeverity: %s\nOre Value: %s ISK\nTax Owed: %s ISK\n" .
-                    "Detected: %s\n%s%s\n" .
-                    "%s Management",
-                    match ($type) {
-                        self::TYPE_INCIDENT_RESOLVED => 'been resolved',
-                        self::TYPE_CRITICAL_THEFT => 'reached critical severity',
-                        self::TYPE_ACTIVE_THEFT => 'continued — character is still mining',
-                        default => 'been detected',
-                    },
-                    $data['character_name'] ?? 'Unknown',
-                    $data['severity_label'] ?? ucfirst($data['severity'] ?? 'unknown'),
-                    isset($data['ore_value']) ? number_format((float) $data['ore_value'], 0) : 'Unknown',
-                    isset($data['tax_owed']) ? number_format((float) $data['tax_owed'], 0) : 'Unknown',
-                    $data['detected_at_display'] ?? ($data['detected_at'] ?? 'Unknown'),
-                    ($type === self::TYPE_ACTIVE_THEFT && isset($data['new_mining_value']))
-                        ? "New Activity Value: " . number_format((float) $data['new_mining_value'], 0) . " ISK\n"
-                        : '',
-                    !empty($data['incident_url']) ? "Details: {$data['incident_url']}\n" : '',
-                    $this->getCorpName()
-                )
-            ],
             self::TYPE_REPORT_GENERATED => [
                 'subject' => sprintf(
                     'Mining Report: %s',
@@ -2166,34 +1690,6 @@ class NotificationService
                         : 'Unknown',
                     $data['generated_by'] ?? 'System',
                     !empty($data['report_url']) ? "View: {$data['report_url']}\n" : '',
-                    $this->getCorpName()
-                )
-            ],
-            self::TYPE_TAX_GENERATED => [
-                'subject' => sprintf('Mining Taxes Summary: %s', $data['period_label'] ?? 'Period'),
-                'body' => sprintf(
-                    "Mining taxes have been calculated.\n\n" .
-                    "Period: %s\nAccounts Taxed: %d\nTotal Tax: %s\nDue Date: %s\nWallet: %s\n\n" .
-                    "Taxation, collection, and verification happen automatically.\n" .
-                    "Monitor the Wallet Verification page for mismatched payments.\n\n" .
-                    "%s Management",
-                    $data['period_label'] ?? 'Unknown',
-                    (int) ($data['tax_count'] ?? 0),
-                    $data['formatted_amount'] ?? 'Unknown',
-                    $data['due_date'] ?? 'See tax page',
-                    $data['wallet_division'] ?? 'Master Wallet',
-                    $this->getCorpName()
-                )
-            ],
-            self::TYPE_TAX_ANNOUNCEMENT => [
-                'subject' => sprintf('New Mining Invoices: %s', $data['period_label'] ?? 'Period'),
-                'body' => sprintf(
-                    "Mining tax invoices have been generated for this period.\n\n" .
-                    "Period: %s\nDue Date: %s\n\n" .
-                    "Check My Taxes to view your invoice and payment instructions.\n\n" .
-                    "%s Management",
-                    $data['period_label'] ?? 'Unknown',
-                    $data['due_date'] ?? 'See tax page',
                     $this->getCorpName()
                 )
             ],
@@ -2217,13 +1713,8 @@ class NotificationService
     public function formatMessageForSlack(string $type, array $data): array
     {
         $color = match ($type) {
-            self::TYPE_TAX_OVERDUE => 'danger',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 'warning',
             self::TYPE_PRICE_PROVIDER => 'warning',
             self::TYPE_MOON_SCAN_MISSING => '#E67E22',
-            self::TYPE_TAX_INVOICE => 'warning',
-            self::TYPE_TAX_GENERATED => 'good',
-            self::TYPE_TAX_ANNOUNCEMENT => '#3498DB',
             self::TYPE_EVENT_CREATED => '#439FE0',
             self::TYPE_EVENT_STARTED, self::TYPE_EVENT_COMPLETED => 'good',
             self::TYPE_MOON_READY => '#3498DB',
@@ -2236,20 +1727,11 @@ class NotificationService
             self::TYPE_EXTRACTION_CANCELLED => 'danger',
             self::TYPE_MOON_NOT_RESCHEDULED => 'warning',
             self::TYPE_SCHEDULE_NEEDS_FILLING => '#9B59B6',
-            self::TYPE_THEFT_DETECTED => '#FFA500',
-            self::TYPE_CRITICAL_THEFT => 'danger',
-            self::TYPE_ACTIVE_THEFT => 'danger',
-            self::TYPE_INCIDENT_RESOLVED => 'good',
             self::TYPE_REPORT_GENERATED => '#3498DB',
             default => '#439FE0'
         };
 
         $text = match ($type) {
-            self::TYPE_TAX_GENERATED => "Mining Taxes Summary: {$data['tax_count']} accounts taxed — {$data['formatted_amount']}",
-            self::TYPE_TAX_ANNOUNCEMENT => "New Mining Invoices — {$data['period_label']}. Check My Taxes for details.",
-            self::TYPE_TAX_INVOICE => "New Tax Invoice: {$data['formatted_amount']} due {$data['due_date']}",
-            self::TYPE_TAX_OVERDUE => "Overdue Tax: {$data['formatted_amount']} - {$data['days_overdue']} days overdue",
-            self::TYPE_TAX_OUTSTANDING_DIGEST => "Outstanding mining tax: " . ($data['member_count'] ?? 0) . " member(s), " . ($data['formatted_total'] ?? '0 ISK') . " still owed",
             self::TYPE_PRICE_PROVIDER => !empty($data['failing'])
                 ? "Price provider " . ($data['provider'] ?? 'unknown') . " is not answering: " . ($data['error'] ?? 'no detail')
                     . (!empty($data['fallback_ok']) ? ". Prices come from " . $data['fallback'] . " meanwhile" : '')
@@ -2276,10 +1758,6 @@ class NotificationService
             self::TYPE_EXTRACTION_CANCELLED => "🛑 Extraction cancelled on " . ($data['moon_name'] ?? 'a moon') . (!empty($data['cancelled_by']) ? " by " . $data['cancelled_by'] : ''),
             self::TYPE_MOON_NOT_RESCHEDULED => "⏰ " . ($data['moon_name'] ?? 'A moon') . " has had no extraction since its chunk arrived " . ($data['hours_since'] ?? '?') . "h ago",
             self::TYPE_SCHEDULE_NEEDS_FILLING => "🗓️ " . $this->needsPlanningTotalLine($data) . (!empty($data['description']) ? "\n" . $data['description'] : ''),
-            self::TYPE_THEFT_DETECTED => "Theft Incident Detected — " . ($data['character_name'] ?? 'Unknown'),
-            self::TYPE_CRITICAL_THEFT => "🚨 CRITICAL THEFT — " . ($data['character_name'] ?? 'Unknown'),
-            self::TYPE_ACTIVE_THEFT => "🔥 ACTIVE THEFT IN PROGRESS — " . ($data['character_name'] ?? 'Unknown'),
-            self::TYPE_INCIDENT_RESOLVED => "Theft Incident Resolved — " . ($data['character_name'] ?? 'Unknown'),
             self::TYPE_REPORT_GENERATED => "📊 Mining Report Generated — " . ucfirst($data['report_type'] ?? 'report') . " for " . ($data['period_str'] ?? 'current period'),
             default => "Mining Manager Notification"
         };
@@ -2298,17 +1776,10 @@ class NotificationService
     }
 
     /**
-     * Format message for Discord
-     *
-     * @param string $type
-     * @param array $data
-     * @return array
-     */
-    /**
      * Build the JSON payload for a generic (custom) webhook.
      *
      * Some notification types have bespoke top-level shapes that downstream
-     * consumers depend on (reports, moon events, theft events); others fall
+     * consumers depend on (reports, moon events); others fall
      * through to a simple {event_type, notification_type, data, timestamp}
      * envelope. Keeps custom-webhook behaviour wire-compatible with what the
      * old WebhookService used to emit before consolidation.
@@ -2395,9 +1866,9 @@ class NotificationService
                 // breaking JSON parsing for templates with intentional
                 // object/array placeholders like:
                 //
-                //   {"data": {{raw_summary}}, "taxes": {{raw_taxes}}}
+                //   {"data": {{raw_summary}}, "report": {{raw_report_data}}}
                 //
-                // (Both `raw_summary` and `raw_taxes` flow through
+                // (Both `raw_summary` and `raw_report_data` flow through
                 // formatCustomPayload as arrays — see TYPE_REPORT_GENERATED
                 // shape above. A custom template using these placeholders
                 // would silently drop the notification on every fire.)
@@ -2406,7 +1877,7 @@ class NotificationService
                 // produce literals like `[1,2,3]` or `{"a":1}` that are
                 // already syntactically complete JSON values. They go
                 // straight into raw-context positions like
-                // `"taxes": {{raw_taxes}}` (no surrounding quotes in the
+                // `"data": {{raw_summary}}` (no surrounding quotes in the
                 // template). Wrapping a placeholder in quotes for an array
                 // value (e.g. `"name": "{{some_array}}"`) was already
                 // not supported and isn't sensible — the template author
@@ -2467,7 +1938,6 @@ class NotificationService
                     'generated_by' => $data['generated_by'] ?? null,
                 ],
                 'summary' => $data['raw_summary'] ?? [],
-                'taxes' => $data['raw_taxes'] ?? [],
             ]),
 
             // Moon notifications — previous behaviour was array_merge of a
@@ -2481,27 +1951,6 @@ class NotificationService
                 'event_type' => $eventType,
                 'timestamp' => $timestamp,
             ], $data),
-
-            // Theft notifications — previous behaviour nested the incident
-            // as an object under `incident`, merged any additional_data keys
-            // at the top level. Preserved byte-for-byte.
-            self::TYPE_THEFT_DETECTED,
-            self::TYPE_CRITICAL_THEFT,
-            self::TYPE_ACTIVE_THEFT,
-            self::TYPE_INCIDENT_RESOLVED => array_merge([
-                'event_type' => $eventType,
-                'incident' => [
-                    'id' => $data['incident_id'] ?? null,
-                    'character_id' => $data['character_id'] ?? null,
-                    'character_name' => $data['character_name'] ?? null,
-                    'severity' => $data['severity'] ?? null,
-                    'ore_value' => $data['ore_value'] ?? null,
-                    'tax_owed' => $data['tax_owed'] ?? null,
-                    'status' => $data['status'] ?? null,
-                    'detected_at' => $data['detected_at_iso'] ?? $timestamp,
-                ],
-                'timestamp' => $timestamp,
-            ], $data['_additional_data'] ?? []),
 
             default => [
                 'event_type' => $eventType,
@@ -2521,13 +1970,8 @@ class NotificationService
     public function formatMessageForDiscord(string $type, array $data): array
     {
         $color = match ($type) {
-            self::TYPE_TAX_OVERDUE => 15158332, // Red
-            self::TYPE_TAX_OUTSTANDING_DIGEST => 15105570, // Amber - a summary, not an alarm
             self::TYPE_PRICE_PROVIDER => 15158332, // Red while it is failing; the title says which way it went
             self::TYPE_MOON_SCAN_MISSING => 0xE67E22, // Orange: valued from a fallback until somebody scans
-            self::TYPE_TAX_INVOICE => 16776960, // Yellow: action required
-            self::TYPE_TAX_GENERATED => 3447003, // Teal
-            self::TYPE_TAX_ANNOUNCEMENT => 4437216, // Blue
             self::TYPE_EVENT_CREATED => 4437216, // Blue
             self::TYPE_EVENT_STARTED, self::TYPE_EVENT_COMPLETED => 3066993, // Green
             self::TYPE_MOON_READY => 0x3498DB, // Blue
@@ -2547,20 +1991,11 @@ class NotificationService
             self::TYPE_EXTRACTION_CANCELLED => 0xC0392B, // Red: no chunk is coming
             self::TYPE_MOON_NOT_RESCHEDULED => 0xF39C12, // Amber: a drill is idle
             self::TYPE_SCHEDULE_NEEDS_FILLING => 0x9B59B6, // Purple: planner nudge
-            self::TYPE_THEFT_DETECTED => 0xFFA500, // Orange
-            self::TYPE_CRITICAL_THEFT => 0xFF0000, // Red
-            self::TYPE_ACTIVE_THEFT => 0xFF6B00, // Orange-red
-            self::TYPE_INCIDENT_RESOLVED => 0x00FF00, // Green
             self::TYPE_REPORT_GENERATED => 0x3498DB, // Blue
             default => 4437216 // Blue
         };
 
         $title = match ($type) {
-            self::TYPE_TAX_GENERATED => '📋 Mining Taxes Summary',
-            self::TYPE_TAX_ANNOUNCEMENT => '📢 New Mining Invoices',
-            self::TYPE_TAX_INVOICE => '📧 New Tax Invoice',
-            self::TYPE_TAX_OVERDUE => '❌ Overdue Tax Payment',
-            self::TYPE_TAX_OUTSTANDING_DIGEST => '📋 Outstanding Mining Tax',
             self::TYPE_PRICE_PROVIDER => '💱 Price Provider',
             self::TYPE_MOON_SCAN_MISSING => '🛰️ Moon Scan Missing',
             self::TYPE_EVENT_CREATED => '📅 New Mining Event',
@@ -2583,10 +2018,6 @@ class NotificationService
             self::TYPE_EXTRACTION_CANCELLED => '🛑 Moon Extraction Cancelled',
             self::TYPE_MOON_NOT_RESCHEDULED => '⏰ Moon Not Rescheduled',
             self::TYPE_SCHEDULE_NEEDS_FILLING => '🗓️ Moons Need Planning',
-            self::TYPE_THEFT_DETECTED => 'Theft Incident Detected',
-            self::TYPE_CRITICAL_THEFT => 'CRITICAL THEFT DETECTED',
-            self::TYPE_ACTIVE_THEFT => 'ACTIVE THEFT IN PROGRESS',
-            self::TYPE_INCIDENT_RESOLVED => 'Theft Incident Resolved',
             self::TYPE_REPORT_GENERATED => '📊 Mining Report Generated',
             default => '📢 Mining Manager Notification'
         };
@@ -2620,31 +2051,6 @@ class NotificationService
     protected function formatFieldsForSlack(string $type, array $data): array
     {
         return match ($type) {
-            self::TYPE_TAX_GENERATED => array_values(array_filter([
-                ['title' => 'Period', 'value' => $data['period_label'], 'short' => true],
-                ['title' => 'Accounts Taxed', 'value' => (string) $data['tax_count'], 'short' => true],
-                ['title' => 'Total Tax', 'value' => $data['formatted_amount'], 'short' => true],
-                ['title' => 'Due Date', 'value' => $data['due_date'] ?? 'See tax page', 'short' => true],
-                ['title' => 'Collection Info', 'value' => "Taxation, collection, and verification happen automatically. Monitor the Wallet Verification page for mismatched payments.", 'short' => false],
-                isset($data['collect_url']) ? ['title' => 'Collection Guide', 'value' => '<' . $data['collect_url'] . '|How to Collect>', 'short' => true] : null,
-                isset($data['wallet_url']) ? ['title' => 'Wallet Verification', 'value' => '<' . $data['wallet_url'] . '|Check Payments>', 'short' => true] : null,
-            ])),
-            self::TYPE_TAX_ANNOUNCEMENT => array_values(array_filter([
-                ['title' => 'Period', 'value' => $data['period_label'], 'short' => true],
-                ['title' => 'Due Date', 'value' => $data['due_date'] ?? 'See tax page', 'short' => true],
-                ['title' => 'Info', 'value' => 'Mining tax invoices have been generated for this period. Check My Taxes to view your invoice and payment instructions.', 'short' => false],
-                isset($data['my_taxes_url']) ? ['title' => 'My Taxes', 'value' => '<' . $data['my_taxes_url'] . '|View My Taxes>', 'short' => true] : null,
-                isset($data['help_url']) ? ['title' => 'How to Pay', 'value' => '<' . $data['help_url'] . '|Payment Guide>', 'short' => true] : null,
-            ])),
-            self::TYPE_TAX_INVOICE => array_values(array_filter([
-                ($data['show_amount'] ?? true) ? ['title' => 'Amount', 'value' => $data['formatted_amount'], 'short' => true] : null,
-                (($data['show_amount'] ?? true) && !empty($data['formatted_credit_applied']))
-                    ? ['title' => 'Already covered from balance', 'value' => $data['formatted_credit_applied'], 'short' => true]
-                    : null,
-                ['title' => 'Due Date', 'value' => $data['due_date'], 'short' => true],
-                isset($data['my_taxes_url']) ? ['title' => 'My Taxes', 'value' => '<' . $data['my_taxes_url'] . '|View My Taxes>', 'short' => true] : null,
-                isset($data['help_url']) ? ['title' => 'How to Pay', 'value' => '<' . $data['help_url'] . '|Payment Guide>', 'short' => true] : null,
-            ])),
             self::TYPE_PRICE_PROVIDER => array_values(array_filter([
                 ['title' => 'Provider', 'value' => $data['provider'] ?? 'unknown', 'short' => true],
                 ['title' => 'State', 'value' => !empty($data['failing']) ? 'Not answering' : 'Answering again', 'short' => true],
@@ -2657,34 +2063,15 @@ class NotificationService
                 !empty($data['since']) ? ['title' => 'Since', 'value' => $data['since'], 'short' => true] : null,
                 !empty($data['last_success']) ? ['title' => 'Last good refresh', 'value' => $data['last_success'], 'short' => true] : null,
             ])),
-            self::TYPE_TAX_OUTSTANDING_DIGEST => array_values(array_filter([
-                ['title' => 'Members', 'value' => (string) ($data['member_count'] ?? 0), 'short' => true],
-                ['title' => 'Still Owed', 'value' => $data['formatted_total'] ?? '0 ISK', 'short' => true],
-                !empty($data['corporations_label']) ? ['title' => 'Only members of', 'value' => $data['corporations_label'], 'short' => false] : null,
-                !empty($data['rows']) ? ['title' => 'Who still owes', 'value' => $data['rows_text'], 'short' => false] : null,
-                !empty($data['tax_page_url']) ? ['title' => 'Full list', 'value' => '<' . $data['tax_page_url'] . '|Outstanding tax>', 'short' => false] : null,
-            ])),
-            self::TYPE_TAX_OVERDUE => array_values(array_filter([
-                ($data['show_amount'] ?? true) ? ['title' => 'Amount', 'value' => $data['formatted_amount'], 'short' => true] : null,
-                (($data['show_amount'] ?? true) && !empty($data['formatted_credit_applied']))
-                    ? ['title' => 'Already covered from balance', 'value' => $data['formatted_credit_applied'], 'short' => true]
-                    : null,
-                ['title' => 'Due Date', 'value' => $data['due_date'], 'short' => true],
-                ['title' => 'Days Overdue', 'value' => (string) $data['days_overdue'], 'short' => true],
-                isset($data['my_taxes_url']) ? ['title' => 'My Taxes', 'value' => '<' . $data['my_taxes_url'] . '|View My Taxes>', 'short' => true] : null,
-                isset($data['help_url']) ? ['title' => 'How to Pay', 'value' => '<' . $data['help_url'] . '|Payment Guide>', 'short' => true] : null,
-            ])),
             self::TYPE_EVENT_CREATED => [
                 ['title' => 'Event', 'value' => $data['event_name'], 'short' => true],
                 ['title' => 'Type', 'value' => $data['event_type'] ?? 'Mining Op', 'short' => true],
-                ['title' => 'Tax Modifier', 'value' => $data['tax_modifier_label'] ?? 'Normal', 'short' => true],
                 ['title' => 'Location', 'value' => $data['location'] ?? 'Any', 'short' => true],
                 ['title' => 'Start', 'value' => $data['start_date'], 'short' => true],
                 ['title' => 'End', 'value' => $data['end_date'] ?? 'Open', 'short' => true]
             ],
             self::TYPE_EVENT_STARTED => [
                 ['title' => 'Event', 'value' => $data['event_name'], 'short' => true],
-                ['title' => 'Tax Modifier', 'value' => $data['tax_modifier_label'] ?? 'Normal', 'short' => true],
                 ['title' => 'Location', 'value' => $data['location'] ?? 'Any', 'short' => true],
                 ['title' => 'End', 'value' => $data['end_date'] ?? 'Open', 'short' => true]
             ],
@@ -2698,14 +2085,6 @@ class NotificationService
                 ['title' => 'Period', 'value' => $data['period_str'] ?? 'N/A', 'short' => true],
                 ['title' => 'Total Miners', 'value' => number_format($data['unique_miners'] ?? 0), 'short' => true],
                 ['title' => 'Total Value Mined', 'value' => number_format($data['total_value'] ?? 0, 0) . ' ISK', 'short' => true],
-                (!empty($data['estimated_tax']) && $data['estimated_tax'] > 0) ? [
-                    'title' => ($data['is_current_month'] ?? false) ? 'Estimated Tax' : 'Total Tax',
-                    'value' => number_format($data['estimated_tax'], 0) . ' ISK',
-                    'short' => true,
-                ] : null,
-                (empty($data['is_current_month']) && !empty($data['collection_rate']))
-                    ? ['title' => 'Collection Rate', 'value' => number_format($data['collection_rate'], 1) . '%', 'short' => true]
-                    : null,
             ])),
             self::TYPE_MOON_READY => array_values(array_filter([
                 isset($data['moon_name']) ? ['title' => 'Moon', 'value' => $data['moon_name'], 'short' => true] : null,
@@ -2810,21 +2189,6 @@ class NotificationService
                     ? ['title' => 'Cargo Value', 'value' => number_format((float) $data['estimated_isk'], 0) . ' ISK', 'short' => true] : null,
                 !empty($data['cargo_url']) ? ['title' => 'Details', 'value' => '<' . $data['cargo_url'] . '|Open in Mining Manager>', 'short' => false] : null,
             ])),
-            self::TYPE_THEFT_DETECTED,
-            self::TYPE_CRITICAL_THEFT,
-            self::TYPE_ACTIVE_THEFT,
-            self::TYPE_INCIDENT_RESOLVED => array_values(array_filter([
-                ['title' => 'Character', 'value' => $data['character_name'] ?? 'Unknown', 'short' => true],
-                isset($data['severity_label']) ? ['title' => 'Severity', 'value' => $data['severity_label'], 'short' => true] : null,
-                isset($data['ore_value']) ? ['title' => 'Ore Value', 'value' => number_format($data['ore_value'], 0) . ' ISK', 'short' => true] : null,
-                isset($data['tax_owed']) ? ['title' => 'Tax Owed', 'value' => number_format($data['tax_owed'], 0) . ' ISK', 'short' => true] : null,
-                ($type === self::TYPE_ACTIVE_THEFT && isset($data['new_mining_value'])) ? [
-                    'title' => 'Active Theft Alert',
-                    'value' => 'Character continues mining! New value: ' . number_format($data['new_mining_value'], 0) . ' ISK',
-                    'short' => false,
-                ] : null,
-                isset($data['incident_url']) ? ['title' => 'Details', 'value' => '<' . $data['incident_url'] . '|View Incident>', 'short' => false] : null,
-            ])),
             default => []
         };
     }
@@ -2878,29 +2242,6 @@ class NotificationService
     protected function formatFieldsForDiscord(string $type, array $data): array
     {
         return match ($type) {
-            self::TYPE_TAX_GENERATED => array_values(array_filter([
-                ['name' => '📅 Period', 'value' => $data['period_label'], 'inline' => true],
-                ['name' => '👥 Accounts Taxed', 'value' => (string) $data['tax_count'], 'inline' => true],
-                ['name' => '💰 Total Tax', 'value' => $data['formatted_amount'], 'inline' => true],
-                ['name' => '📆 Due Date', 'value' => $data['due_date'] ?? 'See tax page', 'inline' => true],
-                ['name' => '🏦 Payment Wallet', 'value' => $data['wallet_division'], 'inline' => true],
-                ['name' => 'ℹ️ Collection Info', 'value' => "Taxation, collection, and verification happen automatically.\nMonitor the **Wallet Verification** page for mismatched payments.", 'inline' => false],
-                isset($data['collect_url']) ? ['name' => '📖 How to Collect', 'value' => '[Collection Guide](' . $data['collect_url'] . ')', 'inline' => true] : null,
-                isset($data['wallet_url']) ? ['name' => '🔍 Wallet Verification', 'value' => '[Check Payments](' . $data['wallet_url'] . ')', 'inline' => true] : null,
-            ])),
-            self::TYPE_TAX_ANNOUNCEMENT => array_values(array_filter([
-                ['name' => '📅 Period', 'value' => $data['period_label'], 'inline' => true],
-                ['name' => '📆 Due Date', 'value' => $data['due_date'] ?? 'See tax page', 'inline' => true],
-                ['name' => 'ℹ️ Info', 'value' => "Mining tax invoices have been generated for this period.\nCheck **My Taxes** to view your invoice and payment instructions.", 'inline' => false],
-                isset($data['my_taxes_url']) ? ['name' => '📋 My Taxes', 'value' => '[View My Taxes](' . $data['my_taxes_url'] . ')', 'inline' => true] : null,
-                isset($data['help_url']) ? ['name' => '❓ How to Pay', 'value' => '[Payment Guide](' . $data['help_url'] . ')', 'inline' => true] : null,
-            ])),
-            self::TYPE_TAX_INVOICE => array_values(array_filter([
-                ($data['show_amount'] ?? true) ? ['name' => '💰 Amount', 'value' => $data['formatted_amount'], 'inline' => true] : null,
-                ['name' => '📅 Due Date', 'value' => $data['due_date'], 'inline' => true],
-                isset($data['my_taxes_url']) ? ['name' => '📋 My Taxes', 'value' => '[View My Taxes](' . $data['my_taxes_url'] . ')', 'inline' => true] : null,
-                isset($data['help_url']) ? ['name' => '❓ How to Pay', 'value' => '[Payment Guide](' . $data['help_url'] . ')', 'inline' => true] : null,
-            ])),
             self::TYPE_PRICE_PROVIDER => array_values(array_filter([
                 ['name' => '🏷️ Provider', 'value' => $data['provider'] ?? 'unknown', 'inline' => true],
                 ['name' => '📡 State', 'value' => !empty($data['failing']) ? 'Not answering' : 'Answering again', 'inline' => true],
@@ -2914,44 +2255,15 @@ class NotificationService
                 !empty($data['last_success']) ? ['name' => '✅ Last good refresh', 'value' => $data['last_success'], 'inline' => true] : null,
                 !empty($data['failing']) && empty($data['fallback_ok']) ? ['name' => '💾 Cached prices', 'value' => "Kept as they are. Nothing is zeroed while the provider is down, and a type with no price yet is priced from SeAT's own market data.", 'inline' => false] : null,
             ])),
-            self::TYPE_TAX_OUTSTANDING_DIGEST => array_values(array_filter([
-                ['name' => '👥 Members', 'value' => (string) ($data['member_count'] ?? 0), 'inline' => true],
-                ['name' => '💰 Still Owed', 'value' => $data['formatted_total'] ?? '0 ISK', 'inline' => true],
-                ['name' => '📆 Covers', 'value' => $data['period_label'] ?? 'All open invoices', 'inline' => true],
-                !empty($data['corporations_label'])
-                    ? ['name' => '🏢 Only members of', 'value' => $data['corporations_label'], 'inline' => false]
-                    : null,
-                !empty($data['rows'])
-                    ? ['name' => '🧾 Who still owes', 'value' => $data['rows_text'], 'inline' => false]
-                    : null,
-                !empty($data['truncated_count'])
-                    ? ['name' => 'And more', 'value' => $data['truncated_count'] . ' further member(s) not listed. Open the tax page for the full list.', 'inline' => false]
-                    : null,
-                !empty($data['tax_page_url'])
-                    ? ['name' => '🔗 Full list', 'value' => '[Outstanding tax](' . $data['tax_page_url'] . ')', 'inline' => false]
-                    : null,
-            ])),
-            self::TYPE_TAX_OVERDUE => array_values(array_filter([
-                ($data['show_amount'] ?? true) ? ['name' => '💰 Amount', 'value' => $data['formatted_amount'], 'inline' => true] : null,
-                (($data['show_amount'] ?? true) && !empty($data['formatted_credit_applied']))
-                    ? ['name' => '🐷 Already covered from balance', 'value' => $data['formatted_credit_applied'], 'inline' => true]
-                    : null,
-                ['name' => '📅 Due Date', 'value' => $data['due_date'], 'inline' => true],
-                ['name' => '⚠️ Days Overdue', 'value' => (string) $data['days_overdue'], 'inline' => true],
-                isset($data['my_taxes_url']) ? ['name' => '📋 My Taxes', 'value' => '[View My Taxes](' . $data['my_taxes_url'] . ')', 'inline' => true] : null,
-                isset($data['help_url']) ? ['name' => '❓ How to Pay', 'value' => '[Payment Guide](' . $data['help_url'] . ')', 'inline' => true] : null,
-            ])),
             self::TYPE_EVENT_CREATED => [
                 ['name' => 'Event', 'value' => $data['event_name'], 'inline' => false],
                 ['name' => 'Type', 'value' => $data['event_type'] ?? 'Mining Op', 'inline' => true],
-                ['name' => 'Tax Modifier', 'value' => $data['tax_modifier_label'] ?? 'Normal', 'inline' => true],
                 ['name' => 'Location', 'value' => $data['location'] ?? 'Any', 'inline' => true],
                 ['name' => 'Start', 'value' => $data['start_date'], 'inline' => true],
                 ['name' => 'End', 'value' => $data['end_date'] ?? 'Open', 'inline' => true]
             ],
             self::TYPE_EVENT_STARTED => [
                 ['name' => 'Event', 'value' => $data['event_name'], 'inline' => false],
-                ['name' => 'Tax Modifier', 'value' => $data['tax_modifier_label'] ?? 'Normal', 'inline' => true],
                 ['name' => 'Location', 'value' => $data['location'] ?? 'Any', 'inline' => true],
                 ['name' => 'End', 'value' => $data['end_date'] ?? 'Open', 'inline' => true]
             ],
@@ -2965,20 +2277,6 @@ class NotificationService
                 ['name' => '📅 Period', 'value' => $data['period_str'] ?? 'N/A', 'inline' => true],
                 ['name' => '👥 Total Miners', 'value' => number_format($data['unique_miners'] ?? 0), 'inline' => true],
                 ['name' => '💰 Total Value Mined', 'value' => number_format($data['total_value'] ?? 0, 0) . ' ISK', 'inline' => true],
-                (!empty($data['estimated_tax']) && $data['estimated_tax'] > 0) ? [
-                    'name' => ($data['is_current_month'] ?? false) ? '📊 Estimated Tax' : '📊 Total Tax',
-                    'value' => number_format($data['estimated_tax'], 0) . ' ISK',
-                    'inline' => true,
-                ] : null,
-                (empty($data['is_current_month']) && !empty($data['total_paid']) && $data['total_paid'] > 0)
-                    ? ['name' => '✅ Total Paid', 'value' => number_format($data['total_paid'], 0) . ' ISK', 'inline' => true]
-                    : null,
-                (empty($data['is_current_month']) && !empty($data['unpaid']) && $data['unpaid'] > 0)
-                    ? ['name' => '❌ Outstanding', 'value' => number_format($data['unpaid'], 0) . ' ISK', 'inline' => true]
-                    : null,
-                (empty($data['is_current_month']) && isset($data['collection_rate']))
-                    ? ['name' => '📈 Collection Rate', 'value' => number_format($data['collection_rate'], 1) . '%', 'inline' => true]
-                    : null,
             ])),
             self::TYPE_MOON_READY => array_values(array_filter([
                 isset($data['moon_name']) ? ['name' => 'Moon', 'value' => $data['moon_name'], 'inline' => true] : null,
@@ -3101,37 +2399,6 @@ class NotificationService
                     ? ['name' => 'Cargo Value', 'value' => number_format((float) $data['estimated_isk'], 0) . ' ISK', 'inline' => true] : null,
                 !empty($data['cargo_url']) ? ['name' => 'Details', 'value' => '[Open in Mining Manager](' . $data['cargo_url'] . ')', 'inline' => false] : null,
             ])),
-            // All 4 theft variants share the same field set — only color, title
-            // and description change per subtype. Active-theft additionally
-            // emits the fire-alert + last-activity block when new_mining_value
-            // is provided.
-            self::TYPE_THEFT_DETECTED,
-            self::TYPE_CRITICAL_THEFT,
-            self::TYPE_ACTIVE_THEFT,
-            self::TYPE_INCIDENT_RESOLVED => array_values(array_filter([
-                ['name' => '👤 Character', 'value' => $data['character_name'] ?? 'Unknown', 'inline' => true],
-                isset($data['severity_label']) ? ['name' => '⚠️ Severity', 'value' => $data['severity_label'], 'inline' => true] : null,
-                isset($data['ore_value']) ? ['name' => '💰 Ore Value', 'value' => number_format($data['ore_value'], 0) . ' ISK', 'inline' => true] : null,
-                isset($data['tax_owed']) ? ['name' => '📋 Tax Owed', 'value' => number_format($data['tax_owed'], 0) . ' ISK', 'inline' => true] : null,
-                isset($data['detected_at_display']) ? ['name' => '📅 Detected', 'value' => $data['detected_at_display'], 'inline' => true] : null,
-                isset($data['status_label']) ? ['name' => '🔍 Status', 'value' => $data['status_label'], 'inline' => true] : null,
-                ($type === self::TYPE_ACTIVE_THEFT && isset($data['new_mining_value'])) ? [
-                    'name' => '🔥 Active Theft Alert',
-                    'value' => "Character continues mining!\nNew value: " . number_format($data['new_mining_value'], 0) . ' ISK' .
-                               "\nActivity count: " . ($data['activity_count'] ?? 1),
-                    'inline' => false,
-                ] : null,
-                ($type === self::TYPE_ACTIVE_THEFT && isset($data['last_activity'])) ? [
-                    'name' => '🕐 Last Activity',
-                    'value' => $data['last_activity'],
-                    'inline' => false,
-                ] : null,
-                isset($data['incident_url']) ? [
-                    'name' => '🔗 View Incident',
-                    'value' => "[Click here to view details]({$data['incident_url']})",
-                    'inline' => false,
-                ] : null,
-            ])),
             default => []
         };
     }
@@ -3190,41 +2457,11 @@ class NotificationService
     }
 
     /**
-     * Get corporation name
-     *
-     * @return string
-     */
-    /**
-     * Get the tax page URL from settings or generate from current app URL.
+     * The site's base URL, from the app configuration.
      */
     protected function getBaseUrl(): string
     {
         return rtrim(config('app.url', ''), '/');
-    }
-
-    protected function getTaxPageUrl(): string
-    {
-        $customUrl = $this->settings->getNotificationSettings()['discord_ping_tax_page_url'] ?? '';
-        if (!empty($customUrl)) {
-            return rtrim($customUrl, '/');
-        }
-
-        return $this->getBaseUrl() . '/mining-manager/tax';
-    }
-
-    protected function getMyTaxesUrl(): string
-    {
-        return $this->getBaseUrl() . '/mining-manager/tax/my-taxes';
-    }
-
-    protected function getHelpPayUrl(): string
-    {
-        return $this->getBaseUrl() . '/mining-manager/help#how-to-pay';
-    }
-
-    protected function getHelpCollectUrl(): string
-    {
-        return $this->getBaseUrl() . '/mining-manager/help#how-to-collect';
     }
 
     /**
@@ -3252,16 +2489,10 @@ class NotificationService
      *      entire CHANNEL_DISCORD dispatch path (which actually fans out to
      *      all three types via sendViaWebhooks) would be skipped, silently
      *      dropping ALL per-webhook notifications.
-     *   2. OR-ing only a subset of the `notify_*` flags (tax_invoice/
-     *      overdue, event_*, moon_arrival). Missing
-     *      notify_jackpot_detected, notify_moon_chunk_unstable,
-     *      notify_theft_*,
-     *      notify_incident_resolved, notify_tax_generated,
-     *      notify_tax_announcement, notify_report_generated. An
-     *      operator who configured Discord webhooks ONLY for theft +
-     *      structure-alerts (a perfectly reasonable security-alarm
-     *      use case) got back `false` here → all their notifications
-     *      silently dropped.
+     *   2. OR-ing only a subset of the `notify_*` flags. An operator
+     *      who configured webhooks only for the types left out got back
+     *      `false` here, and all their notifications were silently
+     *      dropped.
      *
      * The per-event filtering still happens correctly downstream:
      * `sendViaWebhooks` calls `WebhookConfiguration::enabled()
@@ -3393,7 +2624,7 @@ class NotificationService
             // json_encoding the full list means broadcast notifications
             // (`sendBroadcast`) store the entire corp member list —
             // potentially thousands of character IDs, duplicated across
-            // twelve months of monthly tax_announcement broadcasts.
+            // every broadcast.
             //
             // Now: store the count (always accurate) plus a sample of the
             // first 50 IDs (enough for "did the right cohort get pinged?"

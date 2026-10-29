@@ -75,30 +75,6 @@
                 </a>
             </li>
 
-            {{-- Corporation-Specific Settings Section --}}
-            <li class="nav-header px-3 py-2 text-muted small text-uppercase mt-2" style="background: rgba(23, 162, 184, 0.1); border-left: 3px solid #17a2b8;">
-                <i class="fas fa-building"></i> Corporation Settings
-            </li>
-            <li class="nav-item">
-                <a href="#"
-                   class="nav-link"
-                   data-tab="tax-rates">
-                    <i class="fas fa-percent"></i>
-                    {{ trans('mining-manager::settings.tax_rates') }}
-                    <span class="badge badge-info badge-pill float-right" title="Per-corporation setting">C</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a href="{{ route('mining-manager.settings.configured-corporations') }}"
-                   class="nav-link">
-                    <i class="fas fa-building"></i>
-                    Configured Corps
-                    <span class="badge badge-secondary badge-pill float-right" title="View all corporations">
-                        <i class="fas fa-list"></i>
-                    </span>
-                </a>
-            </li>
-
             {{-- System Section --}}
             <li class="nav-header px-3 py-2 text-muted small text-uppercase mt-2" style="background: rgba(108, 117, 125, 0.1); border-left: 3px solid #6c757d;">
                 <i class="fas fa-tools"></i> System

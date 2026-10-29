@@ -6,9 +6,6 @@ use Illuminate\Console\Command;
 use MiningManager\Console\Commands\Concerns\RunsWithinABudget;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Services\Pricing\OreValuationService;
-use MiningManager\Services\Tax\TaxCalculationService;
-use MiningManager\Services\Tax\ClassificationEpoch;
-use MiningManager\Services\Tax\InvoiceCoverage;
 use MiningManager\Services\Ledger\LedgerSummaryService;
 use MiningManager\Services\Configuration\SettingsManagerService;
 use Carbon\Carbon;
@@ -20,7 +17,7 @@ use Illuminate\Support\Facades\Log;
  * Daily ledger price update command.
  *
  * Implements "daily session pricing" — each day's mining is appraised at
- * the current market price. At month end, taxes are the sum of daily values.
+ * the current market price.
  *
  * This command re-prices ledger entries that:
  * - Have a total_value of 0 (never priced)
@@ -70,8 +67,6 @@ class UpdateLedgerPricesCommand extends Command
         $characterId = $this->option('character_id');
 
         $valuationService = app(OreValuationService::class);
-        $taxService = app(TaxCalculationService::class);
-        $settingsService = app(SettingsManagerService::class);
 
         // Build query
         $query = MiningLedger::query();
@@ -105,20 +100,11 @@ class UpdateLedgerPricesCommand extends Command
             $this->info("🔍 Mode: Updating unpriced entries + today's entries (last {$days} day(s))");
         }
 
-        // Mining that sits inside an invoice somebody has already been handed
-        // stops being a live figure. Re-pricing it here would leave the ledger
-        // disagreeing with the bill: the invoice is pinned by
-        // TaxCalculationService::invoiceFreezeReason(), the rows behind it were
-        // not. Only issued invoices pin their rows; a bill still being worked
-        // out can move, so its rows may keep re-pricing.
-        InvoiceCoverage::excludeFrom($query);
-
         $totalEntries = $query->count();
 
-        // --all-unpriced drops the date window entirely. Invoiced periods are
-        // excluded above, so this can no longer disturb a bill, but it can still
-        // rewrite value and rate across the whole history in one go. Say how big
-        // that is and ask, unless the caller has already said to go ahead.
+        // --all-unpriced drops the date window entirely, so it can rewrite value
+        // across the whole history in one go. Say how big that is and ask,
+        // unless the caller has already said to go ahead.
         if ($allUnpriced && ! $force && $totalEntries > 0) {
             $this->warn("--all-unpriced ignores the date window: {$totalEntries} entries across all time.");
 
@@ -152,7 +138,7 @@ class UpdateLedgerPricesCommand extends Command
         // underneath the paging and the run stops with most of the work still
         // to do, having reported success.
         $query->chunkById(500, function ($entries) use (
-            $valuationService, $taxService, $settingsService, $force,
+            $valuationService, $force,
             &$updated, &$errors, &$skipped, &$affectedPairs, &$ranOutOfTime, $bar
         ) {
         // Stopping part way leaves the rows we did not reach exactly as they
@@ -177,46 +163,11 @@ class UpdateLedgerPricesCommand extends Command
                     continue;
                 }
 
-                // Recalculate tax_amount using current tax rates
-                $entryCorpId = $entry->corporation_id;
-                if (!$entryCorpId && $entry->observer_id) {
-                    $entryCorpId = DB::table('corporation_industry_mining_observers')
-                        ->where('observer_id', $entry->observer_id)
-                        ->value('corporation_id');
-                }
-                if ($entryCorpId) {
-                    $settingsService->setActiveCorporation((int) $entryCorpId);
-                }
-
-                $characterCorpId = DB::table('character_affiliations')
-                    ->where('character_id', $entry->character_id)
-                    ->value('corporation_id');
-
-                // Mining from before the classification cutover keeps the rate
-                // it was given at import. Re-deriving it here would apply this
-                // release's new ore categories to work members already finished,
-                // and on installs that tax gas it would raise historical bills.
-                if (ClassificationEpoch::existedBeforeCutover($entry->created_at)) {
-                    $taxRate = (float) $entry->tax_rate;
-                } else {
-                    // Pass the row: the only_corp_moon_ore rule needs to know
-                    // which moon the ore came from, and we have it here.
-                    $taxRate = $taxService->getTaxRateForOre(
-                        $entry->type_id,
-                        $characterCorpId,
-                        $entry
-                    );
-                }
-
-                $newTaxAmount = $newTotalValue * ($taxRate / 100);
-
                 $entry->update([
                     'unit_price' => $values['unit_price'] ?? 0,
                     'ore_value' => $values['ore_value'] ?? 0,
                     'mineral_value' => $values['mineral_value'] ?? 0,
                     'total_value' => $newTotalValue,
-                    'tax_rate' => $taxRate,
-                    'tax_amount' => $newTaxAmount,
                 ]);
 
                 // Track this character+date for daily summary regeneration

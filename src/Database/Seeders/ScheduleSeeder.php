@@ -91,68 +91,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // check-extraction-arrivals and update-events run every minute
-            // inside mining-manager:every-minute (above).
-            // Calculate mining taxes - runs daily at 2:15 AM
-            // Smart: checks shouldCalculateToday() and only acts on period boundaries
-            // Shifted +1 day to allow observer data to settle (ESI lags 12-24h):
-            // (monthly=2nd, biweekly=2nd&16th, weekly=Tuesdays). Skips other days.
-            // Pipeline: ledger-prices (1:00) → daily-summaries (1:30) → finalize (2:00) → taxes (2:15)
-            [
-                'command' => 'mining-manager:calculate-taxes',
-                'expression' => '15 2 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Generate tax invoices - runs daily at 2:30 AM (after tax calculation)
-            // Smart: only creates invoices for completed periods that don't have one yet
-            [
-                'command' => 'mining-manager:generate-invoices',
-                'expression' => '30 2 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Verify wallet payments - runs every 6 hours (staggered +5min after update-extractions)
-            [
-                'command' => 'mining-manager:verify-payments --auto-match',
-                'expression' => '5 */6 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Ore tax contracts - hourly at :40. Credits item exchange
-            // contracts members made to a corporation that takes its tax in
-            // ore. Does nothing while every corporation takes ISK.
-            [
-                'command' => 'mining-manager:verify-ore-contracts',
-                'expression' => '40 * * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Outstanding tax digest for directors. Runs daily but sends rarely:
-            // the command holds off until something is actually past its due
-            // date, then repeats at most every 7 days until everything clears.
-            // Checking daily is what lets the first one land promptly after a
-            // due date rather than waiting for a fixed weekday, which matters
-            // when biweekly and monthly periods fall due on different days.
-            [
-                'command' => 'mining-manager:send-outstanding-digest',
-                'expression' => '30 10 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
             // Generate previous month's report — runs day 9 at 04:05 AM.
-            // Day 9 = ~7 days after `finalize-month` (day 2) and `calculate-monthly-stats` (day 2),
-            // giving miners time to pay invoices so the collection % in the report is meaningful.
             // For ad-hoc/user-defined report cadences, use `report_schedules` (handled by cron below).
             [
                 'command' => 'mining-manager:generate-reports',
@@ -201,28 +140,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // Detect moon theft - runs twice monthly (1st and 15th at 1 AM)
-            // (Full scan: manages theft list, adds/removes characters based on tax status)
-            [
-                'command' => 'mining-manager:detect-theft --notify',
-                'expression' => '0 1 1,15 * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Monitor active thefts - runs every 6 hours (staggered +10min after update-extractions)
-            // (Fast check: only monitors characters already on theft list)
-            [
-                'command' => 'mining-manager:monitor-active-thefts --notify',
-                'expression' => '10 */6 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
-            // Finalize month summaries - runs on 2nd of each month at 2:00 AM (before tax calculation)
-            // Locks previous month's daily summaries so the tax run uses finalized data.
+            // Finalize month summaries - runs on 2nd of each month at 2:00 AM.
             // Runs on 2nd (not 1st) to allow observer data to settle before finalizing.
             [
                 'command' => 'mining-manager:finalize-month',
@@ -232,7 +150,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // Calculate monthly statistics - runs on 2nd of each month at 3:00 AM (after taxes + invoices)
+            // Calculate monthly statistics - runs on 2nd of each month at 3:00 AM
             // Pre-calculates dashboard stats for the now-closed previous month.
             [
                 'command' => 'mining-manager:calculate-monthly-stats',
@@ -252,9 +170,9 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // Update daily summaries (safety net) - runs daily at 1:30 AM (before finalize + taxes)
+            // Update daily summaries (safety net) - runs daily at 1:30 AM (before finalize)
             // Catches non-observer mining (belt mining, etc.) and any late ESI data.
-            // Must run before finalize-month and calculate-taxes so they work from complete data.
+            // Must run before finalize-month so it works from complete data.
             [
                 'command' => 'mining-manager:update-daily-summaries',
                 'expression' => '30 1 * * *',
@@ -336,7 +254,7 @@ class ScheduleSeeder extends AbstractScheduleSeeder
     public function getDeprecatedSchedules(): array
     {
         return [
-            'mining-manager:scan-corporation-contracts', // Removed: contract-based taxing replaced by wallet transfers
+            'mining-manager:scan-corporation-contracts', // Removed
             'mining-manager:update-daily-summaries --today-only', // Removed: process-ledger now auto-generates daily summaries
             // Moved into mining-manager:every-minute (one process instead of three)
             'mining-manager:check-extraction-arrivals',
@@ -345,9 +263,15 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             // Retired: it only published moon lifecycle events for another
             // plugin to pick up. Mining Manager now stands on its own.
             'mining-manager:scan-extraction-events',
-            // Removed: tax payment reminders. Members see what they owe on
-            // My Taxes; invoices and overdue notices still go out.
+            // Removed with the tax and theft features.
             'mining-manager:send-reminders',
+            'mining-manager:calculate-taxes',
+            'mining-manager:generate-invoices',
+            'mining-manager:verify-payments --auto-match',
+            'mining-manager:verify-ore-contracts',
+            'mining-manager:send-outstanding-digest',
+            'mining-manager:detect-theft --notify',
+            'mining-manager:monitor-active-thefts --notify',
         ];
     }
 }

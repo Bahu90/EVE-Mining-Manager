@@ -38,7 +38,7 @@
                        value="{{ \MiningManager\Support\Look::EVE_RO }}" {{ old('display_theme', $currentLook) === \MiningManager\Support\Look::EVE_RO ? 'checked' : '' }}>
                 <label class="form-check-label" for="display_theme_everoo">
                     <strong>EVE-RO</strong>
-                    <span class="text-muted">: black background, Oxanium typeface, ISK in blue and tax in green, as on eve-ro.com.</span>
+                    <span class="text-muted">: black background, Oxanium typeface, ISK in blue, as on eve-ro.com.</span>
                 </label>
             </div>
             <div class="form-check">

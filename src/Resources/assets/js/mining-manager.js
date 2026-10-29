@@ -11,7 +11,6 @@ const MiningManager = {
     api: {
         base: '/mining-manager',
         dashboard: '/mining-manager/dashboard',
-        taxes: '/mining-manager/taxes',
         settings: '/mining-manager/settings',
         events: '/mining-manager/events',
         moon: '/mining-manager/moon',

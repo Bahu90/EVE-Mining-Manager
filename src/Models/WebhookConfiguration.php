@@ -10,17 +10,13 @@ use Carbon\Carbon;
 /**
  * Webhook Configuration Model
  *
- * Stores webhook configurations for theft detection notifications
+ * Stores webhook configurations for notifications
  *
  * @property int $id
  * @property string $name
  * @property string $type
  * @property string $webhook_url
  * @property bool $is_enabled
- * @property bool $notify_theft_detected
- * @property bool $notify_critical_theft
- * @property bool $notify_active_theft
- * @property bool $notify_incident_resolved
  * @property bool $notify_moon_arrival
  * @property bool $notify_jackpot_detected
  * @property bool $notify_moon_chunk_unstable
@@ -28,10 +24,6 @@ use Carbon\Carbon;
  * @property bool $notify_event_created
  * @property bool $notify_event_started
  * @property bool $notify_event_completed
- * @property bool $notify_tax_generated
- * @property bool $notify_tax_announcement
- * @property bool $notify_tax_invoice
- * @property bool $notify_tax_overdue
  * @property bool $notify_report_generated
  * @property string|null $discord_role_id
  * @property string|null $discord_username
@@ -67,16 +59,11 @@ class WebhookConfiguration extends Model
         'type',
         'webhook_url',
         'is_enabled',
-        'notify_theft_detected',
-        'notify_critical_theft',
-        'notify_active_theft',
-        'notify_incident_resolved',
         'notify_moon_arrival',
         'notify_jackpot_detected',
         'notify_moon_chunk_unstable',
         'notify_extraction_started',
         'notify_next_extraction_planned',
-        'notify_tax_outstanding_digest',
         'notify_price_provider',
         'notify_moon_scan_missing',
         'notify_schedule_mismatch',
@@ -88,10 +75,6 @@ class WebhookConfiguration extends Model
         'notify_event_created',
         'notify_event_started',
         'notify_event_completed',
-        'notify_tax_generated',
-        'notify_tax_announcement',
-        'notify_tax_invoice',
-        'notify_tax_overdue',
         'notify_report_generated',
         'discord_role_id',
         'discord_username',
@@ -109,16 +92,11 @@ class WebhookConfiguration extends Model
      */
     protected $casts = [
         'is_enabled' => 'boolean',
-        'notify_theft_detected' => 'boolean',
-        'notify_critical_theft' => 'boolean',
-        'notify_active_theft' => 'boolean',
-        'notify_incident_resolved' => 'boolean',
         'notify_moon_arrival' => 'boolean',
         'notify_jackpot_detected' => 'boolean',
         'notify_moon_chunk_unstable' => 'boolean',
         'notify_extraction_started' => 'boolean',
         'notify_next_extraction_planned' => 'boolean',
-        'notify_tax_outstanding_digest' => 'boolean',
         'notify_price_provider' => 'boolean',
         'notify_moon_scan_missing' => 'boolean',
         'notify_schedule_mismatch' => 'boolean',
@@ -130,10 +108,6 @@ class WebhookConfiguration extends Model
         'notify_event_created' => 'boolean',
         'notify_event_started' => 'boolean',
         'notify_event_completed' => 'boolean',
-        'notify_tax_generated' => 'boolean',
-        'notify_tax_announcement' => 'boolean',
-        'notify_tax_invoice' => 'boolean',
-        'notify_tax_overdue' => 'boolean',
         'notify_report_generated' => 'boolean',
         'custom_headers' => 'array',
         'last_success_at' => 'datetime',
@@ -236,16 +210,11 @@ class WebhookConfiguration extends Model
     public function scopeForEvent($query, $eventType)
     {
         $columnMap = [
-            'theft_detected' => 'notify_theft_detected',
-            'critical_theft' => 'notify_critical_theft',
-            'active_theft' => 'notify_active_theft',
-            'incident_resolved' => 'notify_incident_resolved',
             'moon_arrival' => 'notify_moon_arrival',
             'jackpot_detected' => 'notify_jackpot_detected',
             'moon_chunk_unstable' => 'notify_moon_chunk_unstable',
             'extraction_started' => 'notify_extraction_started',
             'next_extraction_planned' => 'notify_next_extraction_planned',
-            'tax_outstanding_digest' => 'notify_tax_outstanding_digest',
             'price_provider' => 'notify_price_provider',
             'moon_scan_missing' => 'notify_moon_scan_missing',
             'schedule_mismatch' => 'notify_schedule_mismatch',
@@ -257,10 +226,6 @@ class WebhookConfiguration extends Model
             'event_created' => 'notify_event_created',
             'event_started' => 'notify_event_started',
             'event_completed' => 'notify_event_completed',
-            'tax_generated' => 'notify_tax_generated',
-            'tax_announcement' => 'notify_tax_announcement',
-            'tax_invoice' => 'notify_tax_invoice',
-            'tax_overdue' => 'notify_tax_overdue',
             'report_generated' => 'notify_report_generated',
         ];
 
@@ -370,16 +335,11 @@ class WebhookConfiguration extends Model
         }
 
         $eventMap = [
-            'theft_detected' => $this->notify_theft_detected,
-            'critical_theft' => $this->notify_critical_theft,
-            'active_theft' => $this->notify_active_theft,
-            'incident_resolved' => $this->notify_incident_resolved,
             'moon_arrival' => $this->notify_moon_arrival,
             'jackpot_detected' => $this->notify_jackpot_detected,
             'moon_chunk_unstable' => $this->notify_moon_chunk_unstable,
             'extraction_started' => $this->notify_extraction_started,
             'next_extraction_planned' => $this->notify_next_extraction_planned,
-            'tax_outstanding_digest' => $this->notify_tax_outstanding_digest,
             'price_provider' => $this->notify_price_provider,
             'moon_scan_missing' => $this->notify_moon_scan_missing,
             'schedule_mismatch' => $this->notify_schedule_mismatch,
@@ -391,10 +351,6 @@ class WebhookConfiguration extends Model
             'event_created' => $this->notify_event_created,
             'event_started' => $this->notify_event_started,
             'event_completed' => $this->notify_event_completed,
-            'tax_generated' => $this->notify_tax_generated,
-            'tax_announcement' => $this->notify_tax_announcement,
-            'tax_invoice' => $this->notify_tax_invoice,
-            'tax_overdue' => $this->notify_tax_overdue,
             'report_generated' => $this->notify_report_generated,
         ];
 

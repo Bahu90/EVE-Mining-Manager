@@ -31,13 +31,6 @@ return [
                 'permission' => 'mining-manager.member',
             ],
             [
-                'name'       => 'Tax Management',
-                'label'      => 'mining-manager::menu.tax_management',
-                'icon'       => 'fas fa-file-invoice-dollar',
-                'route'      => 'mining-manager.taxes.index',
-                'permission' => 'mining-manager.member',
-            ],
-            [
                 'name'       => 'Mining Events',
                 'label'      => 'mining-manager::menu.mining_events',
                 'icon'       => 'fas fa-users',
@@ -80,13 +73,6 @@ return [
                 'label'      => 'mining-manager::menu.reports',
                 'icon'       => 'fas fa-file-alt',
                 'route'      => 'mining-manager.reports.index',
-                'permission' => 'mining-manager.director',
-            ],
-            [
-                'name'       => 'Theft Detection',
-                'label'      => 'mining-manager::menu.theft_detection',
-                'icon'       => 'fas fa-exclamation-triangle',
-                'route'      => 'mining-manager.theft.index',
                 'permission' => 'mining-manager.director',
             ],
             [

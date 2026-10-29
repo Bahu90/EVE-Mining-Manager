@@ -1,6 +1,6 @@
 <?php
 
-namespace MiningManager\Services\Tax\Concerns;
+namespace MiningManager\Services\Character\Concerns;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -8,10 +8,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Shared "which characters belong to the same player" lookup.
  *
- * This used to exist as two hand-synced copies, one in WalletTransferService
- * and one in VerifyWalletPaymentsCommand, with a comment on each asking the
- * next person to keep them aligned. They drifted anyway. Anything that needs
- * to widen a payment match across a player's alts pulls it from here instead.
+ * Anything that needs a player's alts pulls them from here.
  */
 trait ResolvesCharacterOwnership
 {
@@ -62,34 +59,5 @@ trait ResolvesCharacterOwnership
 
             return [$characterId];
         }
-    }
-
-    /**
-     * True when both characters belong to the same player, or are the same
-     * character. Boolean wrapper for "is this payer allowed to settle this
-     * invoice?" gates.
-     */
-    protected function sharesSeatUser(int $a, int $b): bool
-    {
-        if ($a === $b) {
-            return true;
-        }
-
-        return in_array($b, $this->getCharacterIdsForUserOf($a), true);
-    }
-
-    /**
-     * The character ids a payment from $payerCharacterId may settle invoices
-     * for, honouring the payment.accept_alt_characters setting.
-     *
-     * @param  int  $payerCharacterId
-     * @param  bool  $acceptAlts
-     * @return array<int>
-     */
-    protected function eligibleCharacterIds(int $payerCharacterId, bool $acceptAlts): array
-    {
-        return $acceptAlts
-            ? $this->getCharacterIdsForUserOf($payerCharacterId)
-            : [$payerCharacterId];
     }
 }

@@ -15,7 +15,6 @@ use MiningManager\Services\TypeIdRegistry;
 use MiningManager\Models\MiningPriceCache;
 use MiningManager\Models\MiningLedgerDailySummary;
 use MiningManager\Models\Setting;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\WebhookConfiguration;
 use MiningManager\Services\Notification\NotificationService;
 use Illuminate\Support\Facades\Schema;
@@ -70,7 +69,7 @@ class DiagnosticController extends Controller
     /**
      * Run the Master Test — a one-click chain of read-only smoke checks
      * exercising every major area of the plugin (schema, settings, cross-
-     * plugin integration, pricing, notifications, lifecycle, tax, security
+     * plugin integration, pricing, notifications, lifecycle, security
      * hardening). Returns a structured JSON report.
      *
      * Idempotent — never mutates production data. Heavier per-area
@@ -102,13 +101,6 @@ class DiagnosticController extends Controller
                 ->where('name', 'like', 'Test Miner%')
                 ->count(),
             'mining_ledger' => DB::table('mining_ledger')
-                ->whereIn('character_id', function($query) {
-                    $query->select('character_id')
-                        ->from('character_infos')
-                        ->where('name', 'like', 'Test Miner%');
-                })
-                ->count(),
-            'mining_taxes' => DB::table('mining_taxes')
                 ->whereIn('character_id', function($query) {
                     $query->select('character_id')
                         ->from('character_infos')
@@ -258,7 +250,7 @@ class DiagnosticController extends Controller
         ];
 
         // 5. Moon Owner Corporation — the planner's operating scope
-        $moonOwner = $this->settingsService->getTaxProgramCorporationId();
+        $moonOwner = $this->settingsService->getMoonOwnerCorporationId();
         $checks[] = [
             'label'   => 'Settings: Moon Owner Corporation configured',
             'status'  => $moonOwner ? 'ok' : 'warn',
@@ -879,11 +871,6 @@ class DiagnosticController extends Controller
                 ->where('name', 'like', 'Test Corp%')
                 ->pluck('corporation_id');
 
-            // Delete mining taxes for test characters
-            $taxesDeleted = DB::table('mining_taxes')
-                ->whereIn('character_id', $testCharacterIds)
-                ->delete();
-
             // Delete mining ledger entries for test characters
             $ledgerDeleted = DB::table('mining_ledger')
                 ->whereIn('character_id', $testCharacterIds)
@@ -920,7 +907,7 @@ class DiagnosticController extends Controller
             if ($affiliationsDeleted > 0) {
                 $message .= ", {$affiliationsDeleted} affiliations";
             }
-            $message .= ", {$ledgerDeleted} ledger entries, {$taxesDeleted} tax records, {$settingsDeleted} settings";
+            $message .= ", {$ledgerDeleted} ledger entries, {$settingsDeleted} settings";
 
             return redirect()->route('mining-manager.diagnostic.index')
                 ->with('success', $message);
@@ -1326,7 +1313,7 @@ class DiagnosticController extends Controller
         if ($health['total'] === 0) {
             $recommendations[] = [
                 'severity' => 'critical',
-                'message' => 'Price cache is empty. Tax calculations will fail or return zero values.',
+                'message' => 'Price cache is empty. Mining values will be zero until prices are fetched.',
                 'action' => 'Run: php artisan mining-manager:cache-prices --type=all'
             ];
         }
@@ -1590,142 +1577,6 @@ class DiagnosticController extends Controller
         }
     }
 
-    /**
-     * Test webhook with simulated theft notification
-     *
-     * @param Request $request
-     * @param int $webhookId
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function testWebhook(Request $request, $webhookId)
-    {
-        try {
-            $startTime = microtime(true);
-
-            // Get webhook
-            $webhook = \MiningManager\Models\WebhookConfiguration::findOrFail($webhookId);
-
-            // Get test data from request
-            $eventType = $request->input('event_type', 'theft_detected');
-            $characterName = $request->input('character_name', 'Test Miner');
-            $severity = $request->input('severity', 'medium');
-            $oreValue = $request->input('ore_value', 50000000);
-            $taxOwed = $request->input('tax_owed', 5000000);
-
-            // (Removed: temp_role_id override.)
-            //
-            // The diagnostic used to read a `temp_role_id` form field and
-            // mutate `$webhook->discord_role_id` in-memory before dispatch,
-            // intending to let the operator test "what happens with role X
-            // pinged" without persisting the change. The mutation never
-            // reached the actual dispatch though — sendViaWebhooks calls
-            // `WebhookConfiguration::enabled()->forEvent(...)->get()` which
-            // does a fresh DB read and ignores the in-memory model. So the
-            // feature lied: it reported "role X pinged" while the saved
-            // role got pinged instead. Removed entirely. Operators who
-            // want to test a different role should edit the webhook,
-            // save, test, then revert — same number of clicks, no lie.
-
-            // Create simulated theft incident
-            // Use the webhook's corporation_id (or moon owner corp) so the query matches this webhook
-            $testCorpId = $webhook->corporation_id
-                ?? (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0);
-
-            $testIncident = new \MiningManager\Models\TheftIncident([
-                'character_id' => 123456789,
-                'character_name' => $characterName,
-                'corporation_id' => $testCorpId ?: null,
-                'severity' => $severity,
-                'ore_value' => $oreValue,
-                'tax_owed' => $taxOwed,
-                'status' => 'open',
-                'detected_at' => now(),
-            ]);
-
-            // Add additional data based on event type
-            $additionalData = [
-                'test_mode' => true,
-                'incident_url' => route('mining-manager.diagnostic.index'),
-            ];
-
-            if ($eventType === 'active_theft') {
-                $additionalData['new_mining_value'] = $request->input('new_mining_value', 10000000);
-                $additionalData['last_activity'] = now()->format('Y-m-d H:i:s');
-                $testIncident->activity_count = $request->input('activity_count', 3);
-                $testIncident->last_activity_at = now();
-            } elseif ($eventType === 'incident_resolved') {
-                $additionalData['resolved_by'] = 'Diagnostic Test';
-                $testIncident->status = 'resolved';
-                $testIncident->resolved_by = 'Test Admin';
-            }
-
-            // Send notification via NotificationService (was
-            // WebhookService::sendTheftNotification before consolidation).
-            $notificationService = app(\MiningManager\Services\Notification\NotificationService::class);
-            $nsResults = match ($eventType) {
-                'critical_theft' => $notificationService->sendCriticalTheft($testIncident, $additionalData),
-                'active_theft' => $notificationService->sendActiveTheft($testIncident, $additionalData),
-                'incident_resolved' => $notificationService->sendIncidentResolved($testIncident, $additionalData),
-                default => $notificationService->sendTheftDetected($testIncident, $additionalData),
-            };
-
-            // Unwrap to match the old per-webhook-id shape used by the
-            // success/failure counting below. send() returns a channel-keyed
-            // array; we want the Discord slot for diagnostic reporting.
-            $result = [];
-            foreach ($nsResults['discord']['sent'] ?? [] as $wid) {
-                $result[$wid] = ['success' => true];
-            }
-            foreach ($nsResults['discord']['failed'] ?? [] as $fail) {
-                $result[$fail['webhook_id'] ?? 'unknown'] = ['success' => false, 'error' => $fail['error'] ?? 'Unknown error'];
-            }
-
-            $duration = round((microtime(true) - $startTime) * 1000, 2);
-
-            // Check if notification was successful
-            $success = false;
-            $error = null;
-            foreach ($result as $webhookResult) {
-                if ($webhookResult['success']) {
-                    $success = true;
-                    break;
-                } else {
-                    $error = $webhookResult['error'] ?? 'Unknown error';
-                }
-            }
-
-            if ($success) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Test notification sent successfully!',
-                    'webhook_name' => $webhook->name,
-                    'webhook_type' => $webhook->type,
-                    'event_type' => $eventType,
-                    'duration_ms' => $duration,
-                    'role_mention' => $webhook->discord_role_id,
-                ]);
-            } else {
-                return response()->json([
-                    'success' => false,
-                    'error' => $error,
-                    'message' => 'Failed to send test notification',
-                ], 400);
-            }
-
-        } catch (\Exception $e) {
-            Log::error('Failed to test webhook', [
-                'webhook_id' => $webhookId,
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-                'message' => 'Exception occurred while testing webhook'
-            ], 500);
-        }
-    }
-
     // ========================================================================
     // NEW DIAGNOSTIC TOOLS
     // ========================================================================
@@ -1749,13 +1600,10 @@ class DiagnosticController extends Controller
             // Settings Health alongside the other groups.
             $settingGroups = [
                 'General' => $this->settingsService->getGeneralSettings(),
-                // Feature switches decide whole areas, upfront payments and
-                // data export among them, so their source matters as much as
-                // any other setting's.
+                // Feature switches decide whole areas, data export among
+                // them, so their source matters as much as any other setting's.
                 'Features' => $this->settingsService->getFeatureFlags(),
-                'Tax Rates' => $this->settingsService->getTaxRates(),
                 'Pricing' => $this->settingsService->getPricingSettings(),
-                'Payment' => $this->settingsService->getPaymentSettings(),
                 'Notifications' => method_exists($this->settingsService, 'getNotificationSettings')
                     ? $this->settingsService->getNotificationSettings()
                     : [],
@@ -1769,7 +1617,7 @@ class DiagnosticController extends Controller
                     $dbValue = null;
 
                     if (is_array($value)) {
-                        // Nested settings (e.g., tax_rates.moon_ore)
+                        // Nested settings
                         foreach ($value as $subKey => $subValue) {
                             $fullKey = $key . '.' . $subKey;
                             $dbRecord = Setting::where('key', $fullKey)->first()
@@ -1784,11 +1632,8 @@ class DiagnosticController extends Controller
                         }
                     } else {
                         // Check multiple possible DB key paths for this setting
-                        // Payment settings read from tax_rates.* and payment.* namespaces
                         $dbRecord = Setting::where('key', $key)->first()
                             ?? Setting::where('key', strtolower($groupName) . '.' . $key)->first()
-                            ?? Setting::where('key', 'tax_rates.tax_' . $key)->first()
-                            ?? Setting::where('key', 'payment.' . $key)->first()
                             ?? Setting::where('key', 'general.' . $key)->first();
 
                         // Mask sensitive values
@@ -1851,383 +1696,6 @@ class DiagnosticController extends Controller
 
         } catch (\Exception $e) {
             Log::error('Settings health check failed', ['error' => $e->getMessage()]);
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Tax Calculation Trace
-     * Tax Trace — comprehensive diagnostic showing stored daily summaries,
-     * live recalculation, account/bill info, and mismatch detection.
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function taxDiagnostic(Request $request)
-    {
-        try {
-            $characterId = (int) $request->input('character_id');
-            $month = $request->input('month', Carbon::now()->subMonth()->format('Y-m'));
-
-            if (!$characterId) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'character_id is required'
-                ], 400);
-            }
-
-            // Parse month
-            $monthStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-            $monthEnd = $monthStart->copy()->endOfMonth();
-
-            // ================================================================
-            // SECTION 1: Character & Account Info
-            // ================================================================
-            $character = DB::table('character_infos')
-                ->where('character_id', $characterId)
-                ->first();
-
-            if (!$character) {
-                $hasMiningData = DB::table('mining_ledger')
-                    ->where('character_id', $characterId)
-                    ->exists();
-
-                if (!$hasMiningData) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => "Character {$characterId} not found in SeAT and has no mining data"
-                    ], 404);
-                }
-            }
-
-            $characterName = $character->name ?? "Character {$characterId} (not in SeAT)";
-
-            // Corporation
-            $affiliation = DB::table('character_affiliations')
-                ->where('character_id', $characterId)
-                ->first();
-            $corporationId = $affiliation->corporation_id ?? null;
-            $corporationName = $corporationId
-                ? DB::table('corporation_infos')->where('corporation_id', $corporationId)->value('name')
-                : null;
-
-            // Main account mapping: character -> refresh_tokens -> users -> main_character_id
-            $accountInfo = $this->resolveAccountInfo($characterId);
-
-            // Tax bill for this month (uses main character ID since taxes are grouped by main)
-            $billCharacterId = $accountInfo['main_character_id'] ?? $characterId;
-            $taxBill = MiningTax::where('character_id', $billCharacterId)
-                ->whereYear('month', $monthStart->year)
-                ->whereMonth('month', $monthStart->month)
-                ->first();
-
-            $taxBillData = null;
-            if ($taxBill) {
-                $taxCode = $taxBill->taxCodes()->latest()->first();
-                $taxBillData = [
-                    'id' => $taxBill->id,
-                    'character_id' => $taxBill->character_id,
-                    'amount_owed' => (float) $taxBill->amount_owed,
-                    'amount_paid' => (float) $taxBill->amount_paid,
-                    'status' => $taxBill->status,
-                    'due_date' => $taxBill->due_date ? $taxBill->due_date->format('Y-m-d') : null,
-                    'paid_at' => $taxBill->paid_at ? $taxBill->paid_at->format('Y-m-d H:i') : null,
-                    'tax_code' => $taxCode ? $taxCode->code : null,
-                    'period_type' => $taxBill->period_type ?? 'monthly',
-                ];
-            }
-
-            // ================================================================
-            // SECTION 2: Daily Summaries (Stored Data)
-            // Include all alts in the group so accumulated tax traces show the full picture
-            // ================================================================
-            $allCharIds = $accountInfo['all_character_ids'] ?? [$characterId];
-
-            $dailySummaries = MiningLedgerDailySummary::whereIn('character_id', $allCharIds)
-                ->whereBetween('date', [$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')])
-                ->orderBy('date')
-                ->get();
-
-            $storedDays = [];
-            $storedTotalValue = 0;
-            $storedTotalTax = 0;
-            $storedTotalQuantity = 0;
-            $storedWarnings = [];
-            $taxSelector = $this->settingsService->getTaxSelector();
-
-            foreach ($dailySummaries as $summary) {
-                $oreEntries = $summary->ore_types ?? [];
-                $dayWarnings = [];
-
-                // Check for issues in ore entries
-                foreach ($oreEntries as &$ore) {
-                    $warnings = [];
-                    if (($ore['unit_price'] ?? 0) == 0 && ($ore['quantity'] ?? 0) > 0) {
-                        $warnings[] = 'Zero price — pricing may have failed';
-                    }
-                    // A zero rate is usually the tax selector doing its job. An
-                    // install that only taxes corp moon ore rates everything else
-                    // at nothing, moon ore from somebody else's moon is rated at
-                    // nothing under that same rule, and mining that arrives after
-                    // its period was invoiced is left untaxed on purpose. Warning
-                    // on all of those buried the one case worth reading.
-                    if ($this->taxedCategoryCameOutAtZero($ore, $taxSelector)) {
-                        $warnings[] = 'This category is taxed and has a rate, but this ore came out at 0%. Expected on moon ore from another corporation\'s moon, or on mining that reached the ledger after its period was invoiced.';
-                    }
-                    $ore['warnings'] = $warnings;
-                    if (!empty($warnings)) {
-                        $dayWarnings = array_merge($dayWarnings, $warnings);
-                    }
-                }
-                unset($ore);
-
-                $dayValue = (float) $summary->total_value;
-                $dayTax = (float) $summary->total_tax;
-
-                $storedTotalValue += $dayValue;
-                $storedTotalTax += $dayTax;
-                $storedTotalQuantity += (float) $summary->total_quantity;
-
-                $storedDays[] = [
-                    'date' => $summary->date->format('Y-m-d'),
-                    'total_quantity' => (float) $summary->total_quantity,
-                    'total_value' => $dayValue,
-                    'total_tax' => $dayTax,
-                    'moon_ore_value' => (float) $summary->moon_ore_value,
-                    'regular_ore_value' => (float) $summary->regular_ore_value,
-                    'ice_value' => (float) $summary->ice_value,
-                    'gas_value' => (float) $summary->gas_value,
-                    'is_finalized' => $summary->is_finalized,
-                    'ore_count' => count($oreEntries),
-                    'ores' => $oreEntries,
-                    'warnings' => $dayWarnings,
-                ];
-
-                if (!empty($dayWarnings)) {
-                    $storedWarnings[] = [
-                        'date' => $summary->date->format('Y-m-d'),
-                        'issues' => $dayWarnings,
-                    ];
-                }
-            }
-
-            // ================================================================
-            // SECTION 3: Live Recalculation (current prices/rates)
-            // Include all alts in the group for accumulated tax comparison
-            // ================================================================
-            $entries = DB::table('mining_ledger')
-                ->whereIn('character_id', $allCharIds)
-                ->whereBetween('date', [$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')])
-                ->orderBy('date')
-                ->get();
-
-            $taxRates = $this->settingsService->getTaxRates();
-            $pricingSettings = $this->settingsService->getPricingSettings();
-            $generalSettings = $this->settingsService->getGeneralSettings();
-
-            $liveResults = [];
-            $liveTotalTax = 0;
-            $liveTotalValue = 0;
-
-            foreach ($entries as $entry) {
-                $typeId = $entry->type_id;
-                $quantity = $entry->quantity;
-
-                $isMoonOre = TypeIdRegistry::isMoonOre($typeId);
-                $isIce = TypeIdRegistry::isIce($typeId);
-                $isGas = TypeIdRegistry::isGas($typeId);
-                $isRegularOre = TypeIdRegistry::isRegularOre($typeId);
-                $rarity = $isMoonOre ? TypeIdRegistry::getMoonOreRarity($typeId) : null;
-
-                $category = 'unknown';
-                if ($isMoonOre) $category = 'moon_ore';
-                elseif ($isIce) $category = 'ice';
-                elseif ($isGas) $category = 'gas';
-                elseif ($isRegularOre) $category = 'ore';
-
-                $taxRate = 0;
-                if ($isMoonOre && $rarity) {
-                    $taxRate = $taxRates['moon_ore'][$rarity] ?? 0;
-                } elseif ($isIce) {
-                    $taxRate = $taxRates['ice'] ?? 0;
-                } elseif ($isGas) {
-                    $taxRate = $taxRates['gas'] ?? 0;
-                } elseif ($isRegularOre) {
-                    $taxRate = $taxRates['ore'] ?? 0;
-                }
-
-                $oreValue = 0;
-                $unitPrice = 0;
-                $pricingError = null;
-                try {
-                    $unitPrice = $this->priceService->getPrice($typeId) ?? 0;
-                    $oreValue = $unitPrice * $quantity;
-                } catch (\Exception $e) {
-                    $pricingError = $e->getMessage();
-                }
-
-                $taxAmount = round($oreValue * ($taxRate / 100), 2);
-                $liveTotalTax += $taxAmount;
-                $liveTotalValue += $oreValue;
-
-                $typeName = DB::table('invTypes')
-                    ->where('typeID', $typeId)
-                    ->value('typeName') ?? "Type {$typeId}";
-
-                $liveResults[] = [
-                    'date' => $entry->date,
-                    'type_id' => $typeId,
-                    'type_name' => $typeName,
-                    'quantity' => $quantity,
-                    'category' => $category,
-                    'rarity' => $rarity,
-                    'tax_rate' => $taxRate,
-                    'unit_price' => round($unitPrice, 2),
-                    'total_value' => round($oreValue, 2),
-                    'tax_amount' => $taxAmount,
-                    'pricing_error' => $pricingError,
-                ];
-            }
-
-            // ================================================================
-            // SECTION 4: Mismatch Detection
-            // ================================================================
-            $mismatches = [];
-
-            // Compare stored summary total vs live recalculation
-            $storedVsLiveDiff = abs($storedTotalTax - $liveTotalTax);
-            if ($storedVsLiveDiff > 1) {
-                $mismatches[] = [
-                    'type' => 'stored_vs_live',
-                    'severity' => $storedVsLiveDiff > 1000000 ? 'high' : 'medium',
-                    'message' => sprintf(
-                        'Daily summary total tax (%.2f ISK) differs from live recalculation (%.2f ISK) by %.2f ISK — prices or rates may have changed since summaries were generated',
-                        $storedTotalTax, $liveTotalTax, $storedVsLiveDiff
-                    ),
-                ];
-            }
-
-            // Compare stored total vs tax bill amount
-            if ($taxBill) {
-                // For the bill comparison, we need to check ALL characters under this account
-                $allCharIds = $accountInfo['all_character_ids'] ?? [$characterId];
-                $accountStoredTax = 0;
-
-                if (count($allCharIds) > 1) {
-                    // Sum daily summaries across all alts
-                    $accountStoredTax = (float) MiningLedgerDailySummary::whereIn('character_id', $allCharIds)
-                        ->whereBetween('date', [$monthStart->format('Y-m-d'), $monthEnd->format('Y-m-d')])
-                        ->sum('total_tax');
-                } else {
-                    $accountStoredTax = $storedTotalTax;
-                }
-
-                $billDiff = abs($accountStoredTax - (float) $taxBill->amount_owed);
-                if ($billDiff > 1) {
-                    $mismatches[] = [
-                        'type' => 'summary_vs_bill',
-                        'severity' => $billDiff > 1000000 ? 'high' : 'medium',
-                        'message' => sprintf(
-                            'Account daily summaries total (%.2f ISK across %d characters) differs from tax bill amount (%.2f ISK) by %.2f ISK',
-                            $accountStoredTax, count($allCharIds), (float) $taxBill->amount_owed, $billDiff
-                        ),
-                    ];
-                }
-            }
-
-            // Check for days with mining ledger data but no daily summary
-            $ledgerDates = $entries->pluck('date')->unique()->values()->toArray();
-            $summaryDates = $dailySummaries->map(fn($s) => $s->date->format('Y-m-d'))->toArray();
-            $missingSummaryDates = array_diff($ledgerDates, $summaryDates);
-            if (!empty($missingSummaryDates)) {
-                $mismatches[] = [
-                    'type' => 'missing_summaries',
-                    'severity' => 'high',
-                    'message' => sprintf(
-                        'Mining ledger has data for %d dates with no daily summary: %s — run calculate-taxes to regenerate',
-                        count($missingSummaryDates),
-                        implode(', ', array_slice($missingSummaryDates, 0, 5)) . (count($missingSummaryDates) > 5 ? '...' : '')
-                    ),
-                ];
-            }
-
-            // Check for zero-priced ores
-            $zeroPricedCount = 0;
-            foreach ($storedDays as $day) {
-                foreach ($day['ores'] as $ore) {
-                    if (($ore['unit_price'] ?? 0) == 0 && ($ore['quantity'] ?? 0) > 0) {
-                        $zeroPricedCount++;
-                    }
-                }
-            }
-            if ($zeroPricedCount > 0) {
-                $mismatches[] = [
-                    'type' => 'zero_prices',
-                    'severity' => 'medium',
-                    'message' => sprintf(
-                        '%d ore entries in daily summaries have zero unit price — pricing provider may have failed for these items',
-                        $zeroPricedCount
-                    ),
-                ];
-            }
-
-            return response()->json([
-                'success' => true,
-
-                // Section 1: Character & Account
-                'character' => [
-                    'id' => $characterId,
-                    'name' => $characterName,
-                    'corporation_id' => $corporationId,
-                    'corporation_name' => $corporationName ?? 'Unknown (guest miner)',
-                ],
-                'account' => $accountInfo,
-                'tax_bill' => $taxBillData,
-
-                // Section 2: Stored Daily Summaries
-                'period' => [
-                    'month' => $month,
-                    'start' => $monthStart->format('Y-m-d'),
-                    'end' => $monthEnd->format('Y-m-d'),
-                ],
-                'stored_summaries' => [
-                    'days' => $storedDays,
-                    'totals' => [
-                        'total_quantity' => round($storedTotalQuantity, 2),
-                        'total_value' => round($storedTotalValue, 2),
-                        'total_tax' => round($storedTotalTax, 2),
-                        'effective_rate' => $storedTotalValue > 0 ? round(($storedTotalTax / $storedTotalValue) * 100, 2) : 0,
-                        'days_with_data' => count($storedDays),
-                    ],
-                    'warnings' => $storedWarnings,
-                ],
-
-                // Section 3: Live Recalculation
-                'live_recalculation' => [
-                    'settings_used' => [
-                        'price_provider' => $pricingSettings['price_provider'] ?? 'seat',
-                        'valuation_method' => $generalSettings['ore_valuation_method'] ?? 'mineral_price',
-                        'refining_efficiency' => $pricingSettings['refining_efficiency'] ?? 87.5,
-                    ],
-                    'tax_rates' => $taxRates,
-                    'totals' => [
-                        'total_entries' => count($entries),
-                        'total_value' => round($liveTotalValue, 2),
-                        'total_tax' => round($liveTotalTax, 2),
-                        'effective_rate' => $liveTotalValue > 0 ? round(($liveTotalTax / $liveTotalValue) * 100, 2) : 0,
-                    ],
-                    'entries' => $liveResults,
-                ],
-
-                // Section 4: Mismatches
-                'mismatches' => $mismatches,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Tax diagnostic failed', ['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
             return response()->json([
                 'success' => false,
                 'error' => $e->getMessage()
@@ -2373,348 +1841,6 @@ class DiagnosticController extends Controller
     }
 
     /**
-     * Tax pipeline diagnostic - test summaries, calculation, codes, payment matching
-     */
-    public function taxPipelineDiagnostic(Request $request)
-    {
-        try {
-            $month = $request->input('month', \Carbon\Carbon::now()->subMonth()->format('Y-m'));
-            $characterId = (int) $request->input('character_id');
-
-            $monthStart = \Carbon\Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-            $monthEnd = $monthStart->copy()->endOfMonth();
-
-            $taxService = app(\MiningManager\Services\Tax\TaxCalculationService::class);
-            $walletService = app(\MiningManager\Services\Tax\WalletTransferService::class);
-
-            $pipeline = [];
-
-            // Step 1: Daily summaries
-            $summaryCount = \MiningManager\Models\MiningLedgerDailySummary::whereBetween('date', [$monthStart, $monthEnd])->count();
-            $finalizedCount = \MiningManager\Models\MiningLedgerDailySummary::whereBetween('date', [$monthStart, $monthEnd])->where('is_finalized', true)->count();
-            $uniqueChars = \MiningManager\Models\MiningLedgerDailySummary::whereBetween('date', [$monthStart, $monthEnd])->distinct('character_id')->count('character_id');
-
-            $pipeline['daily_summaries'] = [
-                'status' => $summaryCount > 0 ? 'pass' : 'warning',
-                'total' => $summaryCount,
-                'finalized' => $finalizedCount,
-                'unique_characters' => $uniqueChars,
-                'all_finalized' => $summaryCount > 0 && $summaryCount === $finalizedCount,
-            ];
-
-            // Step 2: Tax records
-            $taxRecords = \MiningManager\Models\MiningTax::where('month', $monthStart->format('Y-m-01'))
-                ->orWhere(function ($q) use ($monthStart, $monthEnd) {
-                    $q->where('period_start', '>=', $monthStart)->where('period_start', '<=', $monthEnd);
-                })
-                ->get();
-
-            $byStatus = $taxRecords->groupBy('status')->map->count();
-            $totalOwed = $taxRecords->sum('amount_owed');
-            $totalPaid = $taxRecords->sum('amount_paid');
-
-            $pipeline['tax_records'] = [
-                'status' => $taxRecords->isNotEmpty() ? 'pass' : 'warning',
-                'total' => $taxRecords->count(),
-                'by_status' => $byStatus->toArray(),
-                'total_owed' => round($totalOwed, 2),
-                'total_paid' => round($totalPaid, 2),
-                'collection_rate' => $totalOwed > 0 ? round(($totalPaid / $totalOwed) * 100, 1) : 0,
-            ];
-
-            // Step 3: Tax codes
-            $taxIds = $taxRecords->pluck('id')->toArray();
-            $codes = \MiningManager\Models\TaxCode::whereIn('mining_tax_id', $taxIds)->get();
-            $codesByStatus = $codes->groupBy('status')->map->count();
-
-            $pipeline['tax_codes'] = [
-                'status' => $codes->isNotEmpty() || $taxRecords->isEmpty() ? 'pass' : 'warning',
-                'total' => $codes->count(),
-                'by_status' => $codesByStatus->toArray(),
-                'taxes_without_codes' => $taxRecords->count() - $codes->pluck('mining_tax_id')->unique()->count(),
-            ];
-
-            // Step 4: Pending payments
-            try {
-                $pending = $walletService->getPendingPayments(30);
-                $pipeline['pending_payments'] = [
-                    'status' => 'pass',
-                    'count' => $pending->count(),
-                ];
-            } catch (\Exception $e) {
-                $pipeline['pending_payments'] = ['status' => 'error', 'error' => $e->getMessage()];
-            }
-
-            // Step 4b: Payment reconciliation
-            $pipeline['payment_reconciliation'] = $this->reconcilePayments();
-
-            // Step 5: Overdue check
-            $overdueCount = $taxRecords->filter(fn($t) => $t->isOverdue())->count();
-            $pipeline['overdue'] = [
-                'status' => $overdueCount === 0 ? 'pass' : 'warning',
-                'count' => $overdueCount,
-                'overdue_records' => $taxRecords->filter(fn($t) => $t->isOverdue())->map(fn($t) => [
-                    'id' => $t->id, 'character_id' => $t->character_id, 'amount_owed' => $t->amount_owed, 'due_date' => $t->due_date?->toDateString(),
-                ])->values()->take(10)->toArray(),
-            ];
-
-            // Step 6: Exemption/minimum check
-            $exemptions = $this->settingsService->getExemptions();
-            $paymentSettings = $this->settingsService->getPaymentSettings();
-            $minimumBehavior = $this->settingsService->getSetting('payment.minimum_tax_behavior', 'exempt');
-
-            $pipeline['thresholds'] = [
-                'exemption_enabled' => $exemptions['enabled'] ?? false,
-                'exemption_threshold' => $exemptions['threshold'] ?? 0,
-                'minimum_tax_amount' => $paymentSettings['minimum_tax_amount'] ?? 1000000,
-                'minimum_behavior' => $minimumBehavior,
-            ];
-
-            // Optional: Character-specific calculation
-            $characterCalc = null;
-            if ($characterId) {
-                try {
-                    $figures = $taxService->accountTaxBeforeThresholds((int) $characterId, $monthStart, $monthEnd);
-
-                    // A bill adds up the main and its alts before either
-                    // threshold is applied, so both are checked against that
-                    // total rather than the one character asked about.
-                    $characterCalc = [
-                        'character_id' => $characterId,
-                        'calculated_tax' => $figures['character_tax'],
-                        'account_tax' => $figures['account_tax'],
-                        'account_characters' => $figures['account_characters'],
-                        'above_exemption' => $figures['account_tax'] >= ($exemptions['threshold'] ?? 0),
-                        'above_minimum' => $figures['account_tax'] >= ($paymentSettings['minimum_tax_amount'] ?? 1000000),
-                    ];
-                } catch (\Exception $e) {
-                    $characterCalc = ['error' => $e->getMessage()];
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'period' => ['month' => $month, 'start' => $monthStart->toDateString(), 'end' => $monthEnd->toDateString()],
-                'pipeline' => $pipeline,
-                'character_calculation' => $characterCalc,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Tax pipeline diagnostic failed', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Check that credited payments still add up, from the cutover forward.
-     *
-     * Every payment applied since the allocation ledger shipped writes a row
-     * per invoice it touched, so an invoice's amount_paid should equal the sum
-     * of its allocations. A mismatch means something credited an invoice
-     * without going through the allocator, which is the failure mode this
-     * whole mechanism exists to prevent.
-     *
-     * Deliberately scoped to invoices settled after the cutover. Older records
-     * were credited by a pipeline that kept no such breakdown, so they cannot
-     * be reconciled and are not something to raise alarms about now.
-     */
-    /**
-     * Whether a zero effective rate on one ore is worth remarking on.
-     *
-     * Only when the category is switched on in the tax selector and carries a
-     * rate above zero. Everything else is configuration, not a fault. Moon ore
-     * is left out entirely while "only corporation moon ore" is set, because a
-     * zero there means the ore came off somebody else's moon, which is the
-     * setting working.
-     */
-    private function taxedCategoryCameOutAtZero(array $ore, array $taxSelector): bool
-    {
-        if (($ore['effective_rate'] ?? 0) != 0 || ($ore['tax_rate'] ?? 0) <= 0) {
-            return false;
-        }
-
-        $category = (string) ($ore['category'] ?? '');
-
-        if (str_starts_with($category, 'moon')) {
-            if (!empty($taxSelector['only_corp_moon_ore']) || !empty($taxSelector['no_moon_ore'])) {
-                return false;
-            }
-
-            return !empty($taxSelector['all_moon_ore']);
-        }
-
-        return match ($category) {
-            'ore' => !empty($taxSelector['ore']),
-            'ice' => !empty($taxSelector['ice']),
-            'gas' => !empty($taxSelector['gas']),
-            'abyssal', 'abyssal_ore' => !empty($taxSelector['abyssal_ore']),
-            'triglavian', 'triglavian_ore' => !empty($taxSelector['triglavian_ore']),
-            default => false,
-        };
-    }
-
-    private function reconcilePayments(): array
-    {
-        try {
-            $allocator = app(\MiningManager\Services\Tax\PaymentAllocationService::class);
-            $epoch = $allocator->getDedupEpoch();
-
-            if (!$epoch) {
-                return [
-                    'status' => 'warning',
-                    'message' => 'No verification cutover is recorded, so nothing can be reconciled.',
-                ];
-            }
-
-            // Invoices raised after the cutover only. One raised before it can
-            // carry a payment the old pipeline credited without a breakdown, and
-            // paying off the rest afterwards would leave that part looking
-            // unexplained for ever.
-            $taxes = \MiningManager\Models\MiningTax::where('created_at', '>=', $epoch)
-                ->whereIn('status', ['paid', 'partial'])
-                ->get(['id', 'character_id', 'amount_owed', 'amount_paid', 'status']);
-
-            if ($taxes->isEmpty()) {
-                return [
-                    'status' => 'pass',
-                    'cutover' => $epoch->toDateTimeString(),
-                    'checked' => 0,
-                    'message' => 'No invoice raised since the cutover has been paid yet.',
-                ];
-            }
-
-            $allocated = \MiningManager\Models\PaymentAllocation::whereIn('mining_tax_id', $taxes->pluck('id'))
-                ->selectRaw('mining_tax_id, SUM(amount) as total')
-                ->groupBy('mining_tax_id')
-                ->pluck('total', 'mining_tax_id');
-
-            $discrepancies = [];
-
-            foreach ($taxes as $tax) {
-                $expected = round((float) ($allocated[$tax->id] ?? 0), 2);
-                $actual = round((float) $tax->amount_paid, 2);
-
-                // A tolerance of 1 ISK matches the settled threshold used when
-                // applying payments, so decimal dust does not read as a fault.
-                if (abs($expected - $actual) < 1.0) {
-                    continue;
-                }
-
-                $discrepancies[] = [
-                    'tax_id' => (int) $tax->id,
-                    'character_id' => (int) $tax->character_id,
-                    'amount_paid' => $actual,
-                    'sum_of_allocations' => $expected,
-                    'difference' => round($actual - $expected, 2),
-                ];
-            }
-
-            $orphanClaims = \MiningManager\Models\ProcessedTransaction::where('matched_at', '>=', $epoch)
-                ->whereNotIn('transaction_id', function ($query) {
-                    $query->select('transaction_id')
-                        ->from('mining_manager_payment_allocations')
-                        ->whereNotNull('transaction_id');
-                })
-                ->count();
-
-            return [
-                'status' => empty($discrepancies) && $orphanClaims === 0 ? 'pass' : 'warning',
-                'cutover' => $epoch->toDateTimeString(),
-                'checked' => $taxes->count(),
-                'discrepancies' => array_slice($discrepancies, 0, 20),
-                'discrepancy_count' => count($discrepancies),
-                'claims_without_allocations' => $orphanClaims,
-            ];
-        } catch (\Exception $e) {
-            return ['status' => 'error', 'error' => $e->getMessage()];
-        }
-    }
-
-    /**
-     * Theft detection diagnostic - test detection logic and statistics
-     */
-    public function theftDiagnostic(Request $request)
-    {
-        try {
-            $characterId = (int) $request->input('character_id');
-            $theftService = app(\MiningManager\Services\Theft\TheftDetectionService::class);
-
-            // Overall statistics
-            $stats = $theftService->getStatistics();
-
-            // Unresolved incidents summary
-            $unresolved = $theftService->getUnresolvedIncidents();
-
-            // Characters who have paid
-            $paidCharacters = [];
-            try {
-                $paid = $theftService->checkForPaidTaxes();
-                $paidCharacters = $paid->map(fn($i) => [
-                    'character_id' => $i->character_id, 'character_name' => $i->character_name, 'status' => $i->status,
-                ])->take(10)->toArray();
-            } catch (\Exception $e) {
-                $paidCharacters = ['error' => $e->getMessage()];
-            }
-
-            // Character-specific analysis
-            $characterAnalysis = null;
-            if ($characterId) {
-                $moonOwnerCorpId = (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0);
-
-                $isExternal = $theftService->isExternalMiner($characterId, $moonOwnerCorpId);
-
-                // Get their mining on moon structures
-                $moonMining = DB::table('corporation_industry_mining_observer_data as m')
-                    ->join('corporation_industry_mining_observers as o', 'm.observer_id', '=', 'o.observer_id')
-                    ->where('m.character_id', $characterId)
-                    ->where('m.last_updated', '>=', now()->subDays(30))
-                    ->select('m.type_id', DB::raw('SUM(m.quantity) as total_qty'), DB::raw('MAX(m.last_updated) as last_seen'))
-                    ->groupBy('m.type_id')
-                    ->get();
-
-                $totalValue = 0;
-                $moonOreEntries = [];
-                foreach ($moonMining as $entry) {
-                    $typeName = DB::table('invTypes')->where('typeID', $entry->type_id)->value('typeName') ?? "Type {$entry->type_id}";
-                    $isMoonOre = \MiningManager\Services\TypeIdRegistry::isMoonOre($entry->type_id);
-                    if ($isMoonOre) {
-                        $moonOreEntries[] = ['type_id' => $entry->type_id, 'name' => $typeName, 'quantity' => $entry->total_qty, 'last_seen' => $entry->last_seen];
-                    }
-                }
-
-                // Check existing incidents
-                $existingIncident = \MiningManager\Models\TheftIncident::where('character_id', $characterId)
-                    ->whereIn('status', ['detected', 'investigating', 'active'])
-                    ->first();
-
-                $characterAnalysis = [
-                    'character_id' => $characterId,
-                    'character_name' => DB::table('character_infos')->where('character_id', $characterId)->value('name') ?? "Unknown ({$characterId})",
-                    'is_external_miner' => $isExternal,
-                    'moon_ore_mined_30d' => $moonOreEntries,
-                    'existing_incident' => $existingIncident ? [
-                        'id' => $existingIncident->id, 'status' => $existingIncident->status, 'severity' => $existingIncident->severity,
-                        'ore_value' => $existingIncident->ore_value, 'tax_owed' => $existingIncident->tax_owed,
-                    ] : null,
-                ];
-            }
-
-            return response()->json([
-                'success' => true,
-                'statistics' => $stats,
-                'unresolved_count' => $unresolved->count(),
-                'unresolved_by_severity' => $unresolved->groupBy('severity')->map->count()->toArray(),
-                'paid_characters' => $paidCharacters,
-                'character_analysis' => $characterAnalysis,
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Theft diagnostic failed', ['error' => $e->getMessage()]);
-            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
-        }
-    }
-
-    /**
      * Event lifecycle diagnostic - test tracking, progress, leaderboards
      */
     public function eventDiagnostic(Request $request)
@@ -2751,7 +1877,7 @@ class DiagnosticController extends Controller
                         'id' => $event->id, 'name' => $event->name, 'type' => $event->type, 'status' => $event->status,
                         'start_time' => $event->start_time?->toIso8601String(), 'end_time' => $event->end_time?->toIso8601String(),
                         'participant_count' => $event->participant_count, 'total_mined' => $event->total_mined,
-                        'tax_modifier' => $event->tax_modifier, 'is_active' => $event->isActive(), 'is_future' => $event->isFuture(),
+                        'is_active' => $event->isActive(), 'is_future' => $event->isFuture(),
                         'duration' => $event->getDuration(),
                     ],
                     'progress' => $progress,
@@ -2815,13 +1941,6 @@ class DiagnosticController extends Controller
                 $results['dashboard_metrics'] = ['error' => $e->getMessage()];
             }
 
-            // Tax metrics
-            try {
-                $results['tax_metrics'] = $metricsService->getTaxMetrics();
-            } catch (\Exception $e) {
-                $results['tax_metrics'] = ['error' => $e->getMessage()];
-            }
-
             // Mining analytics
             try {
                 $results['mining_summary'] = [
@@ -2872,7 +1991,7 @@ class DiagnosticController extends Controller
                 ->get();
             $results['monthly_statistics'] = $monthlyStats->map(fn($s) => [
                 'year' => $s->year, 'month' => $s->month, 'is_closed' => $s->is_closed,
-                'total_value' => round($s->total_value ?? 0, 2), 'tax_owed' => round($s->tax_owed ?? 0, 2),
+                'total_value' => round($s->total_value ?? 0, 2),
                 'mining_days' => $s->mining_days,
             ])->toArray();
 
@@ -3032,8 +2151,8 @@ class DiagnosticController extends Controller
             // its own raw price is never used: raw ore mostly has no market at
             // all, since it is traded compressed or refined, so a raw ore with
             // no price is the true state of the market rather than a fault.
-            // What undervalues a bill there is a refined material with no price.
-            // By ore price the raw price is what gets billed, so that is the one
+            // What undervalues mining there is a refined material with no price.
+            // By ore price the raw price is what is used, so that is the one
             // to watch.
             //
             // Either way only ore with reprocessing materials is considered.
@@ -3087,50 +2206,6 @@ class DiagnosticController extends Controller
                     'severity' => 'warning',
                     'count' => $unpricedCount,
                     'message' => $unpricedMessage,
-                ];
-            }
-
-            // 5. Tax records with negative amounts
-            $negativeTaxes = DB::table('mining_taxes')
-                ->where('amount_owed', '<', 0)
-                ->count();
-
-            if ($negativeTaxes > 0) {
-                $issues[] = [
-                    'category' => 'Negative Taxes',
-                    'severity' => 'error',
-                    'count' => $negativeTaxes,
-                    'message' => 'Tax records with negative amount_owed',
-                ];
-            }
-
-            // 5b. Mining ledger entries with negative tax_amount
-            $negativeLedgerTax = DB::table('mining_ledger')
-                ->where('tax_amount', '<', 0)
-                ->count();
-
-            if ($negativeLedgerTax > 0) {
-                $issues[] = [
-                    'category' => 'Negative Ledger Tax',
-                    'severity' => 'error',
-                    'count' => $negativeLedgerTax,
-                    'message' => 'Mining ledger entries with negative tax_amount',
-                ];
-            }
-
-            // 6. Tax records for non-existent characters
-            $orphanedTaxes = DB::table('mining_taxes')
-                ->whereNotIn('character_id', function ($query) {
-                    $query->select('character_id')->from('character_infos');
-                })
-                ->count();
-
-            if ($orphanedTaxes > 0) {
-                $issues[] = [
-                    'category' => 'Orphaned Taxes',
-                    'severity' => 'warning',
-                    'count' => $orphanedTaxes,
-                    'message' => 'Tax records for characters not in character_infos',
                 ];
             }
 
@@ -3230,43 +2305,6 @@ class DiagnosticController extends Controller
                 ];
             }
 
-            // 11. Account balances that cannot be right: less than nothing left,
-            // or more left than was ever banked.
-            if (\Schema::hasTable('mining_manager_payment_credits')) {
-                $impossibleBalances = DB::table('mining_manager_payment_credits')
-                    ->where(function ($q) {
-                        $q->where('remaining', '<', 0)
-                          ->orWhereColumn('remaining', '>', 'amount');
-                    })
-                    ->count();
-                if ($impossibleBalances > 0) {
-                    $issues[] = [
-                        'category' => 'Impossible Account Balances',
-                        'severity' => 'error',
-                        'count' => $impossibleBalances,
-                        'message' => 'Held balance rows with a remaining amount below zero or above what was banked.',
-                    ];
-                }
-            }
-
-            // 12. Refunds whose balance row is gone. The Balances tab lists
-            // refunds under their balance, so these would never be shown.
-            if (\Schema::hasTable('mining_manager_payment_refunds') && \Schema::hasTable('mining_manager_payment_credits')) {
-                $orphanRefunds = DB::table('mining_manager_payment_refunds as r')
-                    ->leftJoin('mining_manager_payment_credits as c', 'c.id', '=', 'r.credit_id')
-                    ->whereNotNull('r.credit_id')
-                    ->whereNull('c.id')
-                    ->count();
-                if ($orphanRefunds > 0) {
-                    $issues[] = [
-                        'category' => 'Orphan Refunds',
-                        'severity' => 'warning',
-                        'count' => $orphanRefunds,
-                        'message' => 'Refund rows whose account balance row no longer exists, so the Balances tab cannot show them.',
-                    ];
-                }
-            }
-
             $duration = round((microtime(true) - $startTime) * 1000, 2);
 
             // Summary
@@ -3283,7 +2321,6 @@ class DiagnosticController extends Controller
                     'error_categories' => $errorCount,
                     'warning_categories' => $warningCount,
                     'total_mining_entries' => DB::table('mining_ledger')->count(),
-                    'total_tax_records' => DB::table('mining_taxes')->count(),
                     'total_price_cache' => MiningPriceCache::count(),
                     'total_characters' => DB::table('character_infos')->count(),
                 ],
@@ -3349,8 +2386,6 @@ class DiagnosticController extends Controller
             // Load settings
             $pricingSettings = $this->settingsService->getPricingSettings();
             $generalSettings = $this->settingsService->getGeneralSettings();
-            $taxRates = $this->settingsService->getTaxRates();
-
             $steps = [];
 
             // Step 1: Ore identification
@@ -3419,37 +2454,7 @@ class DiagnosticController extends Controller
                 ],
             ];
 
-            // Step 5: Tax rate determination
-            $taxRate = 0;
-            $taxRateSource = '';
-            if ($isMoonOre && $rarity) {
-                $taxRate = $taxRates['moon_ore'][$rarity] ?? 0;
-                $taxRateSource = "moon_ore.{$rarity}";
-            } elseif ($isIce) {
-                $taxRate = $taxRates['ice'] ?? 0;
-                $taxRateSource = 'ice';
-            } elseif ($isGas) {
-                $taxRate = $taxRates['gas'] ?? 0;
-                $taxRateSource = 'gas';
-            } elseif ($isRegularOre) {
-                $taxRate = $taxRates['ore'] ?? 0;
-                $taxRateSource = 'ore';
-            }
-
-            $taxAmount = round($totalValue * ($taxRate / 100), 2);
-
-            $steps[] = [
-                'step' => 5,
-                'action' => 'Tax Calculation',
-                'result' => [
-                    'tax_rate' => $taxRate,
-                    'tax_rate_source' => $taxRateSource,
-                    'tax_amount' => $taxAmount,
-                    'formula' => "total_value ({$totalValue}) x tax_rate ({$taxRate}%)",
-                ],
-            ];
-
-            // Step 6: Price modifier (if applicable)
+            // Step 5: Price modifier (if applicable)
             $priceModifier = (float) ($generalSettings['price_modifier'] ?? 0);
             $modifiedValue = $totalValue;
             if ($priceModifier != 0) {
@@ -3457,7 +2462,7 @@ class DiagnosticController extends Controller
             }
 
             $steps[] = [
-                'step' => 6,
+                'step' => 5,
                 'action' => 'Price Modifier',
                 'result' => [
                     'modifier' => $priceModifier . '%',
@@ -3478,8 +2483,6 @@ class DiagnosticController extends Controller
                 'final_result' => [
                     'unit_price' => round($unitPrice ?? 0, 2),
                     'total_value' => round($totalValue, 2),
-                    'tax_rate' => $taxRate,
-                    'tax_amount' => $taxAmount,
                 ],
                 'steps' => $steps,
             ]);
@@ -3571,28 +2574,11 @@ class DiagnosticController extends Controller
 
         $corpDetails = [];
         foreach ($allCorps as $corp) {
-            $corpId = $corp->corporation_id;
-            $this->settingsService->setActiveCorporation((int) $corpId);
-            $taxRates = $this->settingsService->getTaxRatesForCorporation($corpId);
-            $taxSelector = $this->settingsService->getTaxSelector();
-
             $corpDetails[] = [
-                'corporation_id' => $corpId,
+                'corporation_id' => $corp->corporation_id,
                 'corporation_name' => $corp->name ?? 'Unknown',
-                'has_ore_rate' => isset($taxRates['ore']) && $taxRates['ore'] > 0,
-                'has_moon_rates' => isset($taxRates['moon_ore']) && !empty($taxRates['moon_ore']),
-                'all_moon_ore' => $taxSelector['all_moon_ore'] ?? false,
-                'only_corp_moon_ore' => $taxSelector['only_corp_moon_ore'] ?? false,
-                'no_moon_ore' => $taxSelector['no_moon_ore'] ?? false,
-                'ore_taxed' => $taxSelector['ore'] ?? true,
-                'ice_taxed' => $taxSelector['ice'] ?? true,
-                'gas_taxed' => $taxSelector['gas'] ?? false,
-                'abyssal_taxed' => $taxSelector['abyssal_ore'] ?? false,
-                'triglavian_taxed' => $taxSelector['triglavian_ore'] ?? false,
-                'ore_rate' => $taxRates['ore'] ?? 0,
             ];
         }
-        $this->settingsService->setActiveCorporation(null);
 
         $corpStats['corporation_details'] = $corpDetails;
         $corpStats['status'] = $allCorps->count() > 0 || $moonOwner ? 'healthy' : 'warning';
@@ -3643,8 +2629,6 @@ class DiagnosticController extends Controller
             $cmd = $schedule->command;
             if (str_contains($cmd, 'process-ledger') || str_contains($cmd, 'import-character') || str_contains($cmd, 'update-ledger') || str_contains($cmd, 'update-daily') || str_contains($cmd, 'cache-prices')) {
                 $category = 'data';
-            } elseif (str_contains($cmd, 'calculate-taxes') || str_contains($cmd, 'generate-invoices') || str_contains($cmd, 'verify-payments') || str_contains($cmd, 'generate-tax') || str_contains($cmd, 'finalize')) {
-                $category = 'tax';
             } elseif (str_contains($cmd, 'metenox')) {
                 // v2.0.1 — metenox cargo scanner cron. Separate category so
                 // it stands out in the Scheduled Jobs list (not just lumped
@@ -3659,8 +2643,6 @@ class DiagnosticController extends Controller
                 $category = 'integrity';
             } elseif (str_contains($cmd, 'extract') || str_contains($cmd, 'jackpot') || str_contains($cmd, 'archive')) {
                 $category = 'moon';
-            } elseif (str_contains($cmd, 'theft') || str_contains($cmd, 'detect-theft')) {
-                $category = 'theft';
             } elseif (str_contains($cmd, 'report') || str_contains($cmd, 'stats')) {
                 $category = 'reports';
             }
@@ -3700,17 +2682,8 @@ class DiagnosticController extends Controller
             ? DB::table('metenox_cargo_alert_state')->count()
             : 0;
 
-        // Payments and the moon planner, guarded the same way for installs
-        // part way through their migrations.
-        $paymentAllocations = \Schema::hasTable('mining_manager_payment_allocations')
-            ? DB::table('mining_manager_payment_allocations')->count()
-            : 0;
-        $balancesHeld = \Schema::hasTable('mining_manager_payment_credits')
-            ? DB::table('mining_manager_payment_credits')->where('remaining', '>', 0)->count()
-            : 0;
-        $refundsPending = \Schema::hasTable('mining_manager_payment_refunds')
-            ? DB::table('mining_manager_payment_refunds')->where('status', 'pending')->count()
-            : 0;
+        // The moon planner, guarded the same way for installs part way
+        // through their migrations.
         $plannedPulls = \Schema::hasTable('moon_extraction_plans')
             ? DB::table('moon_extraction_plans')->whereIn('status', ['planned', 'confirmed'])->count()
             : 0;
@@ -3723,7 +2696,6 @@ class DiagnosticController extends Controller
 
         return [
             'mining_ledger' => DB::table('mining_ledger')->count(),
-            'mining_taxes' => DB::table('mining_taxes')->count(),
             'daily_summaries' => DB::table('mining_ledger_daily_summaries')->count(),
             'monthly_summaries' => DB::table('mining_ledger_monthly_summaries')->count(),
             'price_cache' => MiningPriceCache::count(),
@@ -3732,9 +2704,6 @@ class DiagnosticController extends Controller
             'metenox_structures'    => $metenoxStructures,
             'metenox_cargo_rows'    => $metenoxCargoRows,
             'metenox_alert_latches' => $metenoxAlertLatches,
-            'payment_allocations'   => $paymentAllocations,
-            'balances_held'         => $balancesHeld,
-            'refunds_pending'       => $refundsPending,
             'planned_pulls'         => $plannedPulls,
             'moon_claims'           => $moonClaims,
             'watched_moons'         => $watchedMoons,
@@ -3749,15 +2718,14 @@ class DiagnosticController extends Controller
      * Fire a REAL notification through the full NotificationService pipeline.
      *
      * Unlike testNotification() which does a single-webhook preview POST,
-     * this routes through the actual convenience wrappers (sendTaxInvoice,
-     * sendMoonArrival, sendTheftDetected, etc.) so everything gets exercised:
+     * this routes through the actual convenience wrappers (sendMoonArrival,
+     * sendEventStarted, etc.) so everything gets exercised:
      * per-type enable/disable toggles, corp-scoped webhook filtering, all
      * subscribed webhooks (not just one), retry logic on transient failures,
      * and the mining_notification_log audit trail.
      *
      * Useful for end-to-end verification without having to wait for a real
-     * tax calculation, moon extraction, theft detection, or report generation
-     * to happen organically.
+     * moon extraction, event or report generation to happen organically.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -3768,13 +2736,13 @@ class DiagnosticController extends Controller
         $startTime = microtime(true);
         $this->addLog($logs, 'info', '=== Live Notification Fire Started ===');
 
-        $type = $request->input('notification_type', 'tax_invoice');
+        $type = $request->input('notification_type', 'moon_ready');
         $characterId = (int) $request->input('character_id', 0);
         $characterName = $request->input('character_name', 'Test Character');
 
         if ($characterId === 0) {
             $characterId = 123456789;
-            $this->addLog($logs, 'warn', 'No character_id provided — using fake ID 123456789. Tax-individual notifications may not ping a real user.');
+            $this->addLog($logs, 'warn', 'No character_id provided — using fake ID 123456789.');
         } else {
             $charInfo = DB::table('character_infos')->where('character_id', $characterId)->first();
             if ($charInfo) {
@@ -3815,7 +2783,7 @@ class DiagnosticController extends Controller
     /**
      * Route a live notification fire to the right NotificationService wrapper
      * for its type. Builds the fake domain model where the wrapper needs one
-     * (MiningEvent / TheftIncident / MiningReport).
+     * (MiningEvent / MiningReport).
      */
     protected function dispatchLiveByType(
         \MiningManager\Services\Notification\NotificationService $ns,
@@ -3826,25 +2794,6 @@ class DiagnosticController extends Controller
         Request $request
     ): array {
         return match ($type) {
-            'tax_overdue' => $ns->sendTaxOverdue(
-                $characterId,
-                (float) ($data['amount'] ?? 5000000),
-                \Carbon\Carbon::parse($data['due_date'] ?? now()->subDays(3)),
-                (int) ($data['days_overdue'] ?? 3)
-            ),
-            'tax_generated' => $ns->sendTaxGenerated(
-                $data['period_label'] ?? now()->subMonth()->format('F Y'),
-                (int) ($data['tax_count'] ?? 15),
-                (float) ($data['total_amount'] ?? 75000000),
-                $data['period_type'] ?? 'monthly',
-                $data['due_date'] ?? null
-            ),
-            'tax_announcement' => $ns->sendTaxAnnouncement(
-                $data['period_label'] ?? now()->subMonth()->format('F Y'),
-                $data['period_type'] ?? 'monthly',
-                $data['due_date'] ?? null
-            ),
-            'tax_invoice' => $this->fireLiveTaxInvoice($ns, $characterId, $data),
             'event_created' => $ns->sendEventCreated($this->buildFakeMiningEvent($data)),
             'event_started' => $ns->sendEventStarted($this->buildFakeMiningEvent($data), []),
             'event_completed' => $ns->sendEventCompleted($this->buildFakeMiningEvent($data), []),
@@ -3930,45 +2879,9 @@ class DiagnosticController extends Controller
                 'capacity_m3'    => $data['capacity_m3'] ?? 500000,
                 'estimated_value' => (int) ($data['estimated_value'] ?? 850000000),
             ])),
-            'theft_detected' => $ns->sendTheftDetected($this->buildFakeTheftIncident($data), [
-                'incident_url' => $data['incident_url'] ?? route('mining-manager.theft.index'),
-            ]),
-            'critical_theft' => $ns->sendCriticalTheft($this->buildFakeTheftIncident(array_merge($data, ['severity' => 'critical'])), [
-                'incident_url' => $data['incident_url'] ?? route('mining-manager.theft.index'),
-            ]),
-            'active_theft' => $ns->sendActiveTheft($this->buildFakeTheftIncident($data), [
-                'incident_url' => $data['incident_url'] ?? route('mining-manager.theft.index'),
-                'new_mining_value' => (float) ($data['new_mining_value'] ?? 10000000),
-                'last_activity' => $data['last_activity'] ?? now()->format('Y-m-d H:i:s'),
-            ]),
-            'incident_resolved' => $ns->sendIncidentResolved($this->buildFakeTheftIncident(array_merge($data, ['status' => 'resolved'])), [
-                'incident_url' => $data['incident_url'] ?? route('mining-manager.theft.index'),
-                'resolved_by' => $data['resolved_by'] ?? 'Diagnostic Test',
-            ]),
             'report_generated' => $ns->sendReportGenerated($this->buildFakeMiningReport($data), $data),
             default => ['error' => "Unknown notification type: {$type}"],
         };
-    }
-
-    /**
-     * Tax invoice requires a TaxInvoice model — build a fake unsaved one
-     * and call sendTaxInvoice.
-     */
-    protected function fireLiveTaxInvoice(
-        \MiningManager\Services\Notification\NotificationService $ns,
-        int $characterId,
-        array $data
-    ): array {
-        // TaxInvoice uses `expires_at` as its deadline (no `due_date` column on
-        // the model — that lives on mining_taxes). `due_date` would be silently
-        // dropped by the mass-assignment filter since it's not in $fillable.
-        $invoice = new \MiningManager\Models\TaxInvoice([
-            'character_id' => $characterId,
-            'amount' => (float) ($data['amount'] ?? 5000000),
-            'expires_at' => \Carbon\Carbon::parse($data['due_date'] ?? now()->addDays(7)),
-        ]);
-        $invoice->id = 99999;
-        return $ns->sendTaxInvoice($invoice);
     }
 
     /**
@@ -3979,7 +2892,6 @@ class DiagnosticController extends Controller
         $event = new \MiningManager\Models\MiningEvent([
             'name' => $data['event_name'] ?? 'Diagnostic Test Event',
             'type' => $data['event_type_key'] ?? 'mining_op',
-            'tax_modifier' => 1.0,
             'location_scope' => 'any',
             'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
             'status' => 'active',
@@ -3990,26 +2902,6 @@ class DiagnosticController extends Controller
         ]);
         $event->id = 99999;
         return $event;
-    }
-
-    /**
-     * Build an unsaved TheftIncident for theft_* dispatches.
-     */
-    protected function buildFakeTheftIncident(array $data): \MiningManager\Models\TheftIncident
-    {
-        $incident = new \MiningManager\Models\TheftIncident([
-            'character_id' => (int) ($data['character_id'] ?? 123456789),
-            'character_name' => $data['character_name'] ?? 'Test Miner',
-            'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
-            'severity' => $data['severity'] ?? 'medium',
-            'ore_value' => (float) ($data['ore_value'] ?? 50000000),
-            'tax_owed' => (float) ($data['tax_owed'] ?? 5000000),
-            'status' => $data['status'] ?? 'detected',
-            'incident_date' => now(),
-            'activity_count' => (int) ($data['activity_count'] ?? 1),
-        ]);
-        $incident->id = 99999;
-        return $incident;
     }
 
     /**
@@ -4144,7 +3036,7 @@ class DiagnosticController extends Controller
         $this->addLog($logs, 'info', '=== Notification Test Started ===');
 
         // 1. Parse inputs
-        $notificationType = $request->input('notification_type', 'tax_invoice');
+        $notificationType = $request->input('notification_type', 'moon_ready');
         $channels = $request->input('channels', []);
         $characterId = (int) $request->input('character_id', 0);
         $characterName = $request->input('character_name', 'Test Character');
@@ -4156,9 +3048,6 @@ class DiagnosticController extends Controller
         $senderMode = $request->input('sender_mode', 'settings'); // settings or character
         $senderCharacterId = (int) $request->input('sender_character_id', 0);
 
-        // Discord ping test override
-        $testPing = (bool) $request->input('test_ping', false);
-
         if (empty($channels)) {
             $this->addLog($logs, 'error', 'No channels selected. Please select at least one channel.');
             return response()->json([
@@ -4169,10 +3058,6 @@ class DiagnosticController extends Controller
         }
 
         $typeLabels = [
-            'tax_generated' => 'Mining Taxes Summary (General)',
-            'tax_announcement' => 'New Invoices Announcement (General)',
-            'tax_invoice' => 'Tax Invoice Created (Individual)',
-            'tax_overdue' => 'Tax Payment Overdue (Individual)',
             'event_created' => 'Mining Event Created',
             'event_started' => 'Mining Event Started',
             'event_completed' => 'Mining Event Completed',
@@ -4189,10 +3074,6 @@ class DiagnosticController extends Controller
             'moon_not_rescheduled' => 'Moon Not Rescheduled (reminder)',
             'schedule_needs_filling' => 'Moons Need Planning (one list)',
             'metenox_cargo_full' => 'Metenox Cargo Bay Full (yield-stopping)',
-            'theft_detected' => 'Theft Detected',
-            'critical_theft' => 'Critical Theft',
-            'active_theft' => 'Active Theft in Progress',
-            'incident_resolved' => 'Incident Resolved',
             'report_generated' => 'Report Generated',
         ];
 
@@ -4234,7 +3115,7 @@ class DiagnosticController extends Controller
                         break;
 
                     case 'discord':
-                        $this->testDiscordChannel($logs, $summary, $notificationType, $testData, $characterId, $characterName, $webhookId, $customWebhookUrl, $notificationSettings, $testPing);
+                        $this->testDiscordChannel($logs, $summary, $notificationType, $testData, $characterId, $characterName, $webhookId, $customWebhookUrl, $notificationSettings);
                         break;
 
                     case 'slack':
@@ -4345,10 +3226,6 @@ class DiagnosticController extends Controller
         // Format message
         $notificationService = app(NotificationService::class);
         $typeConst = match ($type) {
-            'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
-            'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-            'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
-            'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
             'event_created' => NotificationService::TYPE_EVENT_CREATED,
             'event_started' => NotificationService::TYPE_EVENT_STARTED,
             'event_completed' => NotificationService::TYPE_EVENT_COMPLETED,
@@ -4385,7 +3262,7 @@ class DiagnosticController extends Controller
     /**
      * Test Discord channel — sends real webhook
      */
-    protected function testDiscordChannel(array &$logs, array &$summary, string $type, array $data, int $characterId, string $characterName, $webhookId, $customWebhookUrl, array $settings, bool $testPing = false): void
+    protected function testDiscordChannel(array &$logs, array &$summary, string $type, array $data, int $characterId, string $characterName, $webhookId, $customWebhookUrl, array $settings): void
     {
         // Resolve webhook URL
         $webhookUrl = null;
@@ -4425,63 +3302,15 @@ class DiagnosticController extends Controller
             }
         }
 
-        // Format Discord embed — all surfaces (theft/moon/report/tax/event)
+        // Format Discord embed — all surfaces (moon/report/event)
         // now live in NotificationService. We still reflect
         // into the protected formatter to build the preview without actually
         // sending to any webhook.
         $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable']);
-        $isTheftType = in_array($type, ['theft_detected', 'critical_theft', 'active_theft', 'incident_resolved']);
         $isReportType = $type === 'report_generated';
         $message = null;
 
-        if ($isTheftType) {
-            // Theft notifications live in NotificationService.
-            try {
-                $notificationService = app(\MiningManager\Services\Notification\NotificationService::class);
-                $testIncident = new \MiningManager\Models\TheftIncident([
-                    'character_id' => $data['character_id'] ?? 123456789,
-                    'character_name' => $data['character_name'] ?? 'Test Miner',
-                    'severity' => $data['severity'] ?? 'medium',
-                    'ore_value' => $data['ore_value'] ?? 50000000,
-                    'tax_owed' => $data['tax_owed'] ?? 5000000,
-                    'status' => $type === 'incident_resolved' ? 'resolved' : 'open',
-                    'incident_date' => now(),
-                ]);
-                if ($type === 'active_theft') {
-                    $testIncident->activity_count = $data['activity_count'] ?? 3;
-                    $testIncident->last_activity_at = now();
-                }
-                $additionalData = array_intersect_key($data, array_flip([
-                    'incident_url', 'test_mode', 'new_mining_value', 'last_activity', 'resolved_by',
-                ]));
-
-                // buildTheftData + formatMessageForDiscord + getDiscordRoleMention
-                // are all public on NotificationService — call directly.
-                $previewData = $notificationService->buildTheftData($testIncident, $additionalData);
-
-                $typeConst = match ($type) {
-                    'critical_theft' => \MiningManager\Services\Notification\NotificationService::TYPE_CRITICAL_THEFT,
-                    'active_theft' => \MiningManager\Services\Notification\NotificationService::TYPE_ACTIVE_THEFT,
-                    'incident_resolved' => \MiningManager\Services\Notification\NotificationService::TYPE_INCIDENT_RESOLVED,
-                    default => \MiningManager\Services\Notification\NotificationService::TYPE_THEFT_DETECTED,
-                };
-
-                $message = $notificationService->formatMessageForDiscord($typeConst, $previewData);
-                $embed = $message['embeds'][0] ?? [];
-
-                // Add role mention via the trait helper (also on NotificationService).
-                if ($webhook) {
-                    $roleMention = $notificationService->getDiscordRoleMention($type, $webhook);
-                    if ($roleMention) {
-                        $message['content'] = $roleMention;
-                    }
-                }
-
-                $this->addLog($logs, 'ok', 'Discord theft embed formatted via NotificationService: ' . ($embed['title'] ?? 'N/A'));
-            } catch (\Exception $e) {
-                $this->addLog($logs, 'warn', 'Could not format theft Discord embed: ' . $e->getMessage());
-            }
-        } elseif ($isReportType) {
+        if ($isReportType) {
             // Report notifications live in NotificationService. Build the same $data shape
             // the consolidated formatter expects, then run it through the
             // formatter for the preview. (formatMessageForDiscord is public.)
@@ -4500,11 +3329,6 @@ class DiagnosticController extends Controller
                     'period' => $data['period'] ?? [],
                     'unique_miners' => $data['unique_miners'] ?? ($data['summary']['unique_miners'] ?? 0),
                     'total_value' => $data['total_value'] ?? ($data['summary']['total_value'] ?? 0),
-                    'is_current_month' => $data['is_current_month'] ?? ($data['taxes']['is_current_month'] ?? false),
-                    'estimated_tax' => $data['estimated_tax'] ?? ($data['taxes']['estimated_tax'] ?? 0),
-                    'total_paid' => $data['total_paid'] ?? ($data['taxes']['total_paid'] ?? 0),
-                    'unpaid' => $data['unpaid'] ?? ($data['taxes']['unpaid'] ?? 0),
-                    'collection_rate' => $data['collection_rate'] ?? ($data['taxes']['collection_rate'] ?? null),
                     'description' => $data['description'] ?? 'Preview: sample report notification.',
                     'footer_extra' => $data['footer_extra'] ?? '',
                 ], $data);
@@ -4551,13 +3375,9 @@ class DiagnosticController extends Controller
         }
 
         if (!$message) {
-            // Tax/event notifications use NotificationService
+            // Event and other notifications use NotificationService
             $notificationService = app(NotificationService::class);
             $typeConst = match ($type) {
-                'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
-                'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-                'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
-                'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
                 'event_created' => NotificationService::TYPE_EVENT_CREATED,
                 'event_started' => NotificationService::TYPE_EVENT_STARTED,
                 'event_completed' => NotificationService::TYPE_EVENT_COMPLETED,
@@ -4590,71 +3410,6 @@ class DiagnosticController extends Controller
                     ]]
                 ];
             }
-        }
-
-        // Check Discord pinging (tax types only — moon notifications don't ping individuals)
-        $isTaxType = in_array($type, ['tax_invoice', 'tax_overdue']);
-        $pingingEnabled = $settings['discord_pinging_enabled'] ?? false;
-        $doPing = ($testPing || $pingingEnabled) && $isTaxType;
-
-        if ($doPing) {
-            if ($testPing && !$pingingEnabled) {
-                $this->addLog($logs, 'info', 'Discord pinging is disabled in settings, but testing anyway (test override)');
-            } else {
-                $this->addLog($logs, 'info', 'Discord pinging is enabled, checking seat-connector...');
-            }
-
-            if (Schema::hasTable('seat_connector_users')) {
-                try {
-                    // Try to resolve via seat-connector
-                    $discordId = DB::table('seat_connector_users')
-                        ->where('connector_type', 'discord')
-                        ->where('character_id', $characterId)
-                        ->value('connector_id');
-
-                    if (!$discordId) {
-                        // Try via user_id lookup
-                        $userId = DB::table('refresh_tokens')
-                            ->where('character_id', $characterId)
-                            ->value('user_id');
-
-                        if ($userId) {
-                            $discordId = DB::table('seat_connector_users')
-                                ->where('connector_type', 'discord')
-                                ->where('user_id', $userId)
-                                ->value('connector_id');
-                        }
-                    }
-
-                    if ($discordId) {
-                        $this->addLog($logs, 'ok', "Resolved Discord user ID: {$discordId}");
-                        $showAmount = $settings['discord_ping_show_amount'] ?? true;
-                        $mention = "<@{$discordId}>";
-
-                        // Use production-matching action messages
-                        $action = match ($type) {
-                            'tax_invoice' => 'A new tax invoice has been created for you.',
-                            'tax_overdue' => 'Your tax payment is overdue!',
-                            default => 'You have a pending tax notification.',
-                        };
-
-                        if ($showAmount && isset($data['formatted_amount']) && ($data['show_amount'] ?? true)) {
-                            $message['content'] = "{$mention} — {$action} Amount: {$data['formatted_amount']}";
-                        } else {
-                            $message['content'] = "{$mention} — {$action}";
-                        }
-                        $this->addLog($logs, 'ok', 'Ping content added to message');
-                    } else {
-                        $this->addLog($logs, 'warn', "Could not resolve Discord user ID for character {$characterId} — no seat-connector mapping found");
-                    }
-                } catch (\Exception $e) {
-                    $this->addLog($logs, 'warn', 'Pinging resolution failed: ' . $e->getMessage());
-                }
-            } else {
-                $this->addLog($logs, 'skip', 'seat-connector not installed (seat_connector_users table not found), pinging skipped');
-            }
-        } elseif ($isTaxType) {
-            $this->addLog($logs, 'skip', 'Discord pinging is disabled (enable in settings or check "Test Discord Ping")');
         }
 
         // Send to Discord
@@ -4718,57 +3473,16 @@ class DiagnosticController extends Controller
         // surfaces (moon, report) build inline field layouts in this preview
         // rather than reflecting into protected formatters.
         $isMoonType = in_array($type, ['moon_ready', 'jackpot_detected', 'moon_chunk_unstable']);
-        $isTheftType = in_array($type, ['theft_detected', 'critical_theft', 'active_theft', 'incident_resolved']);
         $isReportType = $type === 'report_generated';
         $message = null;
 
-        if ($isTheftType) {
-            // Theft Slack formatting now goes through NotificationService
-            // (Phase D). The rich Block Kit layout used by the old WebhookService
-            // has been replaced with the simpler attachments-style output that
-            // matches the other surfaces.
-            try {
-                $notificationService = app(\MiningManager\Services\Notification\NotificationService::class);
-                $testIncident = new \MiningManager\Models\TheftIncident([
-                    'character_id' => $data['character_id'] ?? 123456789,
-                    'character_name' => $data['character_name'] ?? 'Test Miner',
-                    'severity' => $data['severity'] ?? 'medium',
-                    'ore_value' => $data['ore_value'] ?? 50000000,
-                    'tax_owed' => $data['tax_owed'] ?? 5000000,
-                    'status' => $type === 'incident_resolved' ? 'resolved' : 'open',
-                    'incident_date' => now(),
-                ]);
-                if ($type === 'active_theft') {
-                    $testIncident->activity_count = $data['activity_count'] ?? 3;
-                    $testIncident->last_activity_at = now();
-                }
-                $additionalData = array_intersect_key($data, array_flip([
-                    'incident_url', 'test_mode', 'new_mining_value', 'last_activity', 'resolved_by',
-                ]));
-
-                $previewData = $notificationService->buildTheftData($testIncident, $additionalData);
-
-                $typeConst = match ($type) {
-                    'critical_theft' => \MiningManager\Services\Notification\NotificationService::TYPE_CRITICAL_THEFT,
-                    'active_theft' => \MiningManager\Services\Notification\NotificationService::TYPE_ACTIVE_THEFT,
-                    'incident_resolved' => \MiningManager\Services\Notification\NotificationService::TYPE_INCIDENT_RESOLVED,
-                    default => \MiningManager\Services\Notification\NotificationService::TYPE_THEFT_DETECTED,
-                };
-
-                $message = $notificationService->formatMessageForSlack($typeConst, $previewData);
-                $title = $notificationService->getEventTitle($type);
-                $this->addLog($logs, 'ok', "Slack theft message formatted via NotificationService: {$title}");
-            } catch (\Exception $e) {
-                $this->addLog($logs, 'warn', 'Could not format theft Slack message: ' . $e->getMessage());
-            }
-        } elseif ($isReportType) {
+        if ($isReportType) {
             // Report notifications live in NotificationService (Phase B).
             try {
                 $notificationService = app(\MiningManager\Services\Notification\NotificationService::class);
                 $title = $notificationService->getEventTitle('report_generated');
 
                 $summary_data = $data['summary'] ?? [];
-                $taxes = $data['taxes'] ?? [];
                 $period = $data['period'] ?? [];
                 $periodStr = isset($period['start'], $period['end']) ? "{$period['start']} to {$period['end']}" : 'N/A';
 
@@ -4841,10 +3555,6 @@ class DiagnosticController extends Controller
         if (!$message) {
             $notificationService = app(NotificationService::class);
             $typeConst = match ($type) {
-                'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
-                'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-                'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
-                'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
                 'event_created' => NotificationService::TYPE_EVENT_CREATED,
                 'event_started' => NotificationService::TYPE_EVENT_STARTED,
                 'event_completed' => NotificationService::TYPE_EVENT_COMPLETED,
@@ -4894,61 +3604,14 @@ class DiagnosticController extends Controller
      */
     protected function buildTestNotificationData(Request $request, string $type, int $characterId, string $characterName): array
     {
-        $amount = $request->input('test_amount', 5000000);
-        $dueDate = $request->input('test_due_date', now()->addDays(7)->format('Y-m-d'));
-        $daysOverdue = $request->input('test_days_overdue', 3);
-
-        // Get show_amount setting and URLs to match production notifications
-        $showAmount = (bool) $this->settingsService->getSetting('notifications.discord_ping_show_amount', true);
         $baseUrl = rtrim(config('app.url', ''), '/');
-        $myTaxesUrl = $baseUrl . '/mining-manager/tax/my-taxes';
-        $helpUrl = $baseUrl . '/mining-manager/help#how-to-pay';
 
         $base = [
             'character_id' => $characterId,
             'character_name' => $characterName,
-            'amount' => $amount,
-            'formatted_amount' => number_format($amount, 2) . ' ISK',
-            'due_date' => $dueDate,
-            'show_amount' => $showAmount,
-            'my_taxes_url' => $myTaxesUrl,
-            'help_url' => $helpUrl,
         ];
 
-        $corpName = $this->settingsService->getSetting('general.moon_owner_corporation_id')
-            ? (\Seat\Eveapi\Models\Corporation\CorporationInfo::where('corporation_id', $this->settingsService->getSetting('general.moon_owner_corporation_id'))->value('name') ?? 'Test Corporation')
-            : 'Test Corporation';
-
         return match ($type) {
-            'tax_generated' => [
-                'period_label' => now()->subMonth()->format('F Y'),
-                'period_type' => 'monthly',
-                'tax_count' => 15,
-                'total_amount' => $amount * 15,
-                'formatted_amount' => number_format($amount * 15, 2) . ' ISK',
-                'due_date' => $dueDate,
-                'corp_name' => $corpName,
-                'wallet_division' => $this->settingsService->getWalletDivisionName(),
-                'tax_code_prefix' => $this->settingsService->getSetting('tax_rates.tax_code_prefix', 'TAX-'),
-                'my_taxes_url' => $myTaxesUrl,
-                'help_url' => $helpUrl,
-                'collect_url' => $baseUrl . '/mining-manager/help#how-to-collect',
-                'wallet_url' => $baseUrl . '/mining-manager/tax/wallet',
-            ],
-            'tax_announcement' => [
-                'period_label' => now()->subMonth()->format('F Y'),
-                'period_type' => 'monthly',
-                'due_date' => $dueDate,
-                'corp_name' => $corpName,
-                'my_taxes_url' => $myTaxesUrl,
-                'help_url' => $helpUrl,
-            ],
-            'tax_invoice' => array_merge($base, [
-                'invoice_id' => 99999,
-            ]),
-            'tax_overdue' => array_merge($base, [
-                'days_overdue' => $daysOverdue,
-            ]),
             'event_created', 'event_started' => [
                 'event_id' => 99999,
                 'event_name' => $request->input('test_event_name', 'Test Mining Event'),
@@ -4956,8 +3619,6 @@ class DiagnosticController extends Controller
                 'event_type_key' => 'mining_op',
                 'start_date' => now()->format('Y-m-d H:i'),
                 'end_date' => now()->addHours(4)->format('Y-m-d H:i'),
-                'tax_modifier' => 1.0,
-                'tax_modifier_label' => 'Normal (100%)',
                 'location' => $request->input('test_location', 'Jita'),
             ],
             'event_completed' => [
@@ -4966,8 +3627,6 @@ class DiagnosticController extends Controller
                 'event_type' => $request->input('test_event_type', 'Mining Op'),
                 'total_mined' => $request->input('test_total_mined', 150000000),
                 'participants' => $request->input('test_participants', 12),
-                'tax_modifier' => 1.0,
-                'tax_modifier_label' => 'Normal (100%)',
                 'location' => $request->input('test_location', 'Jita'),
             ],
             'moon_ready' => [
@@ -5096,7 +3755,6 @@ class DiagnosticController extends Controller
                 'cargo_url'      => rtrim(config('app.url', ''), '/') . '/mining-manager/moon/metenox-cargo',
                 'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
             ],
-            'theft_detected', 'critical_theft', 'active_theft', 'incident_resolved' => $this->buildTheftTestData($request, $type, $characterId, $characterName),
             'report_generated' => [
                 'report_type' => 'monthly',
                 'period' => [
@@ -5106,56 +3764,11 @@ class DiagnosticController extends Controller
                 'summary' => [
                     'unique_miners' => 42,
                     'total_value' => 15000000000,
-                    'total_tax' => 1500000000,
-                ],
-                'taxes' => [
-                    'total_invoices' => 42,
-                    'total_paid' => 35,
-                    'total_outstanding' => 7,
                 ],
                 'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
             ],
             default => $base,
         };
-    }
-
-    /**
-     * Build test data for theft notification types
-     */
-    protected function buildTheftTestData(Request $request, string $type, int $characterId, string $characterName): array
-    {
-        $baseUrl = rtrim(config('app.url', ''), '/');
-        $severity = $request->input('test_severity', 'medium');
-        $oreValue = (float) $request->input('test_ore_value', 50000000);
-        $taxOwed = (float) $request->input('test_tax_owed', 5000000);
-
-        $data = [
-            'character_id' => $characterId,
-            'character_name' => $characterName,
-            'severity' => $severity,
-            'ore_value' => $oreValue,
-            'formatted_ore_value' => number_format($oreValue, 0) . ' ISK',
-            'tax_owed' => $taxOwed,
-            'formatted_tax_owed' => number_format($taxOwed, 0) . ' ISK',
-            'moon_name' => $request->input('test_moon_name', 'Perimeter I - Moon 1'),
-            'structure_name' => $request->input('test_structure_name', 'Athanor - Test Moon'),
-            'detected_at' => now()->format('Y-m-d H:i:s'),
-            'incident_url' => $baseUrl . '/mining-manager/diagnostic',
-            'test_mode' => true,
-            'corporation_id' => (int) $this->settingsService->getSetting('general.moon_owner_corporation_id', 0),
-        ];
-
-        if ($type === 'active_theft') {
-            $data['new_mining_value'] = (float) $request->input('test_new_mining_value', 10000000);
-            $data['formatted_new_mining_value'] = number_format($data['new_mining_value'], 0) . ' ISK';
-            $data['activity_count'] = (int) $request->input('test_activity_count', 3);
-            $data['last_activity'] = now()->format('Y-m-d H:i:s');
-        } elseif ($type === 'incident_resolved') {
-            $data['resolved_by'] = 'Diagnostic Test';
-            $data['status'] = 'resolved';
-        }
-
-        return $data;
     }
 
     /**

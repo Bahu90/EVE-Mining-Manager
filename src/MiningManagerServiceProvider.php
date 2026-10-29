@@ -6,13 +6,9 @@ use Seat\Services\AbstractSeatPlugin;
 use MiningManager\Console\Commands\ProcessMiningLedgerCommand;
 use MiningManager\Console\Commands\ReconcilePersonalMiningCommand;
 use MiningManager\Console\Commands\BackfillOreTypeFlagsCommand;
-use MiningManager\Console\Commands\CalculateMonthlyTaxesCommand;
 use MiningManager\Console\Commands\CalculateMonthlyStatisticsCommand;
-use MiningManager\Console\Commands\GenerateTaxInvoicesCommand;
 use MiningManager\Console\Commands\UpdateMiningEventsCommand;
 use MiningManager\Console\Commands\GenerateReportsCommand;
-use MiningManager\Console\Commands\VerifyWalletPaymentsCommand;
-use MiningManager\Console\Commands\SendOutstandingDigestCommand;
 use MiningManager\Console\Commands\UpdateMoonExtractionsCommand;
 use MiningManager\Console\Commands\CheckExtractionArrivalsCommand;
 use MiningManager\Console\Commands\BackfillExtractionHistoryCommand;
@@ -26,7 +22,6 @@ use MiningManager\Console\Commands\DiagnosePricesCommand;
 use MiningManager\Console\Commands\DiagnoseAffiliationCommand;
 use MiningManager\Console\Commands\ResolveCharactersCommand;
 use MiningManager\Console\Commands\EveryMinuteCommand;
-use MiningManager\Console\Commands\VerifyOreContractsCommand;
 use MiningManager\Console\Commands\DiagnoseCharacterCommand;
 use MiningManager\Console\Commands\DiagnoseMoonExtractionsCommand;
 use MiningManager\Console\Commands\DiagnoseTypeIdsCommand;
@@ -34,13 +29,10 @@ use MiningManager\Console\Commands\GenerateTestDataCommand;
 use MiningManager\Console\Commands\RecalculateExtractionValuesCommand;
 use MiningManager\Console\Commands\ArchiveOldExtractionsCommand;
 use MiningManager\Console\Commands\BackfillExtractionNotificationsCommand;
-use MiningManager\Console\Commands\DetectMoonTheftCommand;
-use MiningManager\Console\Commands\MonitorActiveTheftsCommand;
 use MiningManager\Console\Commands\FinalizeMonthCommand;
 use MiningManager\Console\Commands\UpdateLedgerPricesCommand;
 use MiningManager\Console\Commands\UpdateDailySummariesCommand;
 use MiningManager\Console\Commands\ImportCharacterMiningCommand;
-use MiningManager\Console\Commands\GenerateTaxCodesCommand;
 use MiningManager\Console\Commands\BackupDataCommand;
 use MiningManager\Console\Commands\RestoreDataCommand;
 use MiningManager\Database\Seeders\ScheduleSeeder;
@@ -96,12 +88,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
             return "<?php echo ($expression) ? \Carbon\Carbon::parse($expression)->format('M d, Y') : '-'; ?>";
         });
 
-        // Decide whether the tax section shows a Balances tab. Done here rather
-        // than in each controller because the tab lives in a partial that every
-        // tax page includes, and threading one boolean through six actions to
-        // hide one link is not worth it.
-        $this->registerBalancesTabComposer();
-
         // Register event listeners
         $this->registerEventListeners();
 
@@ -112,13 +98,9 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
                 ProcessMiningLedgerCommand::class,
                 ReconcilePersonalMiningCommand::class,
                 BackfillOreTypeFlagsCommand::class,
-                CalculateMonthlyTaxesCommand::class,
                 CalculateMonthlyStatisticsCommand::class,
-                GenerateTaxInvoicesCommand::class,
                 UpdateMiningEventsCommand::class,
                 GenerateReportsCommand::class,
-                VerifyWalletPaymentsCommand::class,
-                SendOutstandingDigestCommand::class,
                 UpdateMoonExtractionsCommand::class,
                 CheckExtractionArrivalsCommand::class,
                 DetectJackpotsCommand::class,
@@ -129,7 +111,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
                 DiagnoseAffiliationCommand::class,
                 ResolveCharactersCommand::class,
                 EveryMinuteCommand::class,
-                VerifyOreContractsCommand::class,
                 DiagnoseCharacterCommand::class,
                 DiagnoseMoonExtractionsCommand::class,
                 DiagnoseTypeIdsCommand::class,
@@ -139,13 +120,10 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
                 BackfillExtractionNotificationsCommand::class,
                 BackfillExtractionHistoryCommand::class,
                 BackfillEventRecordsCommand::class,
-                DetectMoonTheftCommand::class,
-                MonitorActiveTheftsCommand::class,
                 FinalizeMonthCommand::class,
                 UpdateLedgerPricesCommand::class,
                 UpdateDailySummariesCommand::class,
                 ImportCharacterMiningCommand::class,
-                GenerateTaxCodesCommand::class,
                 InitializeCommand::class,
                 BackupDataCommand::class,
                 RestoreDataCommand::class,
@@ -188,13 +166,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
             \MiningManager\Services\Configuration\SettingsManagerService::class
         );
 
-        // Shared so the controller, the wallet service and the tax calculator
-        // all talk to the same allocator, and therefore the same corporation
-        // context, within a request.
-        $this->app->singleton(
-            \MiningManager\Services\Tax\PaymentAllocationService::class
-        );
-
         // Shared so the in-progress notice on a page sees the characters the
         // controllers asked for while building it.
         $this->app->singleton(
@@ -230,48 +201,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
     }
 
     /**
-     * Show the Balances tab only when it would have something to say.
-     *
-     * Either someone is already holding a balance, or upfront payments are
-     * switched on and members could start creating one. On a fresh install with
-     * neither, an empty tab just looks broken.
-     *
-     * The visibility query is cached briefly: this runs on every tax page load,
-     * and the answer changes rarely.
-     */
-    private function registerBalancesTabComposer(): void
-    {
-        \Illuminate\Support\Facades\View::composer(
-            'mining-manager::taxes.partials.tab-navigation',
-            function ($view) {
-                $visible = false;
-
-                try {
-                    $visible = \Illuminate\Support\Facades\Cache::remember(
-                        'mining_manager_balances_tab_visible',
-                        300,
-                        function () {
-                            if (\MiningManager\Models\PaymentCredit::where('remaining', '>', 0)->exists()) {
-                                return true;
-                            }
-
-                            $settings = app(\MiningManager\Services\Configuration\SettingsManagerService::class);
-
-                            return (bool) ($settings->getFeatureFlags()['enable_upfront_payments'] ?? false);
-                        }
-                    );
-                } catch (\Exception $e) {
-                    // Before migrations have run the table does not exist yet.
-                    // A missing tab is a better failure than a broken tax page.
-                    $visible = false;
-                }
-
-                $view->with('balancesTabVisible', $visible);
-            }
-        );
-    }
-
-    /**
      * Hooks into SeAT's own jobs and events.
      *
      * Nothing is registered here any more. The hooks this used to hold were
@@ -293,14 +222,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
         // billed, and its daily summaries, stay as they were. Every import run
         // also takes the same lock, so one queued per character would mostly
         // skip and could make the scheduled run skip too.
-
-        // Tax payments are matched by mining-manager:verify-payments on its
-        // schedule. There used to be a listener bound to
-        // Seat\Eveapi\Events\CharacterWalletJournalUpdated here, but SeAT has
-        // no such event, so it never fired once. It also read the character
-        // wallet journal, which is the wrong side of a donation. Removed
-        // rather than repointed: the corp journal is what the scheduled run
-        // reads, and there is no SeAT event for that either.
     }
 
     /**

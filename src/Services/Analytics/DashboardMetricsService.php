@@ -4,7 +4,6 @@ namespace MiningManager\Services\Analytics;
 
 use MiningManager\Models\MiningLedger;
 use MiningManager\Models\MiningLedgerDailySummary;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MiningEvent;
 use MiningManager\Models\MoonExtraction;
 use MiningManager\Services\Configuration\SettingsManagerService;
@@ -59,7 +58,6 @@ class DashboardMetricsService
                 'today' => $this->getTodayMetrics($today),
                 'this_month' => $this->getMonthMetrics($thisMonth, Carbon::now()),
                 'last_month' => $this->getMonthMetrics($lastMonth, $lastMonth->copy()->endOfMonth()),
-                'taxes' => $this->getTaxMetrics(),
                 'events' => $this->getEventMetrics(),
                 'extractions' => $this->getExtractionMetrics(),
             ];
@@ -110,33 +108,6 @@ class DashboardMetricsService
             'miners' => $miners,
             'value' => $value,
             'average_per_miner' => $miners > 0 ? $mined / $miners : 0,
-        ];
-    }
-
-    /**
-     * Get tax metrics.
-     * Uses a single aggregate query instead of 5 separate queries.
-     *
-     * @return array
-     */
-    public function getTaxMetrics(): array
-    {
-        $thisMonth = Carbon::now()->startOfMonth();
-
-        $stats = MiningTax::selectRaw("
-            COALESCE(SUM(CASE WHEN status = 'unpaid' THEN amount_owed ELSE 0 END), 0) as total_unpaid,
-            COALESCE(SUM(CASE WHEN status = 'overdue' THEN amount_owed ELSE 0 END), 0) as total_overdue,
-            COALESCE(SUM(CASE WHEN status = 'paid' AND paid_at >= ? THEN amount_paid ELSE 0 END), 0) as paid_this_month,
-            COUNT(CASE WHEN status = 'unpaid' THEN 1 END) as unpaid_count,
-            COUNT(CASE WHEN status = 'overdue' THEN 1 END) as overdue_count
-        ", [$thisMonth])->first();
-
-        return [
-            'unpaid' => (float) $stats->total_unpaid,
-            'overdue' => (float) $stats->total_overdue,
-            'paid_this_month' => (float) $stats->paid_this_month,
-            'unpaid_count' => (int) $stats->unpaid_count,
-            'overdue_count' => (int) $stats->overdue_count,
         ];
     }
 

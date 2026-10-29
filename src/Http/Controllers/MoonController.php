@@ -165,7 +165,7 @@ class MoonController extends Controller
         $historyExtractions = collect();
         if ($status === 'completed' || $status === 'all') {
             $moonOwnerCorpId = app(\MiningManager\Services\Configuration\SettingsManagerService::class)
-                ->getTaxProgramCorporationId();
+                ->getMoonOwnerCorporationId();
 
             $historyQuery = MoonExtractionHistory::orderBy('chunk_arrival_time', 'desc');
 
@@ -799,11 +799,11 @@ class MoonController extends Controller
             'finderOres' => $finder->oreOptions(),
             'pricesUpdatedAt' => $valuation->pricesUpdatedAt(),
             'defaultBasis' => !empty($settings->getPricingSettings()['use_refined_value']) ? 'refined' : 'ore',
-            // Which figure tax is actually worked out from. The page only
+            // Which figure mining values are worked out from. The page only
             // decides which value it shows first, and that is a separate
             // setting, so the two can disagree; when they do, the page says so.
             // Same test OreValuationService makes: minerals, or else the ore.
-            'taxBasis' => ($settings->getGeneralSettings()['ore_valuation_method'] ?? 'mineral_price') === 'mineral_price' ? 'refined' : 'ore',
+            'ledgerBasis' => ($settings->getGeneralSettings()['ore_valuation_method'] ?? 'mineral_price') === 'mineral_price' ? 'refined' : 'ore',
             'features' => $settings->getFeatureFlags(),
             'unscannedRefineryMoons' => $this->unscannedRefineryMoons($settings),
             'canSeeMoonIncome' => $this->canSeeMoonIncome(),
@@ -821,7 +821,7 @@ class MoonController extends Controller
     private function unscannedRefineryMoons(SettingsManagerService $settings): array
     {
         try {
-            $corporationId = (int) $settings->getTaxProgramCorporationId();
+            $corporationId = (int) $settings->getMoonOwnerCorporationId();
             if ($corporationId <= 0) {
                 return [];
             }
@@ -1460,7 +1460,7 @@ class MoonController extends Controller
             // member could otherwise mark any extraction SeAT knows about,
             // from any corporation or from months ago.
             $moonOwnerCorpId = app(\MiningManager\Services\Configuration\SettingsManagerService::class)
-                ->getTaxProgramCorporationId();
+                ->getMoonOwnerCorporationId();
             if ($moonOwnerCorpId && (int) $extraction->corporation_id !== (int) $moonOwnerCorpId) {
                 return redirect()->route('mining-manager.moon.show', $extraction->id)
                     ->with('error', 'Jackpots can only be reported for your corporation\'s own moons.');

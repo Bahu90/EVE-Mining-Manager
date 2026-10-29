@@ -17,9 +17,6 @@ namespace MiningManager\Support;
  * and ore. When both are there the refinery row is counted and the log row
  * is not, so nothing is counted twice.
  *
- * Only what the pages show follows this. Tax is worked out from the tax
- * settings, whatever is picked here.
- *
  * The pick is remembered for the session, so moving between pages keeps it.
  */
 final class MiningSource

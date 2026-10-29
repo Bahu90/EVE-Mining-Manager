@@ -104,7 +104,7 @@ final class MoonNotificationCharacter
     /**
      * The main of the SeAT account a character is on, as [id, name].
      *
-     * Follows the same link the tax calculation groups an account by: the
+     * Follows the link SeAT groups an account by: the
      * character's refresh token names the user, and the user names its main.
      *
      * @return array{0: int, 1: string}|null

@@ -11,8 +11,7 @@ use MiningManager\Support\MiningSource;
  *
  * The daily summaries hold one total per pilot and day with no split by
  * source, so anything that follows the switch is read from the ledger,
- * limited to the rows the summaries count (MiningSource::scope). Tax is not
- * here: it comes from the summaries and bills, whatever the source.
+ * limited to the rows the summaries count (MiningSource::scope).
  */
 class SourceTotals
 {

@@ -41,9 +41,9 @@ class MetricsMathTest extends TestCase
 
     public function test_series_fills_gaps_with_zero(): void
     {
-        $series = MetricsMath::series(['a', 'b', 'c'], ['b' => ['isk' => 5, 'tax' => 1, 'volume' => 2]]);
+        $series = MetricsMath::series(['a', 'b', 'c'], ['b' => ['isk' => 5, 'volume' => 2]]);
         $this->assertSame([0.0, 5.0, 0.0], $series['isk']);
-        $this->assertSame([0.0, 1.0, 0.0], $series['tax']);
+        $this->assertArrayNotHasKey('tax', $series);
         $this->assertSame(['a', 'b', 'c'], $series['labels']);
     }
 
@@ -51,9 +51,9 @@ class MetricsMathTest extends TestCase
     {
         $players = MetricsMath::players(
             [
-                1 => ['isk' => 100, 'tax' => 10, 'volume' => 50, 'quantity' => 5],   // main
-                2 => ['isk' => 200, 'tax' => 20, 'volume' => 70, 'quantity' => 7],   // alt of 1
-                9 => ['isk' => 300, 'tax' => 0, 'volume' => 90, 'quantity' => 9],    // guest
+                1 => ['isk' => 100, 'volume' => 50, 'quantity' => 5],   // main
+                2 => ['isk' => 200, 'volume' => 70, 'quantity' => 7],   // alt of 1
+                9 => ['isk' => 300, 'volume' => 90, 'quantity' => 9],    // guest
             ],
             [1 => 1, 2 => 1],
             [1 => 'Main Pilot', 2 => 'Alt Pilot', 9 => 'Visitor']

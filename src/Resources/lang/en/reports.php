@@ -134,7 +134,7 @@ return [
     'custom_date_help' => 'Select a custom date range for your report. Choose any period from the past.',
     'generation_time_notice' => 'Report generation may take a few moments depending on the amount of data. You\'ll be redirected when complete.',
     'scheduled_reports_info' => 'Automated Report Generation',
-    'scheduled_reports_description' => 'Schedule reports to run automatically at regular intervals. Perfect for monthly tax reports or weekly summaries.',
+    'scheduled_reports_description' => 'Schedule reports to run automatically at regular intervals. Perfect for monthly mining reports or weekly summaries.',
     
     // Preview & Summary
     'report_summary' => 'Report Summary',
@@ -144,7 +144,6 @@ return [
     'include_miner_breakdown' => 'Breakdown by individual miners',
     'include_ore_distribution' => 'Ore type distribution analysis',
     'include_system_analysis' => 'System-by-system breakdown',
-    'include_tax_data' => 'Tax calculations and summaries',
     'export_summary' => 'Export Summary',
     
     // Recent Activity
@@ -156,7 +155,7 @@ return [
     'create_new_schedule' => 'Create New Schedule',
     'automate_report_generation' => 'Automate your report generation',
     'schedule_name' => 'Schedule Name',
-    'schedule_name_placeholder' => 'e.g., Monthly Tax Report',
+    'schedule_name_placeholder' => 'e.g., Monthly Mining Report',
     'description' => 'Description',
     'description_placeholder' => 'Optional description for this schedule',
     'activate_immediately' => 'Activate Immediately',
@@ -181,7 +180,6 @@ return [
     'quick_export_tool' => 'Quick Export Tool',
     'quick_export_description' => 'Export specific data quickly without creating a full report. Perfect for one-time exports or ad-hoc analysis.',
     'mining_activity' => 'Mining Activity',
-    'tax_records' => 'Tax Records',
     'miner_statistics' => 'Miner Statistics',
     'system_statistics' => 'System Statistics',
     'ore_breakdown' => 'Ore Breakdown',
@@ -189,7 +187,6 @@ return [
     
     // Export Type Descriptions
     'export_mining_desc' => 'Raw mining ledger data with all recorded activity',
-    'export_tax_desc' => 'Tax calculations and payment records',
     'export_miners_desc' => 'Individual miner performance and statistics',
     'export_systems_desc' => 'Activity breakdown by solar system',
     'export_ores_desc' => 'Ore type quantities and values',
@@ -199,7 +196,6 @@ return [
     'minimum_value' => 'Minimum Value (ISK)',
     'region_filter' => 'Region Filter',
     'all_regions' => 'All Regions',
-    'only_unpaid' => 'Only Unpaid Taxes',
     
     // Report Show/Detail
     'report_details' => 'Report Details',
@@ -214,11 +210,6 @@ return [
     'ore_type' => 'Ore Type',
     'system_breakdown' => 'System Breakdown',
     'system_name' => 'System',
-    'tax_summary' => 'Tax Summary',
-    'tax_rate' => 'Tax Rate',
-    'taxable_value' => 'Taxable Value',
-    'total_paid' => 'Total Paid',
-    'total_outstanding' => 'Total Outstanding',
     'no_report_data' => 'No Report Data Available',
     'no_report_data_description' => 'This report does not contain any viewable data. Try downloading the report file instead.',
     'unknown' => 'Unknown',

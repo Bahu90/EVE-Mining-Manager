@@ -145,30 +145,6 @@
         </div>
     </div>
 
-    {{-- Total Event Savings — second row, full-width prominent box --}}
-    @if(($stats['total_event_savings'] ?? 0) > 0)
-    <div class="row">
-        <div class="col-12">
-            <div class="small-box bg-gradient-warning">
-                <div class="inner d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="mb-0">
-                            <i class="fas fa-piggy-bank"></i>
-                            {{ number_format($stats['total_event_savings'], 0) }} ISK
-                        </h3>
-                        <p class="mb-0">
-                            <strong>Total tax saved from event participation</strong>
-                            <br>
-                            <small>Across every mining event your characters have participated in. Already applied to your tax bills &mdash; this is the running total of ISK kept in your pocket because of events.</small>
-                        </p>
-                    </div>
-                    <i class="fas fa-gift" style="font-size: 3rem; opacity: 0.5;"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
-
     {{-- FILTER TABS --}}
     <div class="row">
         <div class="col-12">
@@ -240,8 +216,6 @@
                                                 $myParticipations = $event->participants->whereIn('character_id', $characterIds ?? []);
                                                 $myQuantity = $myParticipations->sum('quantity_mined');
                                                 $myValue = $myParticipations->sum('value_mined');
-                                                // Tax saved from this specific event, summed from ore_types JSON.
-                                                $mySavings = (float) ($eventSavingsMap[$event->id] ?? 0);
                                             @endphp
                                             <div class="ml-3">
                                                 <p class="mb-1">{{ trans('mining-manager::events.mined') }}:
@@ -250,18 +224,6 @@
                                                 <p class="mb-1">{{ trans('mining-manager::events.quantity') }}:
                                                     <strong>{{ number_format($myQuantity, 0) }}</strong>
                                                 </p>
-                                                <p class="mb-1">{{ trans('mining-manager::events.tax_modifier') }}:
-                                                    <span class="badge badge-{{ $event->tax_modifier < 0 ? 'success' : ($event->tax_modifier > 0 ? 'warning' : 'secondary') }}">
-                                                        {{ $event->getTaxModifierLabel() }}
-                                                    </span>
-                                                </p>
-                                                @if($mySavings > 0)
-                                                <p class="mb-1">
-                                                    <i class="fas fa-piggy-bank text-warning"></i>
-                                                    <strong>Your tax saved:</strong>
-                                                    <strong class="text-success">{{ number_format($mySavings, 0) }} ISK</strong>
-                                                </p>
-                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -325,11 +287,6 @@
                                                 {{ $event->start_time->diff($event->end_time)->format('%h hours %i minutes') }}
                                             </p>
                                             <p><strong>{{ trans('mining-manager::events.registered_participants') }}:</strong> {{ $event->participants->count() }}</p>
-                                            <p><strong>{{ trans('mining-manager::events.tax_modifier') }}:</strong>
-                                                <span class="badge badge-{{ $event->tax_modifier < 0 ? 'success' : ($event->tax_modifier > 0 ? 'warning' : 'secondary') }}">
-                                                    {{ $event->getTaxModifierLabel() }}
-                                                </span>
-                                            </p>
                                             @if($event->description)
                                             <p class="text-muted mt-2">{{ Str::limit($event->description, 100) }}</p>
                                             @endif
@@ -398,7 +355,6 @@
                                                 $myParticipations = $event->participants->whereIn('character_id', $characterIds ?? []);
                                                 $myQuantity = $myParticipations->sum('quantity_mined');
                                                 $myValue = $myParticipations->sum('value_mined');
-                                                $mySavings = (float) ($eventSavingsMap[$event->id] ?? 0);
 
                                                 // Rank = best rank among the user's characters (lowest number).
                                                 $topParticipants = $event->topParticipants(10);
@@ -425,13 +381,6 @@
                                                     <span class="badge badge-{{ $myRank < 3 ? 'success' : 'info' }}">
                                                         #{{ $myRank + 1 }}
                                                     </span>
-                                                </p>
-                                                @endif
-                                                @if($mySavings > 0)
-                                                <p class="mb-1">
-                                                    <i class="fas fa-piggy-bank text-warning"></i>
-                                                    <strong>Tax saved from this event:</strong>
-                                                    <strong class="text-success">{{ number_format($mySavings, 0) }} ISK</strong>
                                                 </p>
                                                 @endif
                                             </div>

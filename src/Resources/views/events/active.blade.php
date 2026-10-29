@@ -93,12 +93,6 @@
                             <p><strong>{{ trans('mining-manager::events.duration') }}:</strong> {{ $event->start_time->diff($event->end_time)->format('%h hours %i minutes') }}</p>
                             @endif
                             <p><strong>{{ trans('mining-manager::events.location') }}:</strong> {{ $event->getLocationName() ?? $event->getLocationScopeLabel() }}</p>
-                            <p>
-                                <strong>{{ trans('mining-manager::events.tax_modifier') }}:</strong>
-                                <span class="badge badge-{{ $event->tax_modifier < 0 ? 'success' : ($event->tax_modifier > 0 ? 'warning' : 'secondary') }}">
-                                    {{ $event->getTaxModifierLabel() }}
-                                </span>
-                            </p>
                         </div>
 
                         {{-- Participants --}}

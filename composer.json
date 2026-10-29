@@ -1,6 +1,6 @@
 {
   "name": "bahu90/mining-manager",
-  "description": "Comprehensive mining management plugin for SeAT - Track mining activities, manage moon extractions, calculate taxes, and generate detailed reports",
+  "description": "Comprehensive mining management plugin for SeAT - Track mining activities, plan and manage moon extractions, and generate detailed reports",
   "type": "seat-plugin",
   "keywords": [
     "seat",
@@ -10,7 +10,6 @@
     "corporation",
     "management",
     "moon",
-    "tax",
     "plugin"
   ],
   "license": "GPL-2.0-or-later",

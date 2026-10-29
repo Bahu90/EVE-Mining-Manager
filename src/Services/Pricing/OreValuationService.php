@@ -144,7 +144,7 @@ class OreValuationService
             }
         }
 
-        // unit_price should always reflect effective per-unit value (what we use for tax/valuation)
+        // unit_price should always reflect effective per-unit value (what we use for valuation)
         // This ensures consistency: unit_price * quantity ≈ total_value
         if ($result['total_value'] > 0 && $quantity > 0) {
             $result['unit_price'] = $result['total_value'] / $quantity;

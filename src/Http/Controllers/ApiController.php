@@ -5,7 +5,6 @@ namespace MiningManager\Http\Controllers;
 use Illuminate\Http\Request;
 use Seat\Web\Http\Controllers\Controller;
 use MiningManager\Models\MiningLedger;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MiningEvent;
 use MiningManager\Models\MoonExtraction;
 use MiningManager\Services\Analytics\MiningAnalyticsService;
@@ -68,50 +67,6 @@ class ApiController extends Controller
             'success' => true,
             'data' => $ledger,
             'count' => $ledger->count(),
-        ]);
-    }
-
-    /**
-     * Get tax data
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function taxes(Request $request)
-    {
-        $request->validate([
-            'character_id' => 'nullable|integer',
-            'status' => 'nullable|string|in:unpaid,paid,overdue,exempt,waived',
-            'month' => 'nullable|date',
-            'limit' => 'nullable|integer|min:1|max:1000',
-        ]);
-
-        $characterId = $request->input('character_id');
-        $status = $request->input('status');
-        $month = $request->input('month');
-
-        $query = MiningTax::with('character');
-
-        if ($characterId) {
-            $query->where('character_id', $characterId);
-        }
-
-        if ($status) {
-            $query->where('status', $status);
-        }
-
-        if ($month) {
-            $query->where('month', Carbon::parse($month)->format('Y-m-01'));
-        }
-
-        $taxes = $query->orderBy('month', 'desc')
-            ->limit(min((int) $request->input('limit', 100), 1000))
-            ->get();
-
-        return response()->json([
-            'success' => true,
-            'data' => $taxes,
-            'count' => $taxes->count(),
         ]);
     }
 
@@ -260,13 +215,6 @@ class ApiController extends Controller
                 'mined' => MiningLedger::where('date', '>=', $thisMonth)->sum('quantity'),
                 'miners' => MiningLedger::where('date', '>=', $thisMonth)->distinct('character_id')->count(),
             ],
-            'taxes' => [
-                'unpaid' => MiningTax::where('status', 'unpaid')->sum('amount_owed'),
-                'overdue' => MiningTax::where('status', 'overdue')->sum('amount_owed'),
-                'paid_this_month' => MiningTax::where('status', 'paid')
-                    ->where('paid_at', '>=', $thisMonth)
-                    ->sum('amount_paid'),
-            ],
             'events' => [
                 'active' => MiningEvent::where('status', 'active')->count(),
                 'planned' => MiningEvent::where('status', 'planned')->count(),
@@ -310,9 +258,6 @@ class ApiController extends Controller
             ->whereBetween('date', [$startDate, $endDate])
             ->get();
 
-        $taxes = MiningTax::where('character_id', $characterId)
-            ->get();
-
         $summary = [
             'character_id' => $characterId,
             'period' => [
@@ -323,11 +268,6 @@ class ApiController extends Controller
                 'total_quantity' => $miningData->sum('quantity'),
                 'unique_days' => $miningData->pluck('date')->unique()->count(),
                 'ore_types' => $miningData->pluck('type_id')->unique()->count(),
-            ],
-            'taxes' => [
-                'total_owed' => $taxes->sum('amount_owed'),
-                'total_paid' => $taxes->sum('amount_paid'),
-                'unpaid' => $taxes->where('status', 'unpaid')->sum('amount_owed'),
             ],
         ];
 

@@ -128,26 +128,6 @@
                                     </td>
                                     <td>
                                         <div class="webhook-events-pills">
-                                            @if($webhook->notify_theft_detected)
-                                                <span class="badge badge-warning" title="{{ trans('mining-manager::settings.theft_detected') }}">
-                                                    <i class="fas fa-exclamation-triangle"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_critical_theft)
-                                                <span class="badge badge-danger" title="{{ trans('mining-manager::settings.critical_theft') }}">
-                                                    <i class="fas fa-fire"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_active_theft)
-                                                <span class="badge badge-danger" title="{{ trans('mining-manager::settings.active_theft') }}">
-                                                    <i class="fas fa-bolt"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_incident_resolved)
-                                                <span class="badge badge-success" title="{{ trans('mining-manager::settings.incident_resolved') }}">
-                                                    <i class="fas fa-check"></i>
-                                                </span>
-                                            @endif
                                             @if($webhook->notify_moon_arrival)
                                                 <span class="badge badge-info" title="Moon Arrival">
                                                     <i class="fas fa-moon"></i>
@@ -181,26 +161,6 @@
                                             @if($webhook->notify_event_completed)
                                                 <span class="badge badge-secondary" title="Event Completed">
                                                     <i class="fas fa-flag-checkered"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_tax_generated)
-                                                <span class="badge badge-info" title="Mining Taxes Summary">
-                                                    <i class="fas fa-calculator"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_tax_announcement)
-                                                <span class="badge badge-primary" title="Tax Announcement">
-                                                    <i class="fas fa-bullhorn"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_tax_invoice)
-                                                <span class="badge badge-info" title="Tax Invoice">
-                                                    <i class="fas fa-file-invoice"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_tax_overdue)
-                                                <span class="badge badge-danger" title="Tax Overdue">
-                                                    <i class="fas fa-exclamation-circle"></i>
                                                 </span>
                                             @endif
                                             @if($webhook->notify_report_generated)
@@ -241,11 +201,6 @@
                                             @if($webhook->notify_schedule_needs_filling ?? false)
                                                 <span class="badge badge-primary" title="Moons Need Planning (one list)">
                                                     <i class="fas fa-calendar-plus"></i>
-                                                </span>
-                                            @endif
-                                            @if($webhook->notify_tax_outstanding_digest ?? false)
-                                                <span class="badge badge-warning" title="Outstanding Mining Tax (weekly director digest)">
-                                                    <i class="fas fa-clipboard-list"></i>
                                                 </span>
                                             @endif
                                             @if($webhook->notify_price_provider ?? false)
@@ -407,34 +362,6 @@
                     {{-- Event Selection --}}
                     <div class="form-group">
                         <label>{{ trans('mining-manager::settings.notify_on_events') }}</label>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-theft-detected" name="notify_theft_detected" value="1" checked>
-                            <label class="custom-control-label" for="notify-theft-detected">
-                                <i class="fas fa-exclamation-triangle text-warning"></i>
-                                {{ trans('mining-manager::settings.theft_detected') }}
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-critical-theft" name="notify_critical_theft" value="1" checked>
-                            <label class="custom-control-label" for="notify-critical-theft">
-                                <i class="fas fa-fire text-danger"></i>
-                                {{ trans('mining-manager::settings.critical_theft') }}
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-active-theft" name="notify_active_theft" value="1" checked>
-                            <label class="custom-control-label" for="notify-active-theft">
-                                <i class="fas fa-bolt text-danger"></i>
-                                {{ trans('mining-manager::settings.active_theft') }}
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-incident-resolved" name="notify_incident_resolved" value="1">
-                            <label class="custom-control-label" for="notify-incident-resolved">
-                                <i class="fas fa-check text-success"></i>
-                                {{ trans('mining-manager::settings.incident_resolved') }}
-                            </label>
-                        </div>
 
                         <hr class="my-2">
                         <small class="text-muted d-block mb-2"><strong>Moon Events</strong></small>
@@ -509,13 +436,6 @@
                                 Moons Need Planning (one list)
                             </label>
                         </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-outstanding-digest" name="notify_tax_outstanding_digest" value="1">
-                            <label class="custom-control-label" for="notify-tax-outstanding-digest">
-                                <i class="fas fa-clipboard-list text-warning"></i>
-                                Outstanding Mining Tax (weekly director digest)
-                            </label>
-                        </div>
 
                         <div class="custom-control custom-checkbox">
                             <input type="checkbox" class="custom-control-input" id="notify-metenox-cargo-full" name="notify_metenox_cargo_full" value="1">
@@ -550,37 +470,6 @@
                             </label>
                         </div>
 
-                        <hr class="my-2">
-                        <small class="text-muted d-block mb-2"><strong>Tax Notifications</strong></small>
-
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-generated" name="notify_tax_generated" value="1">
-                            <label class="custom-control-label" for="notify-tax-generated">
-                                <i class="fas fa-calculator text-info"></i>
-                                Mining Taxes Summary <span class="badge badge-secondary badge-sm">Directors</span>
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-announcement" name="notify_tax_announcement" value="1">
-                            <label class="custom-control-label" for="notify-tax-announcement">
-                                <i class="fas fa-bullhorn text-primary"></i>
-                                New Invoices Announcement <span class="badge badge-secondary badge-sm">General</span>
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-invoice" name="notify_tax_invoice" value="1">
-                            <label class="custom-control-label" for="notify-tax-invoice">
-                                <i class="fas fa-file-invoice text-info"></i>
-                                Tax Invoice Created
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-overdue" name="notify_tax_overdue" value="1">
-                            <label class="custom-control-label" for="notify-tax-overdue">
-                                <i class="fas fa-exclamation-circle text-danger"></i>
-                                Tax Overdue
-                            </label>
-                        </div>
 
                         <hr class="my-2">
                         <small class="text-muted d-block mb-2"><strong>{{ trans('mining-manager::settings.reports_category') }}</strong></small>

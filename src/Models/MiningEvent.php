@@ -37,7 +37,6 @@ class MiningEvent extends Model
         'participant_count',
         'total_mined',
         'total_mined_value',
-        'tax_modifier',
         'corporation_id',
         'created_by',
         'last_updated',
@@ -54,7 +53,6 @@ class MiningEvent extends Model
         'participant_count' => 'integer',
         'total_mined' => 'integer',
         'total_mined_value' => 'integer',
-        'tax_modifier' => 'integer',
         'corporation_id' => 'integer',
         'last_updated' => 'datetime',
     ];
@@ -71,19 +69,18 @@ class MiningEvent extends Model
     ];
 
     /**
-     * Mapping from event type to the ore categories its tax modifier applies to.
+     * Mapping from event type to the ore categories the event tracks.
      *
      * mining_op       → regular asteroid ore (belt mining)
      * moon_extraction → all moon ore rarities (R4 through R64)
      * ice_mining      → ice
      * gas_huffing     → gas
-     * special         → EVERYTHING (all taxable categories including abyssal + triglavian)
+     * special         → EVERYTHING (including abyssal + triglavian)
      *
      * The 'special' event type is intended for special occasions (holidays,
-     * competitions, incentives) where the organiser wants the modifier to
-     * apply regardless of what ore miners are extracting. Everything else
-     * is scoped so a "Moon Extraction" event doesn't accidentally discount
-     * belt mining or vice versa.
+     * competitions) that count whatever ore miners are extracting. Everything
+     * else is scoped so a "Moon Extraction" event doesn't count belt mining
+     * or vice versa.
      */
     public const EVENT_TYPE_ORE_CATEGORIES = [
         'mining_op' => ['ore'],
@@ -101,21 +98,6 @@ class MiningEvent extends Model
         'system' => 'Specific System',
         'constellation' => 'Constellation',
         'region' => 'Region',
-    ];
-
-    /**
-     * Tax modifier preset labels for UI display.
-     */
-    public const TAX_MODIFIER_LABELS = [
-        -100 => 'Tax Free',
-        -75 => 'Reduced Tax (-75%)',
-        -50 => 'Half Tax (-50%)',
-        -25 => 'Light Discount (-25%)',
-        0 => 'Normal Tax',
-        25 => 'Slight Increase (+25%)',
-        50 => 'Heavy Tax (+50%)',
-        75 => 'Punitive Tax (+75%)',
-        100 => 'Double Tax (+100%)',
     ];
 
     /**
@@ -292,68 +274,6 @@ class MiningEvent extends Model
     }
 
     /**
-     * Get the human-readable label for the tax modifier.
-     *
-     * @return string
-     */
-    public function getTaxModifierLabel(): string
-    {
-        // Check for exact preset match
-        if (isset(self::TAX_MODIFIER_LABELS[$this->tax_modifier])) {
-            return self::TAX_MODIFIER_LABELS[$this->tax_modifier];
-        }
-
-        // Format custom value
-        $sign = $this->tax_modifier >= 0 ? '+' : '';
-        return "{$sign}{$this->tax_modifier}%";
-    }
-
-    /**
-     * Get formatted tax modifier with sign for display.
-     *
-     * @return string
-     */
-    public function getFormattedTaxModifier(): string
-    {
-        if ($this->tax_modifier == 0) {
-            return '0%';
-        }
-
-        $sign = $this->tax_modifier > 0 ? '+' : '';
-        return "{$sign}{$this->tax_modifier}%";
-    }
-
-    /**
-     * Check if this event reduces taxes (negative modifier).
-     *
-     * @return bool
-     */
-    public function reducesTax(): bool
-    {
-        return $this->tax_modifier < 0;
-    }
-
-    /**
-     * Check if this event increases taxes (positive modifier).
-     *
-     * @return bool
-     */
-    public function increasesTax(): bool
-    {
-        return $this->tax_modifier > 0;
-    }
-
-    /**
-     * Check if this is a tax-free event.
-     *
-     * @return bool
-     */
-    public function isTaxFree(): bool
-    {
-        return $this->tax_modifier <= -100;
-    }
-
-    /**
      * Get the human-readable label for the event type.
      *
      * @return string
@@ -495,7 +415,7 @@ class MiningEvent extends Model
     }
 
     /**
-     * Check if this event's tax modifier applies to the given ore category.
+     * Check if this event tracks the given ore category.
      *
      * Returns true when the event's type includes the ore category in
      * EVENT_TYPE_ORE_CATEGORIES. "special" events apply to everything;
@@ -540,7 +460,7 @@ class MiningEvent extends Model
      * (corp, location, time, ore category). If the user edits the event
      * in the UI — e.g. narrows the location scope or flips from
      * moon_extraction to special — the prior materialisation is now
-     * wrong and downstream participant / tax attribution would be stale.
+     * wrong and downstream participant figures would be stale.
      *
      * A full refresh (delete-then-rebuild) is the safest path because
      * it's hard to surgically undo filter changes incrementally.

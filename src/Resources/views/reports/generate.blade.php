@@ -293,7 +293,6 @@
                                 <li><i class="fas fa-check text-success"></i> {{ trans('mining-manager::reports.include_miner_breakdown') }}</li>
                                 <li><i class="fas fa-check text-success"></i> {{ trans('mining-manager::reports.include_ore_distribution') }}</li>
                                 <li><i class="fas fa-check text-success"></i> {{ trans('mining-manager::reports.include_system_analysis') }}</li>
-                                <li><i class="fas fa-check text-success"></i> {{ trans('mining-manager::reports.include_tax_data') }}</li>
                             </ul>
                         </div>
                         

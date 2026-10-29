@@ -58,8 +58,7 @@ class GenerateReportsCommand extends Command
     {
         // Mutex lock to prevent concurrent invocations (schedule entries
         // can overlap; manual artisan runs can coincide with cron). Same
-        // pattern as ProcessMiningLedgerCommand, DetectJackpotsCommand,
-        // CalculateMonthlyTaxesCommand, etc.
+        // pattern as ProcessMiningLedgerCommand, DetectJackpotsCommand, etc.
         $lock = Cache::lock('mining-manager:generate-reports', 600);
         if (!$lock->get()) {
             $this->warn('Another instance of this command is already running. Skipping.');
@@ -267,7 +266,6 @@ class GenerateReportsCommand extends Command
         $this->line("Total Miners: " . ($summary['total_miners'] ?? 0));
         $this->line("Total Ore Mined: " . number_format($summary['total_quantity'] ?? 0));
         $this->line("Total Value: " . number_format($summary['total_value'] ?? 0, 2) . " ISK");
-        $this->line("Total Tax Collected: " . number_format($summary['total_tax'] ?? 0, 2) . " ISK");
 
         // Top miners from miners array
         if (!empty($reportData['miners'])) {

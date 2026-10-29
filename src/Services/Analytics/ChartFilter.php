@@ -129,20 +129,6 @@ final class ChartFilter
     }
 
     /**
-     * True when this slice leans on classification flags.
-     *
-     * Those flags are stamped at import and were only corrected from the
-     * classification cutover forward, so a chart that reads them tells the
-     * truth about recent mining and repeats an old mistake about the rest. The
-     * page uses this to decide whether to say so.
-     */
-    public function dependsOnClassification(): bool
-    {
-        return $this->oreCategory !== null
-            || in_array($this->moonSource, [self::MOON_ANY, self::MOON_OTHER], true);
-    }
-
-    /**
      * Narrow a mining_ledger query to this slice.
      *
      * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query

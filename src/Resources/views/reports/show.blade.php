@@ -61,15 +61,6 @@
         opacity: 0.7;
     }
 
-    .tax-summary-card {
-        border-left: 4px solid #f6c23e;
-    }
-
-    .tax-summary-card .tax-total {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #f6c23e;
-    }
 </style>
 @include('mining-manager::partials.theme')
 @endpush
@@ -330,73 +321,6 @@
         </div>
         @endif
     </div>
-
-    {{-- TAX SUMMARY --}}
-    @if(!empty($reportData['taxes']))
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <div class="card tax-summary-card">
-                <div class="card-header">
-                    <h3 class="card-title">
-                        <i class="fas fa-percentage"></i>
-                        {{ trans('mining-manager::reports.tax_summary') }}
-                        @if($reportData['taxes']['is_current_month'] ?? false)
-                            <span class="badge badge-warning ml-2">Estimated</span>
-                        @else
-                            <span class="badge badge-success ml-2">Final</span>
-                        @endif
-                    </h3>
-                </div>
-                <div class="card-body">
-                    {{-- Estimated tax from daily summaries --}}
-                    @if(isset($reportData['taxes']['estimated_tax']))
-                    <div class="tax-total mb-3">
-                        {{ number_format($reportData['taxes']['estimated_tax'], 2) }} ISK
-                        <small class="d-block text-muted mt-1">
-                            @if($reportData['taxes']['is_current_month'] ?? false)
-                                Estimated Tax (month in progress)
-                            @else
-                                Total Tax
-                            @endif
-                        </small>
-                    </div>
-                    @endif
-
-                    <table class="table table-sm mb-0">
-                        @if(isset($reportData['taxes']['total_owed']) && $reportData['taxes']['total_owed'] > 0)
-                        <tr>
-                            <td><i class="fas fa-file-invoice-dollar text-warning"></i> Total Owed</td>
-                            <td class="text-right">{{ number_format($reportData['taxes']['total_owed'], 2) }} ISK</td>
-                        </tr>
-                        @endif
-                        @if(isset($reportData['taxes']['total_paid']))
-                        <tr>
-                            <td><i class="fas fa-check-circle text-success"></i> {{ trans('mining-manager::reports.total_paid') }}</td>
-                            <td class="text-right">{{ number_format($reportData['taxes']['total_paid'], 2) }} ISK</td>
-                        </tr>
-                        @endif
-                        @if(isset($reportData['taxes']['unpaid']) && $reportData['taxes']['unpaid'] > 0)
-                        <tr>
-                            <td><i class="fas fa-exclamation-circle text-danger"></i> {{ trans('mining-manager::reports.total_outstanding') }}</td>
-                            <td class="text-right text-danger font-weight-bold">{{ number_format($reportData['taxes']['unpaid'], 2) }} ISK</td>
-                        </tr>
-                        @endif
-                        @if(isset($reportData['taxes']['collection_rate']) && !($reportData['taxes']['is_current_month'] ?? false))
-                        <tr>
-                            <td><i class="fas fa-chart-pie text-info"></i> Collection Rate</td>
-                            <td class="text-right">
-                                <span class="badge badge-{{ $reportData['taxes']['collection_rate'] >= 80 ? 'success' : ($reportData['taxes']['collection_rate'] >= 50 ? 'warning' : 'danger') }}">
-                                    {{ number_format($reportData['taxes']['collection_rate'], 1) }}%
-                                </span>
-                            </td>
-                        </tr>
-                        @endif
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-    @endif
 
     @else
     {{-- NO DATA --}}

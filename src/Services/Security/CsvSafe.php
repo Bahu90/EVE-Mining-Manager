@@ -7,7 +7,7 @@ namespace MiningManager\Services\Security;
  *
  * A cell that starts with =, +, -, @, a tab or a carriage return is read as a
  * formula by spreadsheet programs. Names in these exports come from players
- * (event names, theft notes, structure names), so one starting with "=" could
+ * (event names, structure names), so one starting with "=" could
  * run a formula on the director's machine when they open the file. Such cells
  * get a leading apostrophe, which spreadsheets hide and treat as "this is
  * text". Numbers, including negative ones, are left alone.

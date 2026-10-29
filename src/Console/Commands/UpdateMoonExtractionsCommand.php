@@ -144,7 +144,7 @@ class UpdateMoonExtractionsCommand extends Command
         // moon whose in-game timer diverged from the plan ("wrong scheduled
         // moon"). One-shot per plan; no-ops when no Moon Owner Corp is set.
         try {
-            $moonOwnerCorpId = $settingsService->getTaxProgramCorporationId();
+            $moonOwnerCorpId = $settingsService->getMoonOwnerCorporationId();
             if ($moonOwnerCorpId !== null) {
                 $planner = app(\MiningManager\Services\Moon\MoonPlannerService::class);
                 $planner->reconcile($moonOwnerCorpId);
@@ -214,7 +214,7 @@ class UpdateMoonExtractionsCommand extends Command
         // instead, and the simulator cannot see them. Say so once per new
         // reason, and daily as well if that is switched on.
         try {
-            $moonOwnerCorpId = $settingsService->getTaxProgramCorporationId();
+            $moonOwnerCorpId = $settingsService->getMoonOwnerCorporationId();
             if ($moonOwnerCorpId !== null) {
                 $listed = app(\MiningManager\Services\Moon\MoonScanWatch::class)->run((int) $moonOwnerCorpId);
                 if ($listed > 0) {

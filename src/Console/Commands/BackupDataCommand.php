@@ -30,17 +30,11 @@ class BackupDataCommand extends Command
         'mining_ledger',
         'mining_ledger_daily_summaries',
         'mining_ledger_monthly_summaries',
-        'mining_taxes',
-        'mining_tax_codes',
-        'tax_invoices',
         'mining_reports',
         'report_schedules',
         'mining_notification_log',
         'monthly_statistics',
         'mining_price_cache',
-        'theft_incidents',
-        'mining_manager_dismissed_transactions',
-        'mining_manager_processed_transactions',
     ];
 
     public function handle()

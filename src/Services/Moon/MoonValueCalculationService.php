@@ -91,7 +91,6 @@ class MoonValueCalculationService
         // - If R4 ores (Bitumens, etc.) are in the composition → they refine to minerals
         // - If R8+ ores without R4 → no regular minerals obtained
         // The composition defines what you get, so we calculate refined value for each ore type
-        // Note: Individual miner taxation can still use raw ore prices (configured separately)
 
         // Get estimated chunk size from config (default: 150,000 m³)
         $chunkSize = ($this->settingsService->getMoonSettings()['estimated_chunk_size'] ?? 150000);

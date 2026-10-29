@@ -18,7 +18,6 @@
     var colours = {
         isk: cssVar('--mmx-blue', '#00aeff'),
         iskDeep: cssVar('--mmx-blue-deep', '#0a6fae'),
-        tax: cssVar('--mmx-green', '#3ddc84'),
         volume: cssVar('--mmx-volume', '#8a7a68'),
         idle: cssVar('--mmx-label', '#a7b0be'),
         line: cssVar('--mmx-line', '#1b2029'),
@@ -143,8 +142,7 @@
                 data: {
                     labels: data.daily.labels.map(dayLabel),
                     datasets: [
-                        lineSet(data.labels.isk, data.daily.isk, colours.isk, 'isk', true),
-                        lineSet(data.labels.tax, data.daily.tax, colours.tax, 'isk', true)
+                        lineSet(data.labels.isk, data.daily.isk, colours.isk, 'isk', true)
                     ]
                 },
                 // Volume is in m³, not ISK, so it goes in the tooltip rather
@@ -169,14 +167,13 @@
                     labels: data.trend.labels,
                     datasets: [
                         lineSet(data.labels.isk, data.trend.isk, colours.isk, 'isk', true),
-                        lineSet(data.labels.tax, data.trend.tax, colours.tax, 'isk', true),
                         Object.assign(lineSet(data.labels.volume, data.trend.volume, colours.volume, 'volume', false), { hidden: true })
                     ]
                 },
                 options: chartOptions()
             });
 
-            var order = { isk: 0, tax: 1, volume: 2 };
+            var order = { isk: 0, volume: 1 };
             document.querySelectorAll('.mmx-toggle[data-series]').forEach(function (button) {
                 button.addEventListener('click', function () {
                     var index = order[button.getAttribute('data-series')];
@@ -253,7 +250,7 @@
         var cards = Array.prototype.slice.call(grid.querySelectorAll('.mmx-card'));
         var search = section.querySelector('[data-search]');
         var count = section.querySelector('[data-count]');
-        var classes = { volume: 'mmx-vol', isk: 'mmx-isk', tax: 'mmx-taxc' };
+        var classes = { volume: 'mmx-vol', isk: 'mmx-isk' };
 
         function sortBy(key) {
             cards.sort(function (a, b) {

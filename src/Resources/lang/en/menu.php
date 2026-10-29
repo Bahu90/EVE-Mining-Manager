@@ -14,15 +14,6 @@ return [
     'my_mining' => 'My Mining',
     'process_ledger' => 'Process Ledger',
     
-    // Tax Management
-    'tax_management' => 'Tax Management',
-    'tax_overview' => 'Tax Overview',
-    'calculate_taxes' => 'Calculate Taxes',
-    'my_taxes' => 'My Taxes',
-    'tax_codes' => 'Tax Codes',
-    'wallet_verification' => 'Wallet Verification',
-    'account_balances' => 'Balances',
-    
     // Mining Events
     'mining_events' => 'Mining Events',
     'all_events' => 'All Events',
@@ -55,9 +46,6 @@ return [
     'generate_report' => 'Generate Report',
     'scheduled_reports' => 'Scheduled Reports',
     'export_data' => 'Export Data',
-
-    // Theft Detection
-    'theft_detection' => 'Theft Detection',
 
     // Settings
     'settings' => 'Settings',

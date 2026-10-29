@@ -18,7 +18,6 @@ use Carbon\Carbon;
  * @property int|null $corporation_id
  * @property float $total_quantity
  * @property float $total_value
- * @property float $total_tax
  * @property float $moon_ore_value
  * @property float $regular_ore_value
  * @property float $ice_value
@@ -43,7 +42,6 @@ class MiningLedgerMonthlySummary extends Model
         'corporation_id',
         'total_quantity',
         'total_value',
-        'total_tax',
         'moon_ore_value',
         'regular_ore_value',
         'ice_value',
@@ -59,7 +57,6 @@ class MiningLedgerMonthlySummary extends Model
         'month' => 'date',
         'total_quantity' => 'decimal:2',
         'total_value' => 'decimal:2',
-        'total_tax' => 'decimal:2',
         'moon_ore_value' => 'decimal:2',
         'regular_ore_value' => 'decimal:2',
         'ice_value' => 'decimal:2',

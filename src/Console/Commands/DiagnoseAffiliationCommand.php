@@ -156,8 +156,8 @@ class DiagnoseAffiliationCommand extends Command
         }
         $this->newLine();
 
-        // Test 6: Test the actual query from TaxController
-        $this->info('═══ TEST 6: Test TaxController Query ═══');
+        // Test 6: Load characters with their affiliation
+        $this->info('═══ TEST 6: Affiliation Eager-Load Query ═══');
         try {
             $this->line('  Testing the actual problematic query...');
             
@@ -171,7 +171,7 @@ class DiagnoseAffiliationCommand extends Command
             $characterIds = [$character->character_id];
             $this->line("  Using character ID: {$character->character_id}");
             
-            // Try the query that fails in TaxController
+            // The eager-load the member pages rely on
             $this->line('  Query: CharacterInfo::whereIn(\'character_id\', [...])->with(\'affiliation\')->get()');
             $characters = CharacterInfo::whereIn('character_id', $characterIds)
                 ->with('affiliation')
@@ -186,7 +186,6 @@ class DiagnoseAffiliationCommand extends Command
             
         } catch (\Exception $e) {
             $this->error('  ❌ Query failed: ' . $e->getMessage());
-            $this->error('     This is the error from TaxController!');
             $this->newLine();
             $this->line('  Stack trace excerpt:');
             $trace = explode("\n", $e->getTraceAsString());

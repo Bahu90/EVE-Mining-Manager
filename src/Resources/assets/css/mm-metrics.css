@@ -361,7 +361,6 @@
     font-weight: 400;
 }
 
-.mmx-tile.mmx-tax strong { color: var(--mmx-green); }
 
 /* The small triangle in a refinery tile's corner. */
 .mmx-tile.mmx-flag::after {
@@ -558,7 +557,6 @@
 .mmx-r64 { color: var(--mmx-r64) !important; }
 .mmx-rnone { color: var(--mmx-muted) !important; }
 .mmx-isk { color: var(--mmx-blue) !important; }
-.mmx-taxc { color: var(--mmx-green) !important; }
 .mmx-vol { color: var(--mmx-volume) !important; }
 
 .mmx-swatch.mmx-r4 { background: var(--mmx-r4); }
@@ -568,7 +566,6 @@
 .mmx-swatch.mmx-r64 { background: var(--mmx-r64); }
 .mmx-swatch.mmx-all { background: var(--mmx-text-2); }
 .mmx-swatch.mmx-isk { background: var(--mmx-blue); }
-.mmx-swatch.mmx-taxc { background: var(--mmx-green); }
 .mmx-swatch.mmx-vol { background: var(--mmx-volume); }
 
 .mmx-hidden { display: none !important; }

@@ -69,10 +69,6 @@ function loadWebhookData(webhookId) {
                 }
 
                 // Event checkboxes
-                document.getElementById('notify-theft-detected').checked = webhook.notify_theft_detected;
-                document.getElementById('notify-critical-theft').checked = webhook.notify_critical_theft;
-                document.getElementById('notify-active-theft').checked = webhook.notify_active_theft;
-                document.getElementById('notify-incident-resolved').checked = webhook.notify_incident_resolved;
                 document.getElementById('notify-moon-arrival').checked = webhook.notify_moon_arrival;
                 document.getElementById('notify-jackpot-detected').checked = webhook.notify_jackpot_detected;
                 const unstableField = document.getElementById('notify-moon-chunk-unstable');
@@ -96,16 +92,10 @@ function loadWebhookData(webhookId) {
                 document.getElementById('notify-event-created').checked = webhook.notify_event_created;
                 document.getElementById('notify-event-started').checked = webhook.notify_event_started;
                 document.getElementById('notify-event-completed').checked = webhook.notify_event_completed;
-                document.getElementById('notify-tax-generated').checked = webhook.notify_tax_generated;
-                document.getElementById('notify-tax-announcement').checked = webhook.notify_tax_announcement;
-                document.getElementById('notify-tax-invoice').checked = webhook.notify_tax_invoice;
-                document.getElementById('notify-tax-overdue').checked = webhook.notify_tax_overdue;
                 document.getElementById('notify-report-generated').checked = webhook.notify_report_generated;
                 // These four are on the form but were never filled in here, so
                 // opening a webhook to change anything showed them as off and
                 // saving switched them off for real.
-                const digestField = document.getElementById('notify-tax-outstanding-digest');
-                if (digestField) digestField.checked = !!webhook.notify_tax_outstanding_digest;
                 const providerField = document.getElementById('notify-price-provider');
                 if (providerField) providerField.checked = !!webhook.notify_price_provider;
                 const scanMissingField = document.getElementById('notify-moon-scan-missing');
@@ -154,10 +144,6 @@ function saveWebhook() {
         type: document.getElementById('webhook-type').value,
         webhook_url: document.getElementById('webhook-url').value,
         corporation_id: corpForPayload,
-        notify_theft_detected: document.getElementById('notify-theft-detected').checked ? 1 : 0,
-        notify_critical_theft: document.getElementById('notify-critical-theft').checked ? 1 : 0,
-        notify_active_theft: document.getElementById('notify-active-theft').checked ? 1 : 0,
-        notify_incident_resolved: document.getElementById('notify-incident-resolved').checked ? 1 : 0,
         notify_moon_arrival: document.getElementById('notify-moon-arrival').checked ? 1 : 0,
         notify_jackpot_detected: document.getElementById('notify-jackpot-detected').checked ? 1 : 0,
         notify_moon_chunk_unstable: document.getElementById('notify-moon-chunk-unstable')?.checked ? 1 : 0,
@@ -168,17 +154,12 @@ function saveWebhook() {
         notify_extraction_cancelled: document.getElementById('notify-extraction-cancelled')?.checked ? 1 : 0,
         notify_moon_not_rescheduled: document.getElementById('notify-moon-not-rescheduled')?.checked ? 1 : 0,
         notify_schedule_needs_filling: document.getElementById('notify-schedule-needs-filling')?.checked ? 1 : 0,
-        notify_tax_outstanding_digest: document.getElementById('notify-tax-outstanding-digest')?.checked ? 1 : 0,
         notify_price_provider: document.getElementById('notify-price-provider')?.checked ? 1 : 0,
         notify_moon_scan_missing: document.getElementById('notify-moon-scan-missing')?.checked ? 1 : 0,
         notify_metenox_cargo_full: document.getElementById('notify-metenox-cargo-full')?.checked ? 1 : 0,
         notify_event_created: document.getElementById('notify-event-created').checked ? 1 : 0,
         notify_event_started: document.getElementById('notify-event-started').checked ? 1 : 0,
         notify_event_completed: document.getElementById('notify-event-completed').checked ? 1 : 0,
-        notify_tax_generated: document.getElementById('notify-tax-generated').checked ? 1 : 0,
-        notify_tax_announcement: document.getElementById('notify-tax-announcement').checked ? 1 : 0,
-        notify_tax_invoice: document.getElementById('notify-tax-invoice').checked ? 1 : 0,
-        notify_tax_overdue: document.getElementById('notify-tax-overdue').checked ? 1 : 0,
         notify_report_generated: document.getElementById('notify-report-generated').checked ? 1 : 0,
         discord_username: document.getElementById('discord-username')?.value || null,
         slack_channel: document.getElementById('slack-channel')?.value || null,

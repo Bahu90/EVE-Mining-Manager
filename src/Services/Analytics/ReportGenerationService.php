@@ -6,7 +6,6 @@ use MiningManager\Services\Security\CsvSafe;
 use MiningManager\Models\MiningReport;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Models\MiningLedgerDailySummary;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MiningEvent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -99,7 +98,6 @@ class ReportGenerationService
             'ore_types' => $this->getOreTypeData($startDate, $endDate),
             'systems' => $this->getSystemData($startDate, $endDate),
             'daily_breakdown' => $this->getDailyBreakdown($startDate, $endDate),
-            'taxes' => $this->getTaxData($startDate, $endDate),
         ];
     }
 
@@ -208,42 +206,6 @@ class ReportGenerationService
                 'miners' => $day->unique_miners,
             ];
         })->toArray();
-    }
-
-    /**
-     * Get tax data for report.
-     *
-     * @param Carbon $startDate
-     * @param Carbon $endDate
-     * @return array
-     */
-    private function getTaxData(Carbon $startDate, Carbon $endDate): array
-    {
-        $now = Carbon::now();
-        $isCurrentMonth = $endDate->isSameMonth($now);
-
-        // Get estimated tax from daily summaries (source of truth)
-        $estimatedTax = MiningLedgerDailySummary::whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->sum('total_tax');
-
-        // Get finalized tax records
-        $taxes = MiningTax::whereBetween('month', [$startDate->copy()->startOfMonth(), $endDate->copy()->endOfMonth()])
-            ->get();
-
-        $totalOwed = $taxes->sum('amount_owed');
-        $totalPaid = $taxes->sum('amount_paid');
-
-        return [
-            'is_current_month' => $isCurrentMonth,
-            'estimated_tax' => round($estimatedTax, 2),
-            'total_owed' => $totalOwed,
-            'total_paid' => $totalPaid,
-            'unpaid' => $totalOwed - $totalPaid,
-            'overdue' => $taxes->where('status', 'overdue')->sum('amount_owed'),
-            'collection_rate' => $totalOwed > 0
-                ? round(($totalPaid / $totalOwed) * 100, 1)
-                : 0,
-        ];
     }
 
     /**
@@ -373,7 +335,6 @@ class ReportGenerationService
         // Collect data based on export type
         $rows = match ($exportType) {
             'mining_activity' => $this->getMiningActivityExport($startDate, $endDate),
-            'tax_records'     => $this->getTaxRecordsExport($startDate, $endDate),
             'miner_stats'     => $this->getMinerData($startDate, $endDate),
             'system_stats'    => $this->getSystemData($startDate, $endDate),
             'ore_breakdown'   => $this->getOreTypeData($startDate, $endDate),
@@ -451,39 +412,10 @@ class ReportGenerationService
                     'system'       => $entry->system_name,
                     'system_id'    => $entry->solar_system_id,
                     'total_value'  => (float) $entry->total_value,
-                    'tax_amount'   => (float) $entry->tax_amount,
                 ];
             });
 
         return $rows;
-    }
-
-    /**
-     * Get tax records for export.
-     *
-     * @param Carbon $startDate
-     * @param Carbon $endDate
-     * @return array
-     */
-    private function getTaxRecordsExport(Carbon $startDate, Carbon $endDate): array
-    {
-        return MiningTax::whereBetween('month', [$startDate->startOfMonth(), $endDate->endOfMonth()])
-            ->orderByRaw('COALESCE(period_start, month) DESC')
-            ->get()
-            ->map(function ($tax) {
-                return [
-                    'month'        => $tax->month->format('Y-m'),
-                    'character'    => app(\MiningManager\Services\Character\CharacterNames::class)->nameOrId($tax->character_id),
-                    'character_id' => $tax->character_id,
-                    'amount_owed'  => (float) $tax->amount_owed,
-                    'amount_paid'  => (float) $tax->amount_paid,
-                    'balance'      => (float) $tax->getRemainingBalance(),
-                    'status'       => $tax->status,
-                    'due_date'     => $tax->due_date ? $tax->due_date->toDateString() : null,
-                    'paid_at'      => $tax->paid_at ? $tax->paid_at->toDateTimeString() : null,
-                ];
-            })
-            ->toArray();
     }
 
     /**
@@ -509,7 +441,6 @@ class ReportGenerationService
                     'duration_hours'    => $event->getDuration(),
                     'participant_count' => $event->participant_count,
                     'total_mined'       => $event->total_mined,
-                    'tax_modifier'      => $event->getFormattedTaxModifier(),
                     'avg_per_participant' => $event->getAveragePerParticipant(),
                 ];
             })

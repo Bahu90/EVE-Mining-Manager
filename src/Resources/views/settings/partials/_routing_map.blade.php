@@ -15,7 +15,6 @@
       - Webhook-level fallback role lives on `webhook.discord_role_id` (set
         in Settings -> Webhooks)
       - Two-tier precedence: L1 per-type role, L2 webhook legacy role
-      - tax_invoice is hard-blocked from role pings (batch protection in trait)
 
     Required variables (inherited from the settings view scope):
       $webhooks                 — collection of WebhookConfiguration
@@ -162,16 +161,6 @@
     // in notifications.blade.php so the operator sees the same labels here.
     // (No corresponding settings columns means no entry in this map.)
     $mmRouteCategories = [
-        'tax' => [
-            'label' => 'Tax notifications',
-            'icon'  => 'fas fa-coins',
-            'types' => [
-                'tax_generated'    => ['label' => 'Mining Taxes Summary',     'col' => 'notify_tax_generated'],
-                'tax_announcement' => ['label' => 'New Invoices Announcement','col' => 'notify_tax_announcement'],
-                'tax_invoice'      => ['label' => 'Tax Invoice Created',      'col' => 'notify_tax_invoice', 'role_blocked' => true],
-                'tax_overdue'      => ['label' => 'Tax Payment Overdue',      'col' => 'notify_tax_overdue'],
-            ],
-        ],
         'event' => [
             'label' => 'Event notifications',
             'icon'  => 'fas fa-calendar',
@@ -198,7 +187,6 @@
                 'extraction_cancelled' => ['label' => 'Moon Extraction Cancelled', 'col' => 'notify_extraction_cancelled'],
                 'moon_not_rescheduled' => ['label' => 'Moon Not Rescheduled (reminder)', 'col' => 'notify_moon_not_rescheduled'],
                 'schedule_needs_filling' => ['label' => 'Moons Need Planning (one list)', 'col' => 'notify_schedule_needs_filling'],
-                'tax_outstanding_digest' => ['label' => 'Outstanding Mining Tax (digest)', 'col' => 'notify_tax_outstanding_digest'],
                 'metenox_cargo_full'  => ['label' => 'Metenox Cargo Bay Full',          'col' => 'notify_metenox_cargo_full'],
             ],
         ],
@@ -208,16 +196,6 @@
             'types' => [
                 'price_provider'    => ['label' => 'Price Provider Trouble', 'col' => 'notify_price_provider'],
                 'moon_scan_missing' => ['label' => 'Moon Scan Missing',      'col' => 'notify_moon_scan_missing'],
-            ],
-        ],
-        'theft' => [
-            'label' => 'Theft detection',
-            'icon'  => 'fas fa-user-secret',
-            'types' => [
-                'theft_detected'    => ['label' => 'Theft Detected',           'col' => 'notify_theft_detected'],
-                'critical_theft'    => ['label' => 'Critical Theft',           'col' => 'notify_critical_theft'],
-                'active_theft'      => ['label' => 'Active Theft in Progress', 'col' => 'notify_active_theft'],
-                'incident_resolved' => ['label' => 'Incident Resolved',        'col' => 'notify_incident_resolved'],
             ],
         ],
         'report' => [
@@ -254,7 +232,7 @@
             }
 
             // Resolve the per-type role under the dispatcher's rules:
-            // - tax_invoice (and any 'role_blocked') is hard-blocked from
+            // - any type marked 'role_blocked' is hard-blocked from
             //   pings regardless of stored values
             // - ping_role OFF (per-type) → no role ping at all
             // - ping_role ON + per-type role_id set → L1 per-type role
@@ -429,7 +407,7 @@
                                     <td>
                                         @if($row['hardBlocked'])
                                             <span class="mm-role-none">No mention (hard-blocked)</span>
-                                            <span class="routing-via via-blocked" title="tax_invoice batch protection: role pings disabled in code">L0 blocked</span>
+                                            <span class="routing-via via-blocked" title="Role pings disabled in code for this type">L0 blocked</span>
                                         @elseif(!$row['pingRole'])
                                             <span class="mm-role-none">No mention (ping_role OFF)</span>
                                         @else

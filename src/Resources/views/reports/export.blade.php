@@ -107,20 +107,6 @@
                             </div>
 
                             <div class="col-lg-4 mb-3">
-                                <div class="card export-option-card" data-export-type="tax_records">
-                                    <div class="card-body text-center">
-                                        <div class="export-icon icon-taxes">
-                                            <i class="fas fa-coins"></i>
-                                        </div>
-                                        <h5>{{ trans('mining-manager::reports.tax_records') }}</h5>
-                                        <p class="text-muted">
-                                            {{ trans('mining-manager::reports.export_tax_desc') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-lg-4 mb-3">
                                 <div class="card export-option-card" data-export-type="miner_stats">
                                     <div class="card-body text-center">
                                         <div class="export-icon icon-miners">
@@ -447,16 +433,6 @@ $(document).ready(function() {
                         <select class="form-control" name="region_id">
                             <option value="">{{ trans("mining-manager::reports.all_regions") }}</option>
                         </select>
-                    </div>
-                `;
-                break;
-            case 'tax_records':
-                html = `
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" name="only_unpaid" id="only_unpaid">
-                        <label class="form-check-label" for="only_unpaid">
-                            {{ trans("mining-manager::reports.only_unpaid") }}
-                        </label>
                     </div>
                 `;
                 break;

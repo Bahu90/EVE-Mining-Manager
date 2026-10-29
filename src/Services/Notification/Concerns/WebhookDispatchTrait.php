@@ -25,10 +25,10 @@ use MiningManager\Services\Configuration\SettingsManagerService;
  *  - getDiscordRoleMention — per-type ping_role setting authoritative,
  *    with legacy webhook-level discord_role_id as fallback.
  *  - getMoonOwnerScopedWebhooks — returns webhooks whose corporation_id
- *    is NULL or matches the configured Tax Program corp. Used for
- *    tax, moon, and theft dispatches (everything that concerns the
- *    moon-owner corp's operations).
- *  - getCorpName — human-readable Tax Program corp name for footers.
+ *    is NULL or matches the configured Moon Owner corp. Used for
+ *    moon dispatches (everything that concerns the moon-owner corp's
+ *    operations).
+ *  - getCorpName — human-readable Moon Owner corp name for footers.
  *
  * Usage:
  *   class FooDispatcher {
@@ -47,8 +47,8 @@ trait WebhookDispatchTrait
      * have idempotent dedup latches).
      *
      * Tuned from the previous 10s cap — saves up to 5 worker-seconds per
-     * rate-limited webhook. Batch dispatches (e.g. tax invoices fanning
-     * out to N webhooks) accumulate this cost linearly.
+     * rate-limited webhook. Batch dispatches (fanning out to N webhooks)
+     * accumulate this cost linearly.
      */
     protected static function retryAfterHardCapSeconds(): int
     {
@@ -155,7 +155,7 @@ trait WebhookDispatchTrait
      *   2. webhook's own discord_role_id (legacy)
      *   3. null (no mention)
      *
-     * @param string               $eventType  e.g. 'theft_detected', 'moon_arrival'
+     * @param string               $eventType  e.g. 'moon_arrival'
      * @param WebhookConfiguration $webhook    Webhook providing legacy fallback
      * @return string|null Discord "<@&roleId>" mention, or null for no ping
      */
@@ -167,20 +167,6 @@ trait WebhookDispatchTrait
      */
     public function getDiscordRoleMention(string $eventType, WebhookConfiguration $webhook): ?string
     {
-        // Types that are fired in batches and must NEVER role-ping, regardless
-        // of settings — pinging once per invoice (or per dispatched item in any
-        // per-character batch) would spam the role with N messages on every
-        // cron run. The per-user mention still works for these; only the
-        // blanket role ping is suppressed.
-        //
-        // Kept as a hard-coded guard rather than a setting because legacy DB
-        // values with ping_role=true for these types could otherwise re-emerge
-        // after the UI toggle was removed.
-        $typesThatMustNotRolePing = ['tax_invoice'];
-        if (in_array($eventType, $typesThatMustNotRolePing, true)) {
-            return null;
-        }
-
         // Map webhook event keys to settings-type keys where they differ.
         // moon_arrival (webhook subscription column) maps to moon_ready
         // (settings type key). Most types match directly.
@@ -212,10 +198,10 @@ trait WebhookDispatchTrait
 
     /**
      * Return the set of webhooks that should receive a notification scoped
-     * to the Tax Program / Moon Owner Corporation.
+     * to the Moon Owner Corporation.
      *
-     * Moon, theft, and tax notifications always concern the corp that runs
-     * the mining tax program on this SeAT install. We intentionally exclude
+     * Moon notifications always concern the corp that owns the moons on this
+     * SeAT install. We intentionally exclude
      * webhooks owned by other corps on the same install — they may be run
      * by unrelated directors with separate moons/wallets that shouldn't
      * receive this corp's alerts.
@@ -224,13 +210,10 @@ trait WebhookDispatchTrait
      * should NOT use this helper — they fire to every enabled subscribed
      * webhook regardless of corporation_id.
      *
-     * Individual tax notifications (tax_invoice / tax_overdue)
-     * can pass the miner's corporation_id as `$extraCorpId` to ALSO include
-     * webhooks bound to that corp — letting each mining-group director see
-     * their own members' notifications in their own Discord channel, while
-     * the admin (corp_id=NULL) + the tax program corp continue to see all.
-     * Broadcast tax notifications (tax_generated, tax_announcement) should
-     * NOT pass extraCorpId — those are admin-only.
+     * Callers can pass another corporation_id as `$extraCorpId` to ALSO
+     * include webhooks bound to that corp (mining events do, for the
+     * event's own corporation), while the admin (corp_id=NULL) and the moon
+     * owner corp continue to see all.
      *
      * @param  string   $eventType     Webhook subscription column (e.g. 'moon_arrival')
      * @param  int|null $extraCorpId   Optional additional corp ID to include in the OR-clause
@@ -238,7 +221,7 @@ trait WebhookDispatchTrait
      */
     protected function getMoonOwnerScopedWebhooks(string $eventType, ?int $extraCorpId = null): Collection
     {
-        $moonOwnerCorpId = app(SettingsManagerService::class)->getTaxProgramCorporationId();
+        $moonOwnerCorpId = app(SettingsManagerService::class)->getMoonOwnerCorporationId();
 
         if ($moonOwnerCorpId === null) {
             Log::warning("WebhookDispatchTrait: moon_owner_corporation_id is not configured — '{$eventType}' will only fire for global (NULL corp) webhooks" . ($extraCorpId ? " or miner corp {$extraCorpId}" : ""));
@@ -263,10 +246,10 @@ trait WebhookDispatchTrait
             }
             $webhookCorpId = (int) $webhook->corporation_id;
             if ($moonOwnerCorpId !== null && $webhookCorpId === $moonOwnerCorpId) {
-                return true; // Tax program corp — always included
+                return true; // Moon owner corp — always included
             }
             if ($extraCorpId !== null && $webhookCorpId === $extraCorpId) {
-                return true; // Miner's own corp (individual tax notifications only)
+                return true; // The extra corp the caller asked for
             }
             return false;
         });
@@ -280,7 +263,7 @@ trait WebhookDispatchTrait
     }
 
     /**
-     * Get the configured Tax Program / Moon Owner corporation's display name
+     * Get the configured Moon Owner corporation's display name
      * for notification footers. Returns 'Corporation' if unconfigured or the
      * corp row is missing.
      *
@@ -288,7 +271,7 @@ trait WebhookDispatchTrait
      */
     protected function getCorpName(): string
     {
-        $corpId = app(SettingsManagerService::class)->getTaxProgramCorporationId();
+        $corpId = app(SettingsManagerService::class)->getMoonOwnerCorporationId();
 
         if (!$corpId) {
             return 'Corporation';

@@ -7,7 +7,7 @@
    2. mining-manager-dashboard.css - Dashboard-specific styles
    3. settings.css - Settings page styles
 
-   Used by: ALL pages except tax pages
+   Used by: ALL pages
    (dashboard, settings, moon, events, ledger,
     help, analytics, reports)
 
@@ -2659,52 +2659,6 @@
 }
 
 /* ============================================
-   Tax Rate Inputs
-   ============================================ */
-.mining-dashboard .tax-rate-grid,
-.mining-manager-wrapper .tax-rate-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--mm-spacing-lg);
-}
-
-.mining-dashboard .tax-rate-input,
-.mining-manager-wrapper .tax-rate-input {
-    background: var(--mm-dark-bg);
-    border: 1px solid var(--mm-border);
-    border-radius: var(--mm-radius-md);
-    padding: var(--mm-spacing-md);
-}
-
-.mining-dashboard .tax-rate-label,
-.mining-manager-wrapper .tax-rate-label {
-    display: flex;
-    align-items: center;
-    gap: var(--mm-spacing-xs);
-    font-weight: 600;
-    color: var(--mm-text-white);
-    margin-bottom: var(--mm-spacing-sm);
-}
-
-.mining-dashboard .tax-rate-icon,
-.mining-manager-wrapper .tax-rate-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--mm-radius-sm);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem;
-}
-
-.mining-dashboard .tax-rate-input input[type="number"],
-.mining-manager-wrapper .tax-rate-input input[type="number"] {
-    font-size: 1.5rem;
-    font-weight: 700;
-    text-align: center;
-}
-
-/* ============================================
    Feature Toggles
    ============================================ */
 .mining-dashboard .feature-toggles,
@@ -3334,7 +3288,6 @@
     }
     
     .settings-grid,
-    .tax-rate-grid,
     .advanced-settings-grid,
     .help-card-grid {
         grid-template-columns: 1fr;
@@ -4208,12 +4161,6 @@ div.mining-manager-wrapper div[class*="col-"] div.card-body {
 .mm-source-split-legend .dot.moon { background: #ffc107; }
 .mm-source-split-legend .dot.anomalies { background: #17a2b8; }
 
-.mm-tax-note {
-    display: block;
-    margin-top: 2px;
-    font-size: 0.75rem;
-    opacity: 0.75;
-}
 
 /* Short ISK figures: the unit sits apart from the number, smaller and
    dimmed, so "52.70 B" is not read as "52.708". */

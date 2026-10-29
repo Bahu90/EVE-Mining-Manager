@@ -51,7 +51,7 @@ class GenerateTestDataCommand extends Command
 
             $this->warn("\nCleanup will remove:");
             $this->line("  {$testCorporations} corporations named \"Test Corp...\" and {$testCharacters} characters named \"Test Miner...\"");
-            $this->line('  their mining ledger rows, tax records, affiliations and corporation settings');
+            $this->line('  their mining ledger rows, affiliations and corporation settings');
             $this->line('  character_infos and corporation_infos rows, which belong to SeAT rather than to this plugin');
 
             if (!$this->confirm('Remove that test data first?', false)) {
@@ -102,8 +102,7 @@ class GenerateTestDataCommand extends Command
             $this->info("\nNext Steps:");
             $this->line("  1. Go to Mining Manager Settings");
             $this->line("  2. Select a test corporation (Test Corp 1, Test Corp 2, etc.)");
-            $this->line("  3. Configure different tax rates for each corporation");
-            $this->line("  4. Run tax calculations to test multi-corporation functionality");
+            $this->line("  3. Check the dashboards and ledger for each corporation's mining");
             $this->line("\nCleanup: Run with --cleanup flag to remove all test data");
 
             return Command::SUCCESS;
@@ -329,11 +328,6 @@ class GenerateTestDataCommand extends Command
                 ->where('name', 'like', 'Test Corp%')
                 ->pluck('corporation_id');
 
-            // Delete mining taxes
-            $taxesDeleted = DB::table('mining_taxes')
-                ->whereIn('character_id', $testCharacterIds)
-                ->delete();
-
             // Delete mining ledger
             $ledgerDeleted = DB::table('mining_ledger')
                 ->whereIn('character_id', $testCharacterIds)
@@ -372,7 +366,6 @@ class GenerateTestDataCommand extends Command
                 $this->line("  ✓ Deleted {$affiliationsDeleted} affiliations");
             }
             $this->line("  ✓ Deleted {$ledgerDeleted} ledger entries");
-            $this->line("  ✓ Deleted {$taxesDeleted} tax records");
             $this->line("  ✓ Deleted {$settingsDeleted} settings");
 
         } catch (\Exception $e) {

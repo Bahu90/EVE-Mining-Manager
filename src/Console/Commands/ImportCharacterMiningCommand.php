@@ -9,9 +9,6 @@ use Illuminate\Support\Facades\Log;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Services\Pricing\OreValuationService;
 use MiningManager\Services\TypeIdRegistry;
-use MiningManager\Services\Tax\ClassificationEpoch;
-use MiningManager\Services\Tax\InvoiceCoverage;
-use MiningManager\Services\Ledger\LateMining;
 use MiningManager\Services\Ledger\LedgerSummaryService;
 use Carbon\Carbon;
 use MiningManager\Services\OreClassifier;
@@ -54,18 +51,13 @@ class ImportCharacterMiningCommand extends Command
         $force = $this->option('force');
 
         // A dry run walks the same path and counts the same outcomes but writes
-        // nothing: no ledger rows, no deletions, no summary rebuilds. A wide
-        // --days window on a live install can add rows to periods invoiced long
-        // ago, and this is how to see that before it happens.
+        // nothing: no ledger rows, no deletions, no summary rebuilds.
         $dryRun = (bool) $this->option('dry-run');
 
         if ($dryRun) {
             $this->warn('Dry run: nothing will be written to the ledger or the daily summaries.');
             $this->line('');
         }
-        $frozen = 0;
-        $lateArrivals = 0;
-        $billedLeftAlone = 0;
         $cutoffDate = Carbon::now()->subDays($days);
 
         // Check if SeAT's CharacterMining model exists
@@ -81,8 +73,8 @@ class ImportCharacterMiningCommand extends Command
         //
         // The window is by mining date and nothing else. SeAT sometimes saves
         // mining for a day long after the day has left the window, and that is
-        // left out on purpose: by then the day can be on an invoice and in a
-        // daily summary, and neither should move because SeAT caught up late.
+        // left out on purpose: by then the day is in a daily summary, which
+        // should not move because SeAT caught up late.
         // A wider --days run still takes whatever SeAT holds for its dates.
         $query = DB::table((new \Seat\Eveapi\Models\Industry\CharacterMining())->getTable())
             ->select(
@@ -138,7 +130,7 @@ class ImportCharacterMiningCommand extends Command
 
         $query->chunk(500, function ($entries) use (
             $valuationService, $force, $dryRun,
-            &$created, &$updated, &$skipped, &$errors, &$frozen, &$lateArrivals, &$billedLeftAlone, &$ignored,
+            &$created, &$updated, &$skipped, &$errors, &$ignored,
             &$touchedPairs, &$firstNewDate, &$lastNewDate, $progressBar
         ) {
         foreach ($entries as $entry) {
@@ -151,7 +143,7 @@ class ImportCharacterMiningCommand extends Command
                 $entry->quantity = (int) $entry->quantity;
 
                 // Event ore, quest ore and Mutanite are left out of the ledger
-                // entirely, so nothing further along taxes, values or charts them.
+                // entirely, so nothing further along values or charts them.
                 if (OreClassifier::isIgnored((int) $entry->type_id)) {
                     $ignored++;
                     $progressBar->advance();
@@ -182,44 +174,18 @@ class ImportCharacterMiningCommand extends Command
                 if ($existing && !$force) {
                     // Update only if quantity changed
                     if ((int) $existing->quantity !== $entry->quantity) {
-                        // A day on an issued invoice keeps the value and tax it was
-                        // billed at. More mining for it is recorded at today's
-                        // value with a note that it was not taxed. A smaller figure
-                        // is no reason to change the bill's evidence, so it is left alone.
-                        $billed = InvoiceCoverage::coversRow($entry->character_id, $entry->date);
-
-                        if ($billed && $entry->quantity < (int) $existing->quantity) {
-                            $skipped++;
-                            $progressBar->advance();
-                            continue;
-                        }
-
                         if (! $dryRun) {
-                            if ($billed) {
-                                $extraValues = $valuationService->calculateOreValue(
-                                    $entry->type_id,
-                                    $entry->quantity - (int) $existing->quantity
-                                );
-                                $existing->update(LateMining::growth($existing, $entry->quantity, $extraValues) + [
-                                    'processed_at' => Carbon::now(),
-                                ]);
-                            } else {
-                                $values = $valuationService->calculateOreValue($entry->type_id, $entry->quantity);
-                                $existing->update([
-                                    'quantity' => $entry->quantity,
-                                    'unit_price' => $values['unit_price'] ?? 0,
-                                    'ore_value' => $values['ore_value'] ?? 0,
-                                    'mineral_value' => $values['mineral_value'] ?? 0,
-                                    'total_value' => $values['total_value'] ?? 0,
-                                    'processed_at' => Carbon::now(),
-                                ]);
-                            }
+                            $values = $valuationService->calculateOreValue($entry->type_id, $entry->quantity);
+                            $existing->update([
+                                'quantity' => $entry->quantity,
+                                'unit_price' => $values['unit_price'] ?? 0,
+                                'ore_value' => $values['ore_value'] ?? 0,
+                                'mineral_value' => $values['mineral_value'] ?? 0,
+                                'total_value' => $values['total_value'] ?? 0,
+                                'processed_at' => Carbon::now(),
+                            ]);
                         }
                         $updated++;
-
-                        if ($billed) {
-                            $lateArrivals++;
-                        }
 
                         $pairKey = $entry->character_id . '|' . $entry->date;
                         $touchedPairs->put($pairKey, [
@@ -245,43 +211,10 @@ class ImportCharacterMiningCommand extends Command
                 $oreCategory = $this->classifyOreCategory($entry->type_id);
 
                 // Delete existing if force mode.
-                //
-                // Except when the row predates the classification cutover.
-                // Deleting and recreating it would hand old mining this
-                // version's categories and reset its rate to the column
-                // default, which is exactly the retroactive change the cutover
-                // exists to prevent. Leave those rows alone; the normal
-                // non-force path above still keeps their quantity and value
-                // current.
                 if ($existing && $force) {
-                    if (ClassificationEpoch::existedBeforeCutover($existing->created_at)) {
-                        $frozen++;
-                        $progressBar->advance();
-                        continue;
-                    }
-
-                    // Nor a row an issued invoice covers. Deleting it and
-                    // importing it again would turn mining that was billed into
-                    // an untaxed late arrival.
-                    if (InvoiceCoverage::coversRow($entry->character_id, $entry->date)) {
-                        $billedLeftAlone++;
-                        $progressBar->advance();
-                        continue;
-                    }
-
                     if (! $dryRun) {
                         $existing->delete();
                     }
-                }
-
-                // Same rule as the observer path: mining that surfaces for a
-                // period already invoiced is exempt. is_taxable defaults to
-                // true, so without this it would read as taxable at a rate of
-                // zero, which explains nothing to whoever is looking at it.
-                $lateExempt = InvoiceCoverage::coversRow((int) $entry->character_id, $entry->date);
-
-                if ($lateExempt) {
-                    $lateArrivals++;
                 }
 
                 if (! $dryRun) {
@@ -302,10 +235,6 @@ class ImportCharacterMiningCommand extends Command
                         'is_triglavian' => $isTriglavian,
                         'ore_category' => $oreCategory,
                         'processed_at' => Carbon::now(),
-                        'is_taxable' => ! $lateExempt,
-                        'tax_rate' => 0,
-                        'tax_amount' => 0,
-                        'notes' => $lateExempt ? LateMining::NEW_ROW_NOTE : null,
                     ]);
                 }
                 $created++;
@@ -344,8 +273,6 @@ class ImportCharacterMiningCommand extends Command
                 [$dryRun ? 'Existing entries it would update' : 'Existing entries updated', $updated],
                 ['Skipped (observer data exists)', $skipped],
                 ['Ignored (event ore, quest ore, Mutanite)', $ignored],
-                [$dryRun ? 'Would arrive after invoicing, not taxed' : 'Arrived after invoicing, not taxed', $lateArrivals],
-                ['Left alone (already invoiced)', $billedLeftAlone],
                 ['Errors', $errors],
             ]
         );
@@ -353,15 +280,6 @@ class ImportCharacterMiningCommand extends Command
         if ($created > 0) {
             $this->line('');
             $this->info(($dryRun ? 'New entries would be dated ' : 'New entries are dated ') . "{$firstNewDate} to {$lastNewDate}.");
-        }
-
-        // Only ever non-zero under --force, and worth saying out loud rather
-        // than quietly not doing what was asked.
-        if ($frozen > 0) {
-            $this->line('');
-            $this->warn("{$frozen} entr" . ($frozen === 1 ? 'y was' : 'ies were') . " left as they are: they predate the");
-            $this->warn('classification cutover, so re-importing them would change the tax');
-            $this->warn('categories and rate that mining was already billed on.');
         }
 
         // Update daily summaries for touched character+date pairs

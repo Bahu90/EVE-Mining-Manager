@@ -21,7 +21,7 @@ use MiningManager\Services\Moon\RefineryService;
  * Scope: mining recorded by the Moon Owner Corporation's refineries (moon
  * observer rows in the ledger, whose corporation_id is the structure owner),
  * members and visiting miners alike. Values are the ledger's: ISK at the day's
- * prices, and the tax worked out at the configured rates.
+ * prices.
  *
  * The result is cached briefly (five minutes for the current month, an hour
  * for a closed one), since several of its queries read a month of the ledger.
@@ -48,7 +48,7 @@ class MiningMetricsService
 
     public function moonOwnerCorporationId(): ?int
     {
-        $id = $this->settings->getTaxProgramCorporationId();
+        $id = $this->settings->getMoonOwnerCorporationId();
 
         return $id ? (int) $id : null;
     }
@@ -64,7 +64,7 @@ class MiningMetricsService
         }
 
         $isCurrent = $month->isSameMonth(Carbon::now());
-        $key = "mining-manager:metrics:v2:{$corporationId}:{$month->format('Y-m')}:{$trendMonths}";
+        $key = "mining-manager:metrics:v3:{$corporationId}:{$month->format('Y-m')}:{$trendMonths}";
 
         $data = Cache::remember($key, $isCurrent ? 300 : 3600, function () use ($corporationId, $month, $trendMonths) {
             return $this->build($corporationId, $month, $trendMonths);
@@ -85,7 +85,6 @@ class MiningMetricsService
         foreach ($refineries['cards'] as &$card) {
             $sums = $byStructure[$card['structure_id']] ?? [];
             $card['isk'] = (float) ($sums['isk'] ?? 0);
-            $card['tax'] = (float) ($sums['tax'] ?? 0);
             $card['volume'] = (float) ($sums['volume'] ?? 0);
             $card['active'] = $card['volume'] > 0 || $card['isk'] > 0;
         }
@@ -104,10 +103,9 @@ class MiningMetricsService
             $this->sumsBy($corporationId, $trendStart, $end, "DATE_FORMAT(l.date, '%Y-%m')")
         );
 
-        $totals = ['isk' => 0.0, 'tax' => 0.0, 'volume' => 0.0];
+        $totals = ['isk' => 0.0, 'volume' => 0.0];
         foreach ($players as $player) {
             $totals['isk'] += $player['isk'];
-            $totals['tax'] += $player['tax'];
             $totals['volume'] += $player['volume'];
         }
         $totals['members'] = count(array_filter($players, fn ($p) => !$p['guest']));
@@ -132,7 +130,7 @@ class MiningMetricsService
     /**
      * Ledger sums for the corporation's refineries, grouped by one column.
      *
-     * @return array<string, array{isk:float,tax:float,volume:float,quantity:float}>
+     * @return array<string, array{isk:float,volume:float,quantity:float}>
      */
     private function sumsBy(int $corporationId, string $from, string $to, string $groupExpr): array
     {
@@ -143,7 +141,6 @@ class MiningMetricsService
             ->whereBetween('l.date', [$from, $to])
             ->selectRaw("{$groupExpr} as k,
                 SUM(l.total_value) as isk,
-                SUM(l.tax_amount) as tax,
                 SUM(l.quantity * COALESCE(t.volume, 0)) as volume,
                 SUM(l.quantity) as quantity")
             ->groupBy(DB::raw($groupExpr))
@@ -160,7 +157,6 @@ class MiningMetricsService
             // land on the same day.
             $out[$key] = [
                 'isk' => ($out[$key]['isk'] ?? 0.0) + (float) $row->isk,
-                'tax' => ($out[$key]['tax'] ?? 0.0) + (float) $row->tax,
                 'volume' => ($out[$key]['volume'] ?? 0.0) + (float) $row->volume,
                 'quantity' => ($out[$key]['quantity'] ?? 0.0) + (float) $row->quantity,
             ];
@@ -328,35 +324,13 @@ class MiningMetricsService
     }
 
     /**
-     * Each tier's tax rate for the Moon Owner Corporation, with its ores.
+     * The moon ore tiers and their ores.
      */
     private function tiers(int $corporationId): array
     {
-        $previous = $this->settings->getActiveCorporation();
-
-        try {
-            $this->settings->setActiveCorporation($corporationId);
-            $rates = $this->settings->getTaxRates();
-            $selector = $this->settings->getTaxSelector();
-        } catch (\Throwable $e) {
-            Log::warning('Mining Manager: could not read tax rates for the metrics page: ' . $e->getMessage());
-            $rates = [];
-            $selector = [];
-        } finally {
-            $this->settings->setActiveCorporation($previous);
-        }
-
-        $moonTaxed = empty($selector['no_moon_ore'])
-            && (!empty($selector['all_moon_ore']) || !empty($selector['only_corp_moon_ore']) || $selector === []);
-
         $tiers = [];
         foreach (self::TIER_ORES as $tier => $ores) {
-            $rate = $rates['moon_ore'][strtolower($tier)] ?? null;
-            $tiers[] = [
-                'tier' => $tier,
-                'rate' => ($moonTaxed && $rate !== null && (float) $rate > 0) ? (float) $rate : null,
-                'ores' => $ores,
-            ];
+            $tiers[] = ['tier' => $tier, 'ores' => $ores];
         }
 
         return $tiers;

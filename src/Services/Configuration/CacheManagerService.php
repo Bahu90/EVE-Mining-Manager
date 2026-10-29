@@ -25,7 +25,6 @@ class CacheManagerService
      */
     const PREFIX_PRICES = 'mm_prices_';
     const PREFIX_LEDGER = 'mm_ledger_';
-    const PREFIX_TAX = 'mm_tax_';
     const PREFIX_EVENTS = 'mm_events_';
     const PREFIX_MOON = 'mm_moon_';
     const PREFIX_ANALYTICS = 'mm_analytics_';
@@ -249,7 +248,6 @@ class CacheManagerService
             $prefixes = [
                 self::PREFIX_PRICES,
                 self::PREFIX_LEDGER,
-                self::PREFIX_TAX,
                 self::PREFIX_EVENTS,
                 self::PREFIX_MOON,
                 self::PREFIX_ANALYTICS,
@@ -360,7 +358,6 @@ class CacheManagerService
         $prefixes = [
             'prices' => self::PREFIX_PRICES,
             'ledger' => self::PREFIX_LEDGER,
-            'tax' => self::PREFIX_TAX,
             'events' => self::PREFIX_EVENTS,
             'moon' => self::PREFIX_MOON,
             'analytics' => self::PREFIX_ANALYTICS,
@@ -698,7 +695,6 @@ class CacheManagerService
             'prefixes' => [
                 'prices' => self::PREFIX_PRICES,
                 'ledger' => self::PREFIX_LEDGER,
-                'tax' => self::PREFIX_TAX,
                 'events' => self::PREFIX_EVENTS,
                 'moon' => self::PREFIX_MOON,
                 'analytics' => self::PREFIX_ANALYTICS,

@@ -39,7 +39,7 @@ class MoonOreHelper
      * The badge class for a moon ore class, R4 or r4 alike.
      *
      * One place decides what an R-tier looks like, so a moon reads the same
-     * on the planner, the simulator, the tax pages and in Help. The colours
+     * on the planner, the simulator and in Help. The colours
      * themselves live in the plugin stylesheet, next to the other badges.
      *
      * @param string|null $rarity R4 to R64, in either case

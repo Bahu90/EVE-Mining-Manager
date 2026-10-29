@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 /**
  * Turns an exception into a message that is safe to show in the browser.
  *
- * Messages the plugin throws on purpose ("This tax is already paid") are
+ * Messages the plugin throws on purpose ("This event has already ended") are
  * meant for the user and pass through. Internal failures (database errors,
  * PHP errors, anything mentioning SQL) can reveal table names, column names,
  * queries and data, so they are logged in full under a short reference and

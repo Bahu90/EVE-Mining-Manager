@@ -138,7 +138,7 @@
             <div>
                 <h5 class="mb-1">
                     <i class="fas fa-building"></i>
-                    Editing Corporation-Specific Tax Settings
+                    Editing Corporation-Specific Settings
                 </h5>
                 <p class="mb-0">
                     @if($selectedCorp)
@@ -179,46 +179,6 @@
                         ])
                     </div>
 
-                    {{-- Tax Rates Tab --}}
-                    <div id="tax-rates" class="settings-section">
-                        @php
-                            // Flatten moon ore nested array for easier form access
-                            $taxRatesFlattened = $settings['tax_rates'];
-                            if (isset($taxRatesFlattened['moon_ore']) && is_array($taxRatesFlattened['moon_ore'])) {
-                                foreach ($taxRatesFlattened['moon_ore'] as $rarity => $rate) {
-                                    $taxRatesFlattened['moon_ore_' . $rarity] = $rate;
-                                }
-                                unset($taxRatesFlattened['moon_ore']);
-                            }
-
-                            // Remap tax_selector keys to match form field names
-                            // getTaxSelector() returns 'ore','ice','gas','abyssal_ore','triglavian_ore'
-                            // but the form uses 'tax_regular_ore','tax_ice','tax_gas','tax_abyssal_ore','tax_triglavian_ore'
-                            $taxSelectorMapped = [
-                                'tax_regular_ore' => $settings['tax_selector']['ore'] ?? true,
-                                'tax_ice' => $settings['tax_selector']['ice'] ?? true,
-                                'tax_gas' => $settings['tax_selector']['gas'] ?? false,
-                                'tax_abyssal_ore' => $settings['tax_selector']['abyssal_ore'] ?? false,
-                                'tax_triglavian_ore' => $settings['tax_selector']['triglavian_ore'] ?? false,
-                                // Moon ore flags keep their original names (template uses these directly)
-                                'all_moon_ore' => $settings['tax_selector']['all_moon_ore'] ?? true,
-                                'only_corp_moon_ore' => $settings['tax_selector']['only_corp_moon_ore'] ?? false,
-                                'no_moon_ore' => $settings['tax_selector']['no_moon_ore'] ?? false,
-                            ];
-
-                            // Merge all tax-related settings
-                            $taxSettings = array_merge(
-                                $taxRatesFlattened,
-                                $taxSelectorMapped,
-                                $settings['exemptions']
-                            );
-                        @endphp
-                        @include('mining-manager::settings.tabs.tax_rates', [
-                            'settings' => (object)$taxSettings,
-                            'selectedCorporationId' => $corporationId ?? null
-                        ])
-                    </div>
-
                     {{-- Pricing Tab --}}
                     <div id="pricing" class="settings-section">
                         @include('mining-manager::settings.tabs.pricing', ['settings' => $settings])
@@ -245,7 +205,6 @@
                             'settings' => $settings ?? [],
                             'roleProviderAvailable' => $roleProviderAvailable ?? false,
                             'roleProviderLabel' => $roleProviderLabel ?? 'Manual input only',
-                            'taxedCorporations' => $taxedCorporations ?? [],
                         ])
                     </div>
 
@@ -426,23 +385,6 @@
                                 <div class="card bg-dark">
                                     <div class="card-body">
                                         <h5>
-                                            <i class="fas fa-coins text-success"></i>
-                                            {{ trans('mining-manager::settings.help_tax') }}
-                                        </h5>
-                                        <p>{{ trans('mining-manager::settings.help_tax_desc') }}</p>
-                                        <ul>
-                                            <li>{{ trans('mining-manager::settings.help_tax_1') }}</li>
-                                            <li>{{ trans('mining-manager::settings.help_tax_2') }}</li>
-                                            <li>{{ trans('mining-manager::settings.help_tax_3') }}</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-md-6 mb-3">
-                                <div class="card bg-dark">
-                                    <div class="card-body">
-                                        <h5>
                                             <i class="fas fa-chart-line text-warning"></i>
                                             {{ trans('mining-manager::settings.help_pricing') }}
                                         </h5>
@@ -505,24 +447,6 @@ $(document).ready(function() {
         var $link = $('#exportSettingsLink');
         var base = $link.attr('href').split('?')[0];
         $link.attr('href', this.checked ? base + '?include_webhooks=1' : base);
-    });
-
-    // Corporation switching functionality
-    $('#switchCorporationBtn').on('click', function() {
-        const corporationId = $('#corporation_id').val();
-
-        if (!corporationId) {
-            alert('Please select a corporation first.');
-            return;
-        }
-
-        // Redirect to settings page with corporation_id parameter
-        window.location.href = '{{ route("mining-manager.settings.index") }}?corporation_id=' + corporationId;
-    });
-
-    // Update hidden field when corporation changes
-    $('#corporation_id').on('change', function() {
-        $('#selected_corporation_id').val($(this).val());
     });
 
     // Tab switching

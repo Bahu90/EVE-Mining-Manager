@@ -92,7 +92,7 @@ class TypeIdRegistry
         // it never showed up in an Asteroid-category sweep, but its market group
         // is Standard Ores and it is mined with a mining laser like anything else.
         // Reprocesses to a random mineral, so the refined-value model cannot
-        // price it; it needs a market price to be taxed at all.
+        // price it; it needs a market price to be valued at all.
         90041, // Prismaticite
     ];
 

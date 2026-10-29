@@ -49,7 +49,6 @@ MiningSettings.init = function() {
     this.bindEvents();
     
     // Initialize specific sections
-    this.initTaxRateInputs();
     this.initPriceProviderSelector();
     this.initFeatureToggles();
     
@@ -330,26 +329,6 @@ MiningSettings.initColorPickers = function() {
         // Set initial color
         if ($preview.length) {
             $preview.css('background-color', $picker.val());
-        }
-    });
-};
-
-/* ============================================
-   Tax Rate Inputs
-   ============================================ */
-
-/**
- * Initialize tax rate inputs
- */
-MiningSettings.initTaxRateInputs = function() {
-    $('.tax-rate-input input').on('change', function() {
-        const $input = $(this);
-        const value = parseFloat($input.val());
-        
-        if (!isNaN(value)) {
-            // Ensure value is between 0 and 100
-            const clampedValue = Math.max(0, Math.min(100, value));
-            $input.val(clampedValue.toFixed(1));
         }
     });
 };

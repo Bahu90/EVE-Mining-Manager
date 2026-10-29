@@ -22,57 +22,6 @@
 
         // Notification type definitions grouped by category
         $categories = [
-            'Tax Notifications' => [
-                'icon' => 'fas fa-coins text-warning',
-                'types' => [
-                    'tax_generated' => [
-                        'label' => 'Mining Taxes Summary',
-                        'icon' => 'fas fa-calculator text-info',
-                        'desc' => 'When taxes are calculated — broadcasts summary to directors with collection instructions',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                    'tax_announcement' => [
-                        'label' => 'New Invoices Announcement',
-                        'icon' => 'fas fa-bullhorn text-primary',
-                        'desc' => 'General announcement for members when new invoices are generated — shows due date and payment links',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                    'tax_invoice' => [
-                        'label' => 'Tax Invoice Created',
-                        'icon' => 'fas fa-file-invoice text-info',
-                        'desc' => 'Sent to the individual miner when a tax invoice is generated (one notification per invoice — role pings are intentionally disabled for this type to avoid spam during batched invoice generation)',
-                        'scope' => 'individual',
-                        'has_role_ping' => false,
-                        'has_user_ping' => true,
-                        'has_show_amount' => true,
-                    ],
-                    'tax_overdue' => [
-                        'label' => 'Tax Payment Overdue',
-                        'icon' => 'fas fa-exclamation-circle text-danger',
-                        'desc' => 'Sent to the individual miner when a tax payment is past its due date',
-                        'scope' => 'individual',
-                        'has_role_ping' => true,
-                        'has_user_ping' => true,
-                        'has_show_amount' => true,
-                    ],
-                    'tax_outstanding_digest' => [
-                        'label' => 'Outstanding Mining Tax (weekly)',
-                        'icon' => 'fas fa-clipboard-list text-warning',
-                        'desc' => 'For directors: who still owes mining tax, largest debt first, with what is left on each and how much is already paid. Starts once a bill is past its due date and repeats every 7 days until everything is paid. Lists everyone who owes, or only the members of the corporations picked below.',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                        'has_corporation_filter' => true,
-                    ],
-                ],
-            ],
             'Event Notifications' => [
                 'icon' => 'fas fa-calendar text-primary',
                 'types' => [
@@ -82,8 +31,6 @@
                         'desc' => 'New mining event has been scheduled',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'event_started' => [
                         'label' => 'Mining Event Started',
@@ -91,8 +38,6 @@
                         'desc' => 'A mining event has begun',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'event_completed' => [
                         'label' => 'Mining Event Completed',
@@ -100,8 +45,6 @@
                         'desc' => 'A mining event has finished with results',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                 ],
             ],
@@ -114,8 +57,6 @@
                         'desc' => 'Moon chunk has arrived and is ready for fracture',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'jackpot_detected' => [
                         'label' => 'Jackpot Detected',
@@ -123,8 +64,6 @@
                         'desc' => 'A jackpot moon extraction has been detected or reported',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'moon_chunk_unstable' => [
                         'label' => 'Moon Chunk Unstable (Capital Safety)',
@@ -132,8 +71,6 @@
                         'desc' => 'Safety warning fired ~2h before a chunk enters EVE\'s unstable state. Capital pilots (Rorquals, Orcas) should dock up or warp to safety — unstable chunks historically attract hostile gangs.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'extraction_started' => [
                         'label' => 'Extraction Started',
@@ -141,8 +78,6 @@
                         'desc' => 'Fires when a refinery begins a new extraction (drill fired, chunk forming). Read from the in-game MoonminingExtractionStarted director notification, which also names who started it and their main. Lets the team plan around the upcoming arrival.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'metenox_cargo_full' => [
                         'label' => 'Metenox Cargo Bay Full',
@@ -150,8 +85,6 @@
                         'desc' => 'Fires when a Metenox MoonMaterialBay crosses the configured fill-% threshold (default 85%). Yield-stopping warning, not a structure-safety alert — drilling stops when the bay caps out but the structure itself stays online. Latch prevents repeat fires while still over threshold; resets when cargo is pulled.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                 ],
             ],
@@ -164,8 +97,6 @@
                         'desc' => 'The Moon Extraction Planner nudge — fired AFTER a chunk becomes ready, announcing the refinery\'s next planned pull so a director re-fires the drill on schedule. A pull planned more than 56 days ahead, longer than an extraction can run, cannot be set up yet: the message says from when it can, and posts again at that time. Points at the Moon Planner. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'schedule_mismatch' => [
                         'label' => 'Moon Scheduled Off-Plan',
@@ -173,8 +104,6 @@
                         'desc' => 'Fires when a moon\'s in-game extraction is set to a materially different time than the Moon Extraction Planner called for (more than the 30-minute match tolerance, but still the same cycle) — i.e. the drill was fired on the wrong timer, or the plan is stale. One ping per plan. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'refinery_gone' => [
                         'label' => 'Refinery Gone (planned pulls removed)',
@@ -182,8 +111,6 @@
                         'desc' => 'A refinery has been missing from your corporation\'s structures for at least a day, seen gone three times twelve hours apart, so the pulls planned on it were taken off the calendar. Says why if the game reported it (destroyed, unanchored, handed over) and which blueprints still hold it. One message per refinery. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'extraction_cancelled' => [
                         'label' => 'Moon Extraction Cancelled',
@@ -191,8 +118,6 @@
                         'desc' => 'Somebody stopped a moon extraction in game before its chunk arrived, read from the game\'s own cancellation notice, with who cancelled it. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'moon_not_rescheduled' => [
                         'label' => 'Moon Not Rescheduled (reminder)',
@@ -200,8 +125,6 @@
                         'desc' => 'A chunk arrived and no new extraction has been started on that refinery since. Sent once the drill has been idle for the hours set below, then again every that many hours if repeats are on, until an extraction starts or the refinery loses its drill. When the next planned pull is too far ahead to set up, the hours count from when it can be started. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'schedule_needs_filling' => [
                         'label' => 'Moons Need Planning (one list)',
@@ -209,8 +132,6 @@
                         'desc' => 'One message listing every refinery with fewer planned pulls ahead than the target set below, with the total. Long lists are cut short with a count of the rest so the message always arrives. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                 ],
             ],
@@ -223,8 +144,6 @@
                         'desc' => 'Price refreshes have started failing, the fallback provider has taken over or stopped answering, or they work again, with what to do about it. Sent on the change only. While no fallback is answering, cached prices are kept, so values age rather than drop to zero. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                     'moon_scan_missing' => [
                         'label' => 'Moon Scan Missing',
@@ -232,49 +151,6 @@
                         'desc' => 'Moons your refineries drill that have no scan in SeAT. Their chunks are valued from the game\'s notices instead, only once the first notice is in, and the simulator, Find Moons and the quality ratings cannot see them. One message when a refinery with a moon drill is found on such a moon, when an extraction starts there and when a pull is planned there, and daily as well if you switch that on below. Standalone.',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                ],
-            ],
-            'Theft Detection' => [
-                'icon' => 'fas fa-user-secret text-danger',
-                'types' => [
-                    'theft_detected' => [
-                        'label' => 'Theft Detected',
-                        'icon' => 'fas fa-exclamation-triangle text-warning',
-                        'desc' => 'Suspicious mining activity detected on a moon',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                    'critical_theft' => [
-                        'label' => 'Critical Theft',
-                        'icon' => 'fas fa-skull-crossbones text-danger',
-                        'desc' => 'High-value theft or repeated theft incidents',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                    'active_theft' => [
-                        'label' => 'Active Theft in Progress',
-                        'icon' => 'fas fa-bolt text-danger',
-                        'desc' => 'Theft is currently happening — immediate attention required',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
-                    ],
-                    'incident_resolved' => [
-                        'label' => 'Incident Resolved',
-                        'icon' => 'fas fa-check-circle text-success',
-                        'desc' => 'A theft incident has been resolved or cleared',
-                        'scope' => 'general',
-                        'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                 ],
             ],
@@ -287,8 +163,6 @@
                         'desc' => 'A scheduled mining report has been generated',
                         'scope' => 'general',
                         'has_role_ping' => true,
-                        'has_user_ping' => false,
-                        'has_show_amount' => false,
                     ],
                 ],
             ],
@@ -320,9 +194,6 @@
                         $ts = $typeSettings[$typeKey] ?? [];
                         $pingRole = $ts['ping_role'] ?? false;
                         $roleId = $ts['role_id'] ?? '';
-                        $pingUser = $ts['ping_user'] ?? false;
-                        $showAmount = $ts['show_amount'] ?? true;
-                        $filterCorporations = array_map('intval', (array) ($ts['corporations'] ?? []));
 
                     @endphp
 
@@ -345,7 +216,7 @@
                                     </label>
                                 </div>
 
-                                @if($typeInfo['has_role_ping'] || $typeInfo['has_user_ping'] || $typeInfo['has_show_amount'])
+                                @if($typeInfo['has_role_ping'])
                                     <button type="button" class="btn btn-xs btn-outline-secondary notify-expand-btn"
                                             data-target="#typeSettings_{{ $typeKey }}"
                                             onclick="toggleTypeSettings('{{ $typeKey }}')">
@@ -356,9 +227,9 @@
                             <small class="form-text text-muted ml-4">{{ $typeInfo['desc'] }}</small>
 
                             {{-- Expandable settings --}}
-                            @if($typeInfo['has_role_ping'] || $typeInfo['has_user_ping'] || $typeInfo['has_show_amount'])
+                            @if($typeInfo['has_role_ping'])
                                 <div id="typeSettings_{{ $typeKey }}" class="mt-2 pl-4 pr-2 pb-2"
-                                     style="display: {{ ($pingRole || $pingUser || !$showAmount || $filterCorporations) ? 'block' : 'none' }};
+                                     style="display: {{ $pingRole ? 'block' : 'none' }};
                                             border-left: 3px solid rgba(88,166,255,0.3); margin-left: 10px;
                                             {{ !$isEnabled ? 'opacity: 0.5; pointer-events: none;' : '' }}">
 
@@ -413,60 +284,6 @@
                                         @endif
                                     @endif
 
-                                    {{-- User Ping (tax types only) --}}
-                                    @if($typeInfo['has_user_ping'])
-                                        <div class="custom-control custom-switch mt-1 mb-1">
-                                            <input type="checkbox" class="custom-control-input"
-                                                   id="type_{{ $typeKey }}_ping_user" name="type_{{ $typeKey }}_ping_user" value="1"
-                                                   {{ $pingUser ? 'checked' : '' }}>
-                                            <label class="custom-control-label" for="type_{{ $typeKey }}_ping_user">
-                                                <i class="fas fa-user text-success"></i> Ping User
-                                                @if(!$seatConnectorAvailable)
-                                                    <span class="badge badge-secondary ml-1" style="font-size: 0.65rem;">Requires seat-connector</span>
-                                                @endif
-                                            </label>
-                                            <small class="form-text text-muted">Mention the miner by their Discord account (requires seat-connector)</small>
-                                        </div>
-                                    @endif
-
-                                    {{-- Show Amount (tax types only) --}}
-                                    @if($typeInfo['has_show_amount'])
-                                        <div class="custom-control custom-switch mt-1 mb-1">
-                                            <input type="checkbox" class="custom-control-input"
-                                                   id="type_{{ $typeKey }}_show_amount" name="type_{{ $typeKey }}_show_amount" value="1"
-                                                   {{ $showAmount ? 'checked' : '' }}>
-                                            <label class="custom-control-label" for="type_{{ $typeKey }}_show_amount">
-                                                <i class="fas fa-coins text-warning"></i> Show ISK Amount
-                                            </label>
-                                            <small class="form-text text-muted">Include the tax amount in the notification message and ping</small>
-                                        </div>
-                                    @endif
-
-                                    {{-- Corporation filter. The hidden field tells the save a list
-                                         with nothing picked apart from a card that has no list. --}}
-                                    @if(!empty($typeInfo['has_corporation_filter']))
-                                        <input type="hidden" name="type_{{ $typeKey }}_corporation_filter" value="1">
-                                        <div class="form-group mt-2 mb-1">
-                                            <label for="type_{{ $typeKey }}_corporations" class="mb-1">
-                                                <i class="fas fa-building text-info"></i> Corporations
-                                            </label>
-                                            @if(empty($taxedCorporations))
-                                                <small class="form-text text-muted">Nobody has been billed yet, so there is no corporation to pick. It lists everyone who owes.</small>
-                                            @else
-                                                <select class="form-control form-control-sm" id="type_{{ $typeKey }}_corporations"
-                                                        name="type_{{ $typeKey }}_corporations[]" multiple size="5" style="max-width: 420px;">
-                                                    @foreach($taxedCorporations as $corpId => $corpName)
-                                                        <option value="{{ $corpId }}" {{ in_array((int) $corpId, $filterCorporations, true) ? 'selected' : '' }}>{{ $corpName }}</option>
-                                                    @endforeach
-                                                </select>
-                                                <small class="form-text text-muted">
-                                                    Lists only members of the corporations picked here, by the corporation SeAT or the
-                                                    plugin's lookups place them in. Pick none to list everyone who owes. Ctrl-click
-                                                    (Cmd on a Mac) to pick more than one, or to take one off.
-                                                </small>
-                                            @endif
-                                        </div>
-                                    @endif
                                 </div>
                             @endif
                         </div>
@@ -541,10 +358,8 @@
                             <tr>
                                 <th>Webhook</th>
                                 <th>Status</th>
-                                <th class="text-center">Tax Notifications</th>
                                 <th class="text-center">Events</th>
                                 <th class="text-center">Moon</th>
-                                <th class="text-center">Theft</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -562,14 +377,6 @@
                                         @endif
                                     </td>
                                     <td class="text-center">
-                                        @if($wh->notify_tax_generated) <span class="badge badge-info" title="Taxes Summary"><i class="fas fa-calculator"></i></span> @endif
-                                        @if($wh->notify_tax_invoice) <span class="badge badge-info" title="Tax Invoice"><i class="fas fa-file-invoice"></i></span> @endif
-                                        @if($wh->notify_tax_overdue) <span class="badge badge-danger" title="Tax Overdue"><i class="fas fa-exclamation-circle"></i></span> @endif
-                                        @if(!$wh->notify_tax_generated && !$wh->notify_tax_invoice && !$wh->notify_tax_overdue)
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
                                         @if($wh->notify_event_created) <span class="badge badge-primary" title="Created"><i class="fas fa-calendar-plus"></i></span> @endif
                                         @if($wh->notify_event_started) <span class="badge badge-success" title="Started"><i class="fas fa-play"></i></span> @endif
                                         @if($wh->notify_event_completed) <span class="badge badge-secondary" title="Completed"><i class="fas fa-flag-checkered"></i></span> @endif
@@ -582,12 +389,6 @@
                                         @if($wh->notify_jackpot_detected) <span class="badge badge-info" title="Jackpot"><i class="fas fa-star"></i></span> @endif
                                         @if($wh->notify_moon_chunk_unstable ?? false) <span class="badge badge-warning" title="Chunk Unstable (capital safety)"><i class="fas fa-exclamation-triangle"></i></span> @endif
                                         @if(!$wh->notify_moon_arrival && !$wh->notify_jackpot_detected && !($wh->notify_moon_chunk_unstable ?? false))
-                                            <span class="text-muted">-</span>
-                                        @endif
-                                    </td>
-                                    <td class="text-center">
-                                        @if($wh->notify_theft_detected) <span class="badge badge-danger" title="Theft"><i class="fas fa-user-secret"></i></span> @endif
-                                        @if(!$wh->notify_theft_detected)
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
@@ -653,10 +454,6 @@
 
                 @php
                     $slackTypeList = [
-                        'tax_generated' => ['label' => 'Mining Taxes Summary', 'icon' => 'fas fa-calculator text-info'],
-                        'tax_announcement' => ['label' => 'New Invoices Announcement', 'icon' => 'fas fa-bullhorn text-primary'],
-                        'tax_invoice' => ['label' => 'Tax Invoice Created', 'icon' => 'fas fa-file-invoice text-info'],
-                        'tax_overdue' => ['label' => 'Tax Overdue', 'icon' => 'fas fa-exclamation-circle text-danger'],
                         'event_created' => ['label' => 'Event Created', 'icon' => 'fas fa-calendar-plus text-primary'],
                         'event_started' => ['label' => 'Event Started', 'icon' => 'fas fa-play text-success'],
                         'event_completed' => ['label' => 'Event Completed', 'icon' => 'fas fa-flag-checkered text-secondary'],
@@ -671,13 +468,8 @@
                         'extraction_cancelled' => ['label' => 'Moon Extraction Cancelled', 'icon' => 'fas fa-ban text-danger'],
                         'moon_not_rescheduled' => ['label' => 'Moon Not Rescheduled (reminder)', 'icon' => 'fas fa-hourglass-half text-warning'],
                         'schedule_needs_filling' => ['label' => 'Moons Need Planning (one list)', 'icon' => 'fas fa-calendar-plus text-primary'],
-                        'tax_outstanding_digest' => ['label' => 'Outstanding Mining Tax (digest)', 'icon' => 'fas fa-clipboard-list text-warning'],
                         'price_provider' => ['label' => 'Price Provider Trouble', 'icon' => 'fas fa-coins text-danger'],
                         'moon_scan_missing' => ['label' => 'Moon Scan Missing', 'icon' => 'fas fa-satellite-dish text-warning'],
-                        'theft_detected' => ['label' => 'Theft Detected', 'icon' => 'fas fa-exclamation-triangle text-warning'],
-                        'critical_theft' => ['label' => 'Critical Theft', 'icon' => 'fas fa-skull-crossbones text-danger'],
-                        'active_theft' => ['label' => 'Active Theft', 'icon' => 'fas fa-bolt text-danger'],
-                        'incident_resolved' => ['label' => 'Incident Resolved', 'icon' => 'fas fa-check-circle text-success'],
                         'report_generated' => ['label' => 'Report Generated', 'icon' => 'fas fa-chart-line text-info'],
                     ];
                     $slackTypes = old('slack_types', $notificationSettings['slack_types'] ?? []);

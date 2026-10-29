@@ -35,8 +35,6 @@
 @section('full')
 <div class="mining-manager-wrapper mm-metrics">
 
-    @include('mining-manager::dashboard.partials._tax_banner')
-
     {{-- Head: the month as the title --}}
     <div class="mmx-head">
         <div>
@@ -62,13 +60,12 @@
         </div>
     @else
 
-    {{-- Moon ore tiers and their tax --}}
+    {{-- Moon ore tiers and their ores --}}
     <div class="mmx-tiers">
         @foreach($data['tiers'] as $tier)
             <div class="mmx-tier mmx-tile" title="{{ trans('mining-manager::metrics.tier_title', ['tier' => $tier['tier']]) }}">
                 <div class="mmx-tier-rate">
                     <small>{{ $tier['tier'] }}</small>
-                    <strong>{{ $tier['rate'] !== null ? rtrim(rtrim(number_format($tier['rate'], 2, '.', ''), '0'), '.') . '%' : trans('mining-manager::metrics.tier_none') }}</strong>
                 </div>
                 <div class="mmx-tier-ores">
                     @foreach($tier['ores'] as $ore)
@@ -124,10 +121,6 @@
                 <div class="mmx-tile">
                     <span>{{ trans('mining-manager::metrics.isk_mined') }}</span>
                     <strong>{{ $fmt($data['totals']['isk']) }}</strong>
-                </div>
-                <div class="mmx-tile mmx-tax">
-                    <span>{{ trans('mining-manager::metrics.mining_tax') }}</span>
-                    <strong>{{ $fmt($data['totals']['tax']) }}</strong>
                 </div>
                 <div class="mmx-tile">
                     <span>{{ trans('mining-manager::metrics.active_players') }}</span>
@@ -223,7 +216,6 @@
                 </div>
                 <button type="button" class="mmx-toggle" data-series="volume"><span class="mmx-swatch mmx-vol"></span>{{ trans('mining-manager::metrics.volume') }}</button>
                 <button type="button" class="mmx-toggle active" data-series="isk"><span class="mmx-swatch mmx-isk"></span>{{ trans('mining-manager::metrics.isk_mined') }}</button>
-                <button type="button" class="mmx-toggle active" data-series="tax"><span class="mmx-swatch mmx-taxc"></span>{{ trans('mining-manager::metrics.mining_tax') }}</button>
             </div>
         </div>
         <div class="mmx-chart mmx-chart-tall"><canvas id="mmxTrend" aria-label="{{ trans('mining-manager::metrics.trends') }}"></canvas></div>
@@ -268,7 +260,7 @@
                      data-tier="{{ $s['rarity'] ?? '' }}"
                      data-active="{{ $s['active'] ? 1 : 0 }}"
                      data-text="{{ strtolower(($s['system'] ?? '') . ' ' . $s['name']) }}"
-                     title="{{ $s['name'] }}&#10;{{ trans('mining-manager::metrics.isk_mined') }}: {{ $fmt($s['isk']) }}&#10;{{ trans('mining-manager::metrics.mining_tax') }}: {{ $fmt($s['tax']) }}&#10;{{ trans('mining-manager::metrics.volume') }}: {{ $fmt($s['volume']) }} m³@if($s['arrival'])&#10;{{ trans('mining-manager::metrics.chunk', ['date' => \Carbon\Carbon::parse($s['arrival'])->format('j M')]) }}@endif">
+                     title="{{ $s['name'] }}&#10;{{ trans('mining-manager::metrics.isk_mined') }}: {{ $fmt($s['isk']) }}&#10;{{ trans('mining-manager::metrics.volume') }}: {{ $fmt($s['volume']) }} m³@if($s['arrival'])&#10;{{ trans('mining-manager::metrics.chunk', ['date' => \Carbon\Carbon::parse($s['arrival'])->format('j M')]) }}@endif">
                     <img src="https://images.evetech.net/types/{{ $s['type_id'] ?: 35835 }}/render?size=64" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
                     <div class="mmx-card-body">
                         <div class="mmx-card-name">{{ $s['name'] }}</div>
@@ -308,7 +300,6 @@
                 <button type="button" class="mmx-toggle active" data-sort="volume"><span class="mmx-swatch mmx-vol"></span>{{ trans('mining-manager::metrics.volume') }}</button>
                 @if($canSeeIsk)
                     <button type="button" class="mmx-toggle" data-sort="isk"><span class="mmx-swatch mmx-isk"></span>{{ trans('mining-manager::metrics.isk_mined') }}</button>
-                    <button type="button" class="mmx-toggle" data-sort="tax"><span class="mmx-swatch mmx-taxc"></span>{{ trans('mining-manager::metrics.mining_tax') }}</button>
                 @endif
             </div>
         </div>
@@ -317,8 +308,7 @@
                 <div class="mmx-card {{ !empty($p['own']) ? 'mmx-own' : '' }}"
                      data-text="{{ strtolower($p['name']) }}"
                      data-volume="{{ $p['volume'] }}"
-                     data-isk="{{ $p['isk'] ?? 0 }}"
-                     data-tax="{{ $p['tax'] ?? 0 }}">
+                     data-isk="{{ $p['isk'] ?? 0 }}">
                     <img src="{{ $p['portrait'] }}" alt="" loading="lazy" onerror="this.style.visibility='hidden'">
                     <div class="mmx-card-body">
                         <div class="mmx-card-name">
@@ -328,11 +318,10 @@
                         <div class="mmx-card-row">
                             <span class="mmx-card-big mmx-vol" data-big
                                   data-volume-text="{{ $fmt($p['volume'], 0) }}"
-                                  data-isk-text="{{ $p['isk'] !== null ? $fmt($p['isk']) : '' }}"
-                                  data-tax-text="{{ $p['tax'] !== null ? $fmt($p['tax']) : '' }}">{{ $fmt($p['volume'], 0) }}</span>
+                                  data-isk-text="{{ $p['isk'] !== null ? $fmt($p['isk']) : '' }}">{{ $fmt($p['volume'], 0) }}</span>
                             <span class="mmx-card-meta">
                                 @if($p['isk'] !== null)
-                                    <span class="mmx-isk">{{ $fmt($p['isk'], 1) }}</span><i>|</i><span class="mmx-taxc">{{ $fmt($p['tax'], 1) }}</span>
+                                    <span class="mmx-isk">{{ $fmt($p['isk'], 1) }}</span>
                                 @elseif($p['characters'] > 1)
                                     {{ trans('mining-manager::metrics.alts', ['count' => $p['characters']]) }}
                                 @endif
@@ -369,7 +358,6 @@
     ];
     $mmLabels = [
         'isk' => trans('mining-manager::metrics.isk_mined'),
-        'tax' => trans('mining-manager::metrics.mining_tax'),
         'volume' => trans('mining-manager::metrics.volume') . ' (m³)',
     ];
 @endphp

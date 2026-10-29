@@ -3,59 +3,26 @@
 namespace MiningManager\Services\Moon;
 
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
-use MiningManager\Services\Configuration\SettingsManagerService;
-use MiningManager\Services\Ledger\LedgerSummaryService;
 
 /**
- * What a moon would earn the corporation over one extraction period, worked
- * out two ways: a refinery whose chunk the members mine and pay tax on, or a
- * Metenox Moon Drill that keeps everything it drills. Both before fuel:
- * fuel rates and fuel prices differ too much between corporations to guess.
- *
- * The refinery side charges what an invoice would, through the same methods
- * the daily summaries use: the tax selector and the members' rates of the
- * Moon Owner Corporation. Only part of a chunk is ever mined, so the share
- * mined is the caller's to choose; the default is what this moon's last
- * chunks actually saw.
+ * What a Metenox Moon Drill on a moon would collect over one extraction
+ * period: it keeps everything it drills. Before fuel: fuel rates and fuel
+ * prices differ too much between corporations to guess.
  */
 class MoonIncomeEstimate
 {
-    /**
-     * Archived chunks on the moon that set its usual mined share.
-     */
-    public const MOON_CHUNKS = 6;
-
-    /**
-     * Archived chunks across the corporation, for a moon with none of its own.
-     */
-    public const CORPORATION_CHUNKS = 20;
-
-    /**
-     * @var SettingsManagerService
-     */
-    protected $settings;
-
     /**
      * @var MoonValuation
      */
     protected $valuation;
 
-    /**
-     * @var LedgerSummaryService
-     */
-    protected $summaries;
-
-    public function __construct(SettingsManagerService $settings, MoonValuation $valuation, LedgerSummaryService $summaries)
+    public function __construct(MoonValuation $valuation)
     {
-        $this->settings = $settings;
         $this->valuation = $valuation;
-        $this->summaries = $summaries;
     }
 
     /**
-     * Both sides for a simulation, over the simulation's own days.
+     * The drill's haul for a simulation, over the simulation's own days.
      *
      * @param array $simulation what MoonExtractionService::simulateExtraction() returned
      */
@@ -63,27 +30,6 @@ class MoonIncomeEstimate
     {
         $moonId = (int) ($simulation['moon_id'] ?? 0);
         $days = (int) ($simulation['extraction_days'] ?? 14);
-        $hull = (int) ($simulation['rig']['hull'] ?? RefineryService::ATHANOR);
-
-        // Read the way the daily summaries read it, not from whichever
-        // corporation happens to be active.
-        $moonOwner = $this->settings->getSettingForCorporation('general.moon_owner_corporation_id', null);
-        $moonOwner = $moonOwner ? (int) $moonOwner : null;
-
-        $previous = $this->settings->getActiveCorporation();
-        if ($moonOwner) {
-            $this->settings->setActiveCorporation($moonOwner);
-        }
-        try {
-            // The same test OreValuationService makes when a ledger row is
-            // valued: minerals, or else the ore.
-            $basis = ($this->settings->getGeneralSettings()['ore_valuation_method'] ?? 'mineral_price') === 'mineral_price'
-                ? 'refined'
-                : 'ore';
-            $refinery = $this->refineryTax($simulation['composition'] ?? [], $basis, $moonOwner);
-        } finally {
-            $this->settings->setActiveCorporation($previous);
-        }
 
         $metenox = $this->valuation->metenox($this->moonOres($moonId), $days);
         $bayM3 = 0.0;
@@ -93,12 +39,6 @@ class MoonIncomeEstimate
 
         return [
             'days' => $days,
-            'tax_basis' => $basis,
-            'moon_owner_set' => $moonOwner !== null,
-            'mined_share' => $this->usualMinedShare($moonId, $moonOwner),
-            'refinery' => $refinery + [
-                'hull' => $hull,
-            ],
             'metenox' => [
                 'value' => $metenox['value'],
                 'materials' => $metenox['materials'],
@@ -109,106 +49,6 @@ class MoonIncomeEstimate
                     ? MetenoxCargoService::MOON_MATERIAL_BAY_CAPACITY_M3 / ($bayM3 / $days)
                     : null,
             ],
-        ];
-    }
-
-    /**
-     * Tax on the whole chunk, line by line, at the members' rates. The caller
-     * scales it by the share mined.
-     *
-     * Chunk mining is only ever taxed from the Moon Owner Corporation's own
-     * refineries, so with none set nothing here is taxed, which is what the
-     * invoices would say too.
-     *
-     * @param array $composition the simulation's ore lines
-     * @return array{value: float, tax: float, lines: array}
-     */
-    protected function refineryTax(array $composition, string $basis, ?int $moonOwner): array
-    {
-        $lines = [];
-        $value = 0.0;
-        $tax = 0.0;
-
-        foreach ($composition as $line) {
-            $typeId = (int) ($line['type_id'] ?? 0);
-            $lineValue = (float) ($basis === 'refined' ? ($line['refined_value'] ?? 0) : ($line['value'] ?? 0));
-
-            $rate = $moonOwner !== null && $this->summaries->shouldTaxType($typeId, $moonOwner, $moonOwner)
-                ? $this->summaries->getTaxRateForType($typeId)
-                : 0.0;
-            $lineTax = $lineValue * $rate / 100;
-
-            $value += $lineValue;
-            $tax += $lineTax;
-            $lines[] = [
-                'type_id' => $typeId,
-                'ore_name' => (string) ($line['ore_name'] ?? ''),
-                'rarity' => $line['rarity'] ?? null,
-                'value' => $lineValue,
-                'rate' => $rate,
-                'tax' => $lineTax,
-            ];
-        }
-
-        return ['value' => $value, 'tax' => $tax, 'lines' => $lines];
-    }
-
-    /**
-     * How much of a chunk usually gets mined, as a fraction. This moon's last
-     * archived chunks first, then the corporation's, and all of it when there
-     * is no history to go on. Cancelled chunks never had anything to mine and
-     * are left out; a chunk nobody mined counts, since that is exactly what a
-     * refinery risks.
-     *
-     * @return array{share: float, source: string, chunks: int}
-     */
-    public function usualMinedShare(int $moonId, ?int $corporationId): array
-    {
-        try {
-            if (Schema::hasTable('moon_extraction_history')) {
-                $moon = DB::table('moon_extraction_history')
-                    ->where('moon_id', $moonId)
-                    ->where('final_status', '<>', 'cancelled')
-                    ->orderByDesc('chunk_arrival_time')
-                    ->limit(self::MOON_CHUNKS)
-                    ->pluck('completion_percentage');
-                if ($moon->isNotEmpty()) {
-                    return $this->averageShare($moon->all(), 'moon');
-                }
-
-                $query = DB::table('moon_extraction_history')
-                    ->where('final_status', '<>', 'cancelled');
-                if ($corporationId) {
-                    $query->where('corporation_id', $corporationId);
-                }
-                $corporation = $query->orderByDesc('chunk_arrival_time')
-                    ->limit(self::CORPORATION_CHUNKS)
-                    ->pluck('completion_percentage');
-                if ($corporation->isNotEmpty()) {
-                    return $this->averageShare($corporation->all(), 'corporation');
-                }
-            }
-        } catch (\Throwable $e) {
-            Log::warning('Mining Manager: could not read the extraction history for the income estimate', [
-                'moon_id' => $moonId,
-                'error' => $e->getMessage(),
-            ]);
-        }
-
-        return ['share' => 1.0, 'source' => 'none', 'chunks' => 0];
-    }
-
-    /**
-     * @param array<int, float|string|null> $percentages
-     */
-    protected function averageShare(array $percentages, string $source): array
-    {
-        $values = array_map(fn ($p) => max(0.0, min(100.0, (float) $p)), $percentages);
-
-        return [
-            'share' => array_sum($values) / count($values) / 100,
-            'source' => $source,
-            'chunks' => count($values),
         ];
     }
 

@@ -9,7 +9,7 @@ class PublicErrorTest extends TestCase
 {
     public function test_the_plugins_own_messages_are_not_internal(): void
     {
-        $this->assertFalse(PublicError::isInternal(new \Exception('This tax has already been paid.')));
+        $this->assertFalse(PublicError::isInternal(new \Exception('This event has already ended.')));
         $this->assertFalse(PublicError::isInternal(new \RuntimeException('Webhook URL refused: Webhook URLs must start with https://.')));
     }
 
@@ -19,7 +19,7 @@ class PublicErrorTest extends TestCase
         $this->assertTrue(PublicError::isInternal(new \PDOException('connection refused')));
         $this->assertTrue(PublicError::isInternal(new \TypeError('Argument #1 must be of type int')));
         $this->assertTrue(PublicError::isInternal(new \ErrorException('Undefined array key "x"')));
-        $this->assertTrue(PublicError::isInternal(new \Exception('Error in select id from mining_taxes where x')));
+        $this->assertTrue(PublicError::isInternal(new \Exception('Error in select id from mining_ledger where x')));
         $this->assertTrue(PublicError::isInternal(new \Exception('failed in /var/www/seat/vendor/x.php')));
     }
 

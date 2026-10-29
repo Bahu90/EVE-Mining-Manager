@@ -38,75 +38,6 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Tax Payment Method
-    |--------------------------------------------------------------------------
-    | Players pay their mining taxes via direct wallet transfers with tax codes.
-    */
-    'tax_payment' => [
-        // Payment method (wallet transfers only)
-        'method' => 'wallet',
-
-        // Grace period days after month end before overdue
-        'grace_period_days' => 7,
-
-        // Minimum tax amount to collect (ISK)
-        'minimum_tax_amount' => 1000000,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Wallet Transfer Payment Settings
-    |--------------------------------------------------------------------------
-    | Settings for wallet transfer-based tax payment method with tax codes
-    */
-    'wallet' => [
-        // Match tolerance (ISK) - allow this much difference
-        'match_tolerance' => 1000,
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tax Rates
-    |--------------------------------------------------------------------------
-    */
-    'tax_rates' => [
-        // Moon ore tax rates by rarity (percentage)
-        'moon_ore' => [
-            'r64' => 15.0,  // Exceptional (Zeolites, Sylvite, etc.)
-            'r32' => 12.0,  // Rare (Cobaltite, Euxenite, etc.)
-            'r16' => 10.0,  // Uncommon (Carnotite, Cinnabar, etc.)
-            'r8' => 8.0,    // Common (Caesium, Hafnium, etc.)
-            'r4' => 5.0,    // Ubiquitous
-        ],
-
-        // Regular ore types (percentage)
-        'ice' => 10.0,
-        'ore' => 10.0,
-        'gas' => 10.0,
-        'abyssal_ore' => 15.0,
-        'triglavian_ore' => 10.0,
-
-        // Note: Event tax modifiers are configured per-event, not globally.
-        // See event creation/edit for tax modifier options (-100% to +100%).
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Tax Selector - What to Tax
-    |--------------------------------------------------------------------------
-    */
-    'tax_selector' => [
-        'all_moon_ore' => true,          // Tax all moon ore
-        'only_corp_moon_ore' => false,   // Only tax if mined at corp structures
-        'ore' => true,                   // Regular ore
-        'ice' => true,                   // Ice products
-        'gas' => false,                  // Gas clouds
-        'abyssal_ore' => false,          // Abyssal trace materials
-        'triglavian_ore' => false,       // Triglavian/Pochven ores
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
     | Pricing
     |--------------------------------------------------------------------------
     */
@@ -155,7 +86,6 @@ return [
     */
     'features' => [
         // Core features
-        'enable_tax_tracking' => true,
         'enable_ledger_tracking' => true,
         'enable_analytics' => true,
         'enable_reports' => true,
@@ -175,13 +105,9 @@ return [
 
         // Automation
         'auto_process_ledger' => true,
-        'auto_calculate_taxes' => true,
-        'auto_generate_invoices' => true,
-        'verify_wallet_transactions' => true,
 
         // Data retention
         'ledger_retention_days' => 365,
-        'tax_record_retention_days' => 730,
         'auto_cleanup_old_data' => false,
     ],
 

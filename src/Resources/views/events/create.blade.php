@@ -93,17 +93,15 @@
                             @enderror
                             <small class="form-text text-info">
                                 <i class="fas fa-info-circle"></i>
-                                <strong>Tax modifier scope depends on event type:</strong>
+                                <strong>What the event counts depends on its type:</strong>
                                 <ul class="mb-0 mt-1">
-                                    <li><strong>Mining Operation</strong> — applies to <em>regular asteroid ore</em> only</li>
-                                    <li><strong>Moon Extraction</strong> — applies to <em>moon ore</em> (R4 through R64) only</li>
-                                    <li><strong>Ice Mining</strong> — applies to <em>ice</em> only</li>
-                                    <li><strong>Gas Huffing</strong> — applies to <em>gas</em> only</li>
-                                    <li><strong>Special Event</strong> — applies to <em>all currently-taxed ore categories</em> (whichever of ore, moon, ice, gas, abyssal, triglavian your plugin is set to tax). Use for incentives, holidays, or competitions.</li>
+                                    <li><strong>Mining Operation</strong> — <em>regular asteroid ore</em> only</li>
+                                    <li><strong>Moon Extraction</strong> — <em>moon ore</em> (R4 through R64) only</li>
+                                    <li><strong>Ice Mining</strong> — <em>ice</em> only</li>
+                                    <li><strong>Gas Huffing</strong> — <em>gas</em> only</li>
+                                    <li><strong>Special Event</strong> — <em>everything</em>: ore, moon ore, ice, gas, abyssal and triglavian. Use for holidays or competitions.</li>
                                 </ul>
                             </small>
-
-                            @include('mining-manager::events._tax_compatibility_panel')
                         </div>
 
                         <div class="row">
@@ -210,25 +208,6 @@
                             <label for="max_participants">{{ trans('mining-manager::events.max_participants') }}</label>
                             <input type="number" class="form-control" id="max_participants" name="max_participants" value="{{ old('max_participants') }}" min="1" placeholder="{{ trans('mining-manager::events.unlimited') }}">
                             <small class="form-text text-muted">{{ trans('mining-manager::events.leave_empty_unlimited') }}</small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="tax_modifier">{{ trans('mining-manager::events.tax_modifier') }}</label>
-                            <select class="form-control @error('tax_modifier') is-invalid @enderror" id="tax_modifier" name="tax_modifier" required>
-                                <option value="-100" {{ old('tax_modifier') == -100 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_tax_free') }}</option>
-                                <option value="-75" {{ old('tax_modifier') == -75 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_75') }}</option>
-                                <option value="-50" {{ old('tax_modifier') == -50 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_50') }}</option>
-                                <option value="-25" {{ old('tax_modifier') == -25 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_reduced_25') }}</option>
-                                <option value="0" {{ old('tax_modifier', 0) == 0 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_normal') }}</option>
-                                <option value="25" {{ old('tax_modifier') == 25 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_25') }}</option>
-                                <option value="50" {{ old('tax_modifier') == 50 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_50') }}</option>
-                                <option value="75" {{ old('tax_modifier') == 75 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_increase_75') }}</option>
-                                <option value="100" {{ old('tax_modifier') == 100 ? 'selected' : '' }}>{{ trans('mining-manager::events.modifier_double') }}</option>
-                            </select>
-                            @error('tax_modifier')
-                            <span class="invalid-feedback">{{ $message }}</span>
-                            @enderror
-                            <small class="form-text text-muted">{{ trans('mining-manager::events.tax_modifier_help') }}</small>
                         </div>
 
                         <div class="form-group">
@@ -393,8 +372,7 @@ $(document).ready(function() {
         preview += 'Description: ' + $('#description').val() + '\n';
         preview += 'Type: ' + $('#type option:selected').text() + '\n';
         preview += 'Location: ' + ($('#location_scope').val() === 'any' ? 'Any Location' : ($('#solar_system_id option:selected').text() || 'Not Selected')) + '\n';
-        preview += 'Start: ' + $('#start_time').val() + '\n';
-        preview += 'Tax Modifier: ' + $('#tax_modifier option:selected').text();
+        preview += 'Start: ' + $('#start_time').val();
 
         alert(preview);
     });

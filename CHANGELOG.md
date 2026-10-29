@@ -2,6 +2,27 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [3.0.0] — 2026-10-29
+
+**Breaking: the tax system and theft detection are removed.** Mining Manager now only tracks mining and moons. Nothing is billed, chased, notified or shown to pilots about tax.
+
+- **Removed pages:** Tax Management (Tax Overview, Calculate Taxes, Tax Codes, Wallet Verification, Balances), My Taxes, the tax banner on the Mining Dashboard, Theft Detection, and Settings > Tax Rates and Configured Corporations.
+- **Removed commands:** `calculate-taxes`, `generate-tax-codes`, `generate-invoices`, `verify-payments`, `verify-ore-contracts`, `send-outstanding-digest`, `detect-theft` and `monitor-active-thefts`. Their schedules are deleted by the schedule seeder on update.
+- **Removed notifications:** tax generated, announcement, invoice, overdue and the Outstanding Mining Tax digest; theft detected, critical, active and resolved. Reports no longer carry tax figures.
+- **Theft detection** went too: it flagged miners by their unpaid bills, so without bills it had nothing to work from.
+- **Dashboards, ledger, My Mining, Mining Summary, reports, analytics and the API** show quantities and values only. Event pages show participation; event tax modifiers are gone.
+- **Extraction Simulator:** the Metenox output card stays; the refinery-versus-Metenox tax comparison is gone.
+- **Diagnostics:** the Tax Trace, Tax Pipeline and Theft Detection tabs and the tax, payment and classification-cutover checks in the Master Test are removed.
+- **Data is kept.** No table or column is dropped: earlier bills, payments, codes and theft incidents stay in the database, unread. A later release can drop them once you are sure you do not need them.
+
+**After updating**, run the schedule seeder so the removed schedules are deleted, then clear the caches:
+
+```bash
+php artisan migrate
+php artisan db:seed --class=MiningManager\\Database\\Seeders\\ScheduleSeeder
+php artisan optimize:clear
+```
+
 ## [2.3.1] — 2026-10-29
 
 - **calculate-monthly-stats --all-history** skipped every month ("Another instance of this command is already running"): it called itself for each month and ran into its own lock. The months now run in the same process. This also affected the backfill in `initialize`.

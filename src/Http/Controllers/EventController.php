@@ -137,9 +137,7 @@ class EventController extends Controller
         // actually meaningfully assign events to.
         $corporations = $this->getEventDropdownCorporations();
 
-        $taxCompat = $this->buildTaxCompatibilityMap();
-
-        return view('mining-manager::events.create', compact('corporations', 'taxCompat'));
+        return view('mining-manager::events.create', compact('corporations'));
     }
 
     /**
@@ -163,7 +161,6 @@ class EventController extends Controller
             // renders "Unknown", confusing reports / charts — so reject at
             // save time instead.
             'solar_system_id' => 'nullable|integer|exists:solar_systems,system_id',
-            'tax_modifier' => 'required|integer|min:-100|max:100',
             'corporation_id' => 'nullable|integer|exists:corporation_infos,corporation_id',
         ]);
 
@@ -176,7 +173,6 @@ class EventController extends Controller
                 'end_time' => $request->input('end_time') ? Carbon::parse($request->input('end_time')) : null,
                 'location_scope' => $request->input('location_scope', 'any'),
                 'solar_system_id' => $request->input('location_scope') !== 'any' ? $request->input('solar_system_id') : null,
-                'tax_modifier' => $request->input('tax_modifier', 0),
                 'corporation_id' => $request->input('corporation_id'),
                 'status' => 'planned',
                 'created_by' => auth()->user()->id,
@@ -232,8 +228,6 @@ class EventController extends Controller
                 'average_per_miner' => $participants->count() > 0
                     ? $participants->sum('quantity_mined') / $participants->count()
                     : 0,
-                'tax_modifier' => $event->tax_modifier,
-                'tax_modifier_label' => $event->getTaxModifierLabel(),
             ];
 
             return view('mining-manager::events.show', compact('event', 'participants', 'stats'));
@@ -264,9 +258,7 @@ class EventController extends Controller
         // in the dropdown set still renders correctly.
         $corporations = $this->getEventDropdownCorporations((int) ($event->corporation_id ?? 0));
 
-        $taxCompat = $this->buildTaxCompatibilityMap();
-
-        return view('mining-manager::events.edit', compact('event', 'corporations', 'taxCompat'));
+        return view('mining-manager::events.edit', compact('event', 'corporations'));
     }
 
     /**
@@ -289,8 +281,7 @@ class EventController extends Controller
     {
         $corpIds = collect();
 
-        // Corps that have any MM setting persisted (per-corp tax rates,
-        // per-corp tax program corporation, etc.)
+        // Corps that have any MM setting persisted
         $settingsCorpIds = DB::table('mining_manager_settings')
             ->whereNotNull('corporation_id')
             ->distinct()
@@ -345,7 +336,6 @@ class EventController extends Controller
             // integer lets stale form replays / typos persist pointers to
             // non-existent systems / corps.
             'solar_system_id' => 'nullable|integer|exists:solar_systems,system_id',
-            'tax_modifier' => 'required|integer|min:-100|max:100',
             'corporation_id' => 'nullable|integer|exists:corporation_infos,corporation_id',
             'status' => 'required|in:planned,active,completed,cancelled',
         ]);
@@ -361,7 +351,6 @@ class EventController extends Controller
                 'end_time' => $request->input('end_time') ? Carbon::parse($request->input('end_time')) : null,
                 'location_scope' => $request->input('location_scope', 'any'),
                 'solar_system_id' => $request->input('location_scope') !== 'any' ? $request->input('solar_system_id') : null,
-                'tax_modifier' => $request->input('tax_modifier', 0),
                 'corporation_id' => $request->input('corporation_id'),
                 'status' => $request->input('status'),
             ]);
@@ -511,7 +500,7 @@ class EventController extends Controller
             }
 
             return redirect()->route('mining-manager.events.show', $event->id)
-                ->with('success', 'Event completed successfully. Tax modifier: ' . $event->getTaxModifierLabel());
+                ->with('success', 'Event completed successfully.');
         } catch (\Exception $e) {
             \Log::error('EventController: Error completing event', [
                 'event_id' => $id,
@@ -571,8 +560,6 @@ class EventController extends Controller
                     'solar_system_id' => $event->solar_system_id,
                     'description' => $event->description ?? '',
                     'participants' => $event->participant_count ?? 0,
-                    'tax_modifier' => $event->tax_modifier ?? 0,
-                    'tax_modifier_label' => $event->getTaxModifierLabel(),
                     'total_mined' => $event->total_mined ?? 0
                 ]
             ];
@@ -644,14 +631,6 @@ class EventController extends Controller
         // counts.
         $allParticipations = EventParticipant::whereIn('character_id', $characterIds)->get();
 
-        // Per-event savings map — {event_id => total tax saved}. Walks
-        // ore_types JSON on the user's daily summaries and attributes
-        // event_discount_amount by event_id. Used for per-event card
-        // sub-lines and for the grand-total stat box.
-        $eventSavingsMap = app(\MiningManager\Services\Ledger\LedgerSummaryService::class)
-            ->getEventSavingsByEvent($characterIds);
-        $totalEventSavings = array_sum($eventSavingsMap);
-
         $stats = [
             'total' => $allParticipations->count(),
             'active' => $activeEvents->count(),
@@ -659,7 +638,6 @@ class EventController extends Controller
             'avg_per_event' => $allParticipations->count() > 0
                 ? $allParticipations->avg('value_mined')
                 : 0,
-            'total_event_savings' => $totalEventSavings,
         ];
 
         return view('mining-manager::events.my-events', compact(
@@ -667,8 +645,7 @@ class EventController extends Controller
             'upcomingEvents',
             'completedEvents',
             'stats',
-            'characterIds',
-            'eventSavingsMap'
+            'characterIds'
         ));
     }
 
@@ -836,87 +813,6 @@ class EventController extends Controller
     }
 
     // ==================== HELPER METHODS (SeAT v5.x COMPATIBLE) ====================
-
-    /**
-     * Build a tax-scope compatibility map for the event form.
-     *
-     * Produces a data structure the create/edit views render as:
-     *   - a "current tax settings" badge row
-     *   - a per-event-type compatibility hint (full / partial / empty)
-     *   - a "suggested event types" list based on what's taxed
-     *
-     * The map is serialised to JSON and read by event-tax-compat.js so
-     * the warning panel updates immediately when the user changes the
-     * event type dropdown — no submit-then-see-error loop.
-     *
-     * @return array{
-     *   category_taxed: array<string, bool>,
-     *   moon_mode: string,
-     *   event_type_compat: array<string, array{
-     *       taxed: int, untaxed: int, total: int, status: string,
-     *       taxed_categories: array<string>, untaxed_categories: array<string>
-     *   }>
-     * }
-     */
-    private function buildTaxCompatibilityMap(): array
-    {
-        $settingsService = app(\MiningManager\Services\Configuration\SettingsManagerService::class);
-        $taxSelector = $settingsService->getTaxSelector();
-
-        $categoryTaxed = [
-            'ore' => !empty($taxSelector['ore']),
-            'ice' => !empty($taxSelector['ice']),
-            'gas' => !empty($taxSelector['gas']),
-            'abyssal' => !empty($taxSelector['abyssal_ore']),
-            'triglavian' => !empty($taxSelector['triglavian_ore']),
-        ];
-
-        // Moon is tri-state: 'none' | 'corp_only' | 'all'
-        $moonMode = 'none';
-        if (empty($taxSelector['no_moon_ore'])) {
-            if (!empty($taxSelector['only_corp_moon_ore'])) {
-                $moonMode = 'corp_only';
-            } elseif (!empty($taxSelector['all_moon_ore'])) {
-                $moonMode = 'all';
-            }
-        }
-
-        $eventTypeCompat = [];
-        foreach (MiningEvent::EVENT_TYPE_ORE_CATEGORIES as $eventType => $categories) {
-            $taxedList = [];
-            $untaxedList = [];
-
-            foreach ($categories as $category) {
-                $isTaxed = str_starts_with($category, 'moon_')
-                    ? $moonMode !== 'none'
-                    : ($categoryTaxed[$category] ?? false);
-
-                $isTaxed ? $taxedList[] = $category : $untaxedList[] = $category;
-            }
-
-            $total = count($categories);
-            $taxedCount = count($taxedList);
-            $untaxedCount = count($untaxedList);
-            $status = $taxedCount === 0
-                ? 'empty'
-                : ($untaxedCount === 0 ? 'full' : 'partial');
-
-            $eventTypeCompat[$eventType] = [
-                'taxed' => $taxedCount,
-                'untaxed' => $untaxedCount,
-                'total' => $total,
-                'status' => $status,
-                'taxed_categories' => $taxedList,
-                'untaxed_categories' => $untaxedList,
-            ];
-        }
-
-        return [
-            'category_taxed' => $categoryTaxed,
-            'moon_mode' => $moonMode,
-            'event_type_compat' => $eventTypeCompat,
-        ];
-    }
 
     /**
      * FIXED: Get user's character IDs with multiple fallback methods

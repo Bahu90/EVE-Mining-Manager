@@ -106,11 +106,6 @@
                                     <p><i class="fas fa-users"></i> <strong>{{ trans('mining-manager::events.participants') }}:</strong> {{ $event->participant_count ?? 0 }}</p>
                                     <p><i class="fas fa-cubes"></i> <strong>Total Quantity Mined:</strong> {{ number_format($event->total_mined ?? 0, 0) }} units</p>
                                     <p><i class="fas fa-coins"></i> <strong>{{ trans('mining-manager::events.total_mined') }}:</strong> {{ number_format($event->total_mined_value ?? 0, 0) }} ISK</p>
-                                    <p><i class="fas fa-percentage"></i> <strong>{{ trans('mining-manager::events.tax_modifier') }}:</strong>
-                                        <span class="badge badge-{{ $event->tax_modifier < 0 ? 'success' : ($event->tax_modifier > 0 ? 'warning' : 'secondary') }}">
-                                            {{ $event->getTaxModifierLabel() }}
-                                        </span>
-                                    </p>
                                 </div>
                             </div>
                         </div>

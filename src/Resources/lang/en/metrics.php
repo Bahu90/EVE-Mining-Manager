@@ -8,15 +8,12 @@ return [
     'anomalies_own' => 'Not counted here: :isk ISK you mined in belts and anomalies this month',
     'details' => 'Dashboard',
     'my_mining' => 'My mining',
-    'my_taxes' => 'My taxes',
 
-    'tier_none' => 'N/A',
-    'tier_title' => 'Tax on :tier moon ore',
+    'tier_title' => ':tier moon ore',
 
     'overview' => 'Overview',
-    'overview_text' => 'Moon mining at the :corp refineries from <strong>:from</strong> to <strong>:to</strong>, from the moon drills\' own records. ISK is valued at each day\'s prices; tax is what the configured rates come to.',
+    'overview_text' => 'Moon mining at the :corp refineries from <strong>:from</strong> to <strong>:to</strong>, from the moon drills\' own records. ISK is valued at each day\'s prices.',
     'isk_mined' => 'ISK mined',
-    'mining_tax' => 'Mining tax',
     'active_players' => 'Active players',
     'volume_mined' => 'Volume mined',
     'guests' => '+:count visiting',
@@ -53,7 +50,7 @@ return [
     'search_player' => 'Search player',
     'guest' => 'Visitor',
     'alts' => ':count characters',
-    'isk_hidden' => 'ISK and tax per player are shown to directors.',
+    'isk_hidden' => 'ISK per player is shown to directors.',
 
     'nothing' => 'No moon mining was recorded at the corporation\'s refineries in this month.',
     'not_configured' => 'Choose the Moon Owner Corporation under Settings > General to see Moon Mining.',

@@ -56,17 +56,16 @@ final class MetricsMath
      * Spread keyed sums over a fixed list of keys, filling gaps with zero.
      *
      * @param string[] $keys
-     * @param array<string, array{isk:float,tax:float,volume:float}> $byKey
-     * @return array{labels:string[], isk:float[], tax:float[], volume:float[]}
+     * @param array<string, array{isk:float,volume:float}> $byKey
+     * @return array{labels:string[], isk:float[], volume:float[]}
      */
     public static function series(array $keys, array $byKey): array
     {
-        $out = ['labels' => $keys, 'isk' => [], 'tax' => [], 'volume' => []];
+        $out = ['labels' => $keys, 'isk' => [], 'volume' => []];
 
         foreach ($keys as $key) {
             $row = $byKey[$key] ?? [];
             $out['isk'][] = round((float) ($row['isk'] ?? 0), 2);
-            $out['tax'][] = round((float) ($row['tax'] ?? 0), 2);
             $out['volume'][] = round((float) ($row['volume'] ?? 0), 2);
         }
 
@@ -78,7 +77,7 @@ final class MetricsMath
      * pilot with alts is one card. Characters with no SeAT account stand on
      * their own and are marked as guests.
      *
-     * @param array<int, array{isk:float,tax:float,volume:float,quantity:float}> $byCharacter character_id => totals
+     * @param array<int, array{isk:float,volume:float,quantity:float}> $byCharacter character_id => totals
      * @param array<int, int> $mainOf character_id => main character_id (registered characters only)
      * @param array<int, string> $names character_id => name
      * @return array<int, array> sorted by volume, largest first
@@ -99,7 +98,6 @@ final class MetricsMath
                     'guest' => !$registered,
                     'characters' => 0,
                     'isk' => 0.0,
-                    'tax' => 0.0,
                     'volume' => 0.0,
                     'quantity' => 0.0,
                 ];
@@ -107,7 +105,6 @@ final class MetricsMath
 
             $players[$mainId]['characters']++;
             $players[$mainId]['isk'] += (float) ($totals['isk'] ?? 0);
-            $players[$mainId]['tax'] += (float) ($totals['tax'] ?? 0);
             $players[$mainId]['volume'] += (float) ($totals['volume'] ?? 0);
             $players[$mainId]['quantity'] += (float) ($totals['quantity'] ?? 0);
         }

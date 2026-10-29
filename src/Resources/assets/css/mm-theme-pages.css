@@ -356,49 +356,6 @@ body .mining-dashboard .recent-changes-box {
     border-left: 4px solid var(--mmx-blue) !important;
 }
 
-/* ---------- assets/css/tax-management.css ---------- */
-body .mining-manager-wrapper .period-btn:hover,
-body .mining-dashboard .period-btn:hover {
-    border-color: rgba(0, 174, 255, 0.5) !important;
-    background: rgba(0, 174, 255, 0.1) !important;
-}
-body .mining-manager-wrapper .tax-summary-card:hover,
-body .mining-dashboard .tax-summary-card:hover {
-    border-color: rgba(0, 174, 255, 0.5) !important;
-}
-body .mining-manager-wrapper .tax-breakdown-row:hover,
-body .mining-dashboard .tax-breakdown-row:hover {
-    background-color: rgba(0, 174, 255, 0.05) !important;
-}
-body .mining-manager-wrapper .tax-breakdown-total,
-body .mining-dashboard .tax-breakdown-total {
-    background: rgba(0, 174, 255, 0.1) !important;
-}
-body .mining-manager-wrapper .btn-copy-code:hover,
-body .mining-dashboard .btn-copy-code:hover {
-    background: rgba(0, 174, 255, 0.2) !important;
-}
-body .mining-manager-wrapper .payment-method-card:hover,
-body .mining-dashboard .payment-method-card:hover {
-    border-color: rgba(0, 174, 255, 0.5) !important;
-}
-body .mining-manager-wrapper .payment-method-card.selected,
-body .mining-dashboard .payment-method-card.selected {
-    background: rgba(0, 174, 255, 0.1) !important;
-}
-body .mining-manager-wrapper .breakdown-character-section + .breakdown-character-section,
-body .mining-dashboard .breakdown-character-section + .breakdown-character-section {
-    border-top: 2px solid rgba(0, 174, 255, 0.3) !important;
-}
-body .mining-manager-wrapper .account-group-header,
-body .mining-dashboard .account-group-header {
-    background: rgba(0, 174, 255, 0.15) !important;
-}
-body .mining-manager-wrapper .account-group-header:hover,
-body .mining-dashboard .account-group-header:hover {
-    background: rgba(0, 174, 255, 0.25) !important;
-}
-
 /* ---------- views/analytics/compare.blade.php ---------- */
 body .mining-manager-wrapper .period-1,
 body .mining-dashboard .period-1 {
@@ -745,66 +702,6 @@ body .mining-dashboard .stats-card {
     background: var(--mmx-blue-deep) !important;
 }
 
-/* ---------- views/settings/configured_corporations.blade.php ---------- */
-body .mining-manager-wrapper .corp-card,
-body .mining-dashboard .corp-card {
-    background: var(--mmx-surface) !important;
-    border: 1px solid rgba(0, 174, 255, 0.3) !important;
-}
-body .mining-manager-wrapper .corp-card:hover,
-body .mining-dashboard .corp-card:hover {
-    box-shadow: 0 5px 15px rgba(0, 174, 255, 0.4) !important;
-    border-color: rgba(0, 174, 255, 0.6) !important;
-}
-body .mining-manager-wrapper .corp-header,
-body .mining-dashboard .corp-header {
-    border-bottom: 1px solid rgba(0, 174, 255, 0.2) !important;
-}
-body .mining-manager-wrapper .corp-name,
-body .mining-dashboard .corp-name {
-    color: var(--mmx-blue) !important;
-}
-body .mining-manager-wrapper .corp-ticker,
-body .mining-dashboard .corp-ticker {
-    background: rgba(0, 174, 255, 0.2) !important;
-    color: var(--mmx-blue) !important;
-}
-body .mining-manager-wrapper .tax-item,
-body .mining-dashboard .tax-item {
-    background: rgba(0, 174, 255, 0.1) !important;
-    border: 1px solid rgba(0, 174, 255, 0.3) !important;
-}
-body .mining-manager-wrapper .tax-value,
-body .mining-dashboard .tax-value {
-    color: var(--mmx-blue) !important;
-}
-body .mining-manager-wrapper .settings-badge,
-body .mining-dashboard .settings-badge {
-    background: rgba(0, 174, 255, 0.2) !important;
-    color: var(--mmx-blue) !important;
-}
-body .mining-manager-wrapper .selector-status,
-body .mining-dashboard .selector-status {
-    background: rgba(0, 174, 255, 0.05) !important;
-}
-body .mining-manager-wrapper .empty-state,
-body .mining-dashboard .empty-state {
-    background: rgba(0, 174, 255, 0.05) !important;
-    border: 2px dashed rgba(0, 174, 255, 0.3) !important;
-}
-body .mining-manager-wrapper .empty-state i,
-body .mining-dashboard .empty-state i {
-    color: rgba(0, 174, 255, 0.3) !important;
-}
-body .mining-manager-wrapper .btn-edit,
-body .mining-dashboard .btn-edit {
-    background: var(--mmx-blue-deep) !important;
-}
-body .mining-manager-wrapper .btn-edit:hover,
-body .mining-dashboard .btn-edit:hover {
-    box-shadow: 0 3px 10px rgba(0, 174, 255, 0.4) !important;
-}
-
 /* ---------- views/settings/index.blade.php ---------- */
 body .mining-manager-wrapper .nav-pills .nav-link:hover,
 body .mining-dashboard .nav-pills .nav-link:hover {
@@ -824,18 +721,4 @@ body .mining-dashboard .action-buttons {
 body .mining-manager-wrapper .mm-routing-map .routing-arrow,
 body .mining-dashboard .mm-routing-map .routing-arrow {
     color: var(--mmx-blue) !important;
-}
-
-/* ---------- views/taxes/partials/datatables-styles.blade.php ---------- */
-body .mining-manager-wrapper .dataTables_wrapper .dataTables_filter input,
-body .mining-dashboard .dataTables_wrapper .dataTables_filter input,
-body .mining-manager-wrapper .dataTables_wrapper .dataTables_length select,
-body .mining-dashboard .dataTables_wrapper .dataTables_length select {
-    background: var(--mmx-surface-3) !important;
-}
-
-/* ---------- views/theft/index.blade.php ---------- */
-body .mining-manager-wrapper .severity-badge-critical,
-body .mining-dashboard .severity-badge-critical {
-    background-color: var(--mmx-surface-2) !important;
 }

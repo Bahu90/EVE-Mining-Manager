@@ -57,13 +57,13 @@ class MoonExtractionService
      */
     protected function getMoonOwnerCorporationId(): ?int
     {
-        $corpId = $this->settingsService->getTaxProgramCorporationId();
+        $corpId = $this->settingsService->getMoonOwnerCorporationId();
 
         if ($corpId) {
             return $corpId;
         }
 
-        // Last-resort heuristic: if the tax program corp is not configured,
+        // Last-resort heuristic: if the moon owner corp is not configured,
         // try to pick up any corp that has extraction data in SeAT's tables.
         // This keeps the plugin functional on a fresh install before the admin
         // sets the setting; a warning is logged so the state is visible.
@@ -72,7 +72,7 @@ class MoonExtractionService
             ->first();
 
         if ($firstExtraction?->corporation_id) {
-            Log::warning("Mining Manager: tax program corporation not configured, falling back to corporation {$firstExtraction->corporation_id} from extraction data");
+            Log::warning("Mining Manager: moon owner corporation not configured, falling back to corporation {$firstExtraction->corporation_id} from extraction data");
             return (int) $firstExtraction->corporation_id;
         }
 
@@ -991,7 +991,7 @@ class MoonExtractionService
      */
     public function sendExtractionCancelledNotification(MoonExtraction $extraction, ?string $cancelledBy): string
     {
-        $moonOwner = $this->settingsService->getTaxProgramCorporationId();
+        $moonOwner = $this->settingsService->getMoonOwnerCorporationId();
         if ($moonOwner !== null && (int) $extraction->corporation_id !== (int) $moonOwner) {
             return 'skipped';
         }

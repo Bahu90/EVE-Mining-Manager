@@ -5,7 +5,6 @@ namespace MiningManager\Console\Commands;
 use Illuminate\Console\Command;
 use MiningManager\Models\MiningLedger;
 use MiningManager\Models\MiningLedgerDailySummary;
-use MiningManager\Models\MiningTax;
 use MiningManager\Models\MonthlyStatistic;
 use MiningManager\Http\Controllers\DashboardController;
 use Seat\Web\Models\User;
@@ -205,10 +204,6 @@ class CalculateMonthlyStatisticsCommand extends Command
                 'total_value' => $stats['total_value'],
                 'ore_value' => $stats['ore_value'],
                 'mineral_value' => $stats['mineral_value'],
-                'tax_owed' => $stats['tax_owed'],
-                'tax_paid' => $stats['tax_paid'],
-                'tax_pending' => $stats['tax_pending'],
-                'tax_overdue' => $stats['tax_overdue'],
                 'moon_ore_value' => $stats['moon_ore_value'],
                 'ice_value' => $stats['ice_value'],
                 'gas_value' => $stats['gas_value'],
@@ -258,16 +253,6 @@ class CalculateMonthlyStatisticsCommand extends Command
             ')
             ->first();
 
-        // Tax statistics
-        $taxes = MiningTax::whereIn('character_id', $characterIds)
-            ->where('month', $monthStart)
-            ->selectRaw('
-                SUM(amount_owed) as tax_owed,
-                SUM(CASE WHEN status = "paid" THEN amount_owed ELSE 0 END) as tax_paid,
-                SUM(CASE WHEN status = "pending" THEN amount_owed ELSE 0 END) as tax_pending,
-                SUM(CASE WHEN status = "overdue" THEN amount_owed ELSE 0 END) as tax_overdue
-            ')
-            ->first();
 
         // Daily chart data
         $dailyData = MiningLedger::whereIn('character_id', $characterIds)
@@ -304,10 +289,6 @@ class CalculateMonthlyStatisticsCommand extends Command
             'total_value' => $totals->total_value ?? 0,
             'ore_value' => $totals->ore_value ?? 0,
             'mineral_value' => $totals->mineral_value ?? 0,
-            'tax_owed' => $taxes->tax_owed ?? 0,
-            'tax_paid' => $taxes->tax_paid ?? 0,
-            'tax_pending' => $taxes->tax_pending ?? 0,
-            'tax_overdue' => $taxes->tax_overdue ?? 0,
             'moon_ore_value' => $oreTypes->moon_ore_value ?? 0,
             'ice_value' => $oreTypes->ice_value ?? 0,
             'gas_value' => $oreTypes->gas_value ?? 0,
@@ -343,21 +324,10 @@ class CalculateMonthlyStatisticsCommand extends Command
                 SUM(regular_ore_value) as regular_ore_value,
                 SUM(ice_value) as ice_value,
                 SUM(gas_value) as gas_value,
-                SUM(total_tax) as total_tax,
                 COUNT(DISTINCT date) as mining_days
             ')
             ->first();
 
-        // Tax statistics (still from mining_taxes — not in daily summaries)
-        $taxes = MiningTax::whereIn('character_id', $characterIds)
-            ->where('month', $monthStart)
-            ->selectRaw('
-                SUM(amount_owed) as tax_owed,
-                SUM(CASE WHEN status = "paid" THEN amount_owed ELSE 0 END) as tax_paid,
-                SUM(CASE WHEN status = "pending" THEN amount_owed ELSE 0 END) as tax_pending,
-                SUM(CASE WHEN status = "overdue" THEN amount_owed ELSE 0 END) as tax_overdue
-            ')
-            ->first();
 
         // Daily chart data from daily summaries — one row per day already
         $dailyData = MiningLedgerDailySummary::whereIn('character_id', $characterIds)
@@ -399,10 +369,6 @@ class CalculateMonthlyStatisticsCommand extends Command
             'total_value' => $totalValue,
             'ore_value' => $totalValue, // ore_value approximated as total_value for current month
             'mineral_value' => 0, // mineral reprocessing value not tracked in daily summaries
-            'tax_owed' => $taxes->tax_owed ?? 0,
-            'tax_paid' => $taxes->tax_paid ?? 0,
-            'tax_pending' => $taxes->tax_pending ?? 0,
-            'tax_overdue' => $taxes->tax_overdue ?? 0,
             'moon_ore_value' => $moonOreValue,
             'ice_value' => $iceValue,
             'gas_value' => $gasValue,
