@@ -2,6 +2,10 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
+## [3.0.2] — 2026-10-29
+
+- **Stat tiles look the same.** In the EVE-RO look, tiles side by side had different frames: some a coloured border, Total Volume none, Active Miners a blue fill. Every tile now has the same thin blue frame on the plain panel.
+
 ## [3.0.1] — 2026-10-29
 
 - **Dashboard** failed with a server error (500) for everyone: removing the tax banner also removed the helper that finds the pilot's characters. It is back.

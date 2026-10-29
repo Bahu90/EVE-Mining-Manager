@@ -338,6 +338,19 @@ body .mining-dashboard .small-box[class*="bg-"] {
     background: var(--mmx-surface) !important;
 }
 
+/* Every tile gets the same frame. The original look gave each gradient
+   colour its own border (and teal none), and the page styles tint the
+   primary tile, so tiles side by side looked different. :not(#mm) adds
+   an id's weight so this outranks both, whatever loads after it. */
+body .mining-manager-wrapper .info-box:not(#mm),
+body .mining-dashboard .info-box:not(#mm),
+body .mining-manager-wrapper .small-box:not(#mm),
+body .mining-dashboard .small-box:not(#mm) {
+    background: var(--mmx-surface) !important;
+    border: 1px solid rgba(0, 174, 255, 0.2) !important;
+    backdrop-filter: none !important;
+}
+
 body .mining-manager-wrapper .info-box[class*="success"] .info-box-number,
 body .mining-dashboard .info-box[class*="success"] .info-box-number,
 body .mining-manager-wrapper .info-box:has(.info-box-icon[class*="success"]) .info-box-number,
