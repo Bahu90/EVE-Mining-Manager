@@ -2,7 +2,7 @@
 
 All notable changes to Mining Manager will be documented in this file.
 
-## [2.2.1] — 2026-10-29
+## [2.3.0] — 2026-10-29
 
 - **My Taxes** opens with an **All time** line: what you owe now across every unpaid bill (and how much of it is overdue), everything billed and paid since your first bill, and the tax building up this period that is not billed yet.
 - **My Taxes, Mining Breakdown** shows one line per pilot (ISK mined and tax), biggest first. Click a pilot to open its ores.
