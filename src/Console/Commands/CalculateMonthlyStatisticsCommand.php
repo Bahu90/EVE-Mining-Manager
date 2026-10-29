@@ -81,58 +81,66 @@ class CalculateMonthlyStatisticsCommand extends Command
                 $month = Carbon::now()->subMonth();
             }
 
-            $userId = $this->option('user_id');
-
-            $this->info("📅 Calculating statistics for: {$month->format('F Y')}");
-
-            $userQuery = $userId ? User::where('id', $userId) : User::query();
-            $totalUsers = $userQuery->count();
-            $this->info("👥 Processing {$totalUsers} user(s)...\n");
-
-            $bar = $this->output->createProgressBar($totalUsers);
-            $bar->start();
-
-            $calculated = 0;
-            $skipped = 0;
-            $errors = 0;
-
-            $userQuery->chunk(100, function ($users) use ($month, &$calculated, &$skipped, &$errors, $bar) {
-                foreach ($users as $user) {
-                    try {
-                        $result = $this->calculateForUser($user, $month);
-                        if ($result === 'calculated') {
-                            $calculated++;
-                        } elseif ($result === 'skipped') {
-                            $skipped++;
-                        }
-                    } catch (\Exception $e) {
-                        $errors++;
-                        Log::error("Failed to calculate monthly stats for user {$user->id}: " . $e->getMessage());
-                        $this->error("\n❌ Error for user {$user->id}: " . $e->getMessage());
-                    }
-
-                    $bar->advance();
-                }
-            });
-
-            $bar->finish();
-
-            $this->newLine(2);
-            $this->info("✅ Calculation complete!");
-            $this->info("   📊 Calculated: {$calculated}");
-            $this->info("   ⏭️  Skipped: {$skipped}");
-            if ($errors > 0) {
-                $this->error("   ❌ Errors: {$errors}");
-            }
-
-            // Clear dashboard cache
-            DashboardController::clearDashboardCache();
-            $this->info("\n🔄 Dashboard cache cleared!");
-
-            return Command::SUCCESS;
+            return $this->calculateMonth($month);
         } finally {
             $lock->release();
         }
+    }
+
+    /**
+     * Statistics for every user for one month.
+     */
+    protected function calculateMonth(Carbon $month): int
+    {
+        $userId = $this->option('user_id');
+
+        $this->info("📅 Calculating statistics for: {$month->format('F Y')}");
+
+        $userQuery = $userId ? User::where('id', $userId) : User::query();
+        $totalUsers = $userQuery->count();
+        $this->info("👥 Processing {$totalUsers} user(s)...\n");
+
+        $bar = $this->output->createProgressBar($totalUsers);
+        $bar->start();
+
+        $calculated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $userQuery->chunk(100, function ($users) use ($month, &$calculated, &$skipped, &$errors, $bar) {
+            foreach ($users as $user) {
+                try {
+                    $result = $this->calculateForUser($user, $month);
+                    if ($result === 'calculated') {
+                        $calculated++;
+                    } elseif ($result === 'skipped') {
+                        $skipped++;
+                    }
+                } catch (\Exception $e) {
+                    $errors++;
+                    Log::error("Failed to calculate monthly stats for user {$user->id}: " . $e->getMessage());
+                    $this->error("\n❌ Error for user {$user->id}: " . $e->getMessage());
+                }
+
+                $bar->advance();
+            }
+        });
+
+        $bar->finish();
+
+        $this->newLine(2);
+        $this->info("✅ Calculation complete!");
+        $this->info("   📊 Calculated: {$calculated}");
+        $this->info("   ⏭️  Skipped: {$skipped}");
+        if ($errors > 0) {
+            $this->error("   ❌ Errors: {$errors}");
+        }
+
+        // Clear dashboard cache
+        DashboardController::clearDashboardCache();
+        $this->info("\n🔄 Dashboard cache cleared!");
+
+        return Command::SUCCESS;
     }
 
     /**
@@ -442,11 +450,11 @@ class CalculateMonthlyStatisticsCommand extends Command
         $this->info("From: {$startMonth->format('F Y')} to: {$currentMonth->subMonth()->format('F Y')}\n");
 
         foreach ($months as $month) {
+            // In this process, under the lock already held. Calling the
+            // command again for each month ran into that lock and skipped
+            // every month.
             $this->info("Processing {$month->format('F Y')}...");
-            $this->call('mining-manager:calculate-monthly-stats', [
-                '--month' => $month->format('Y-m'),
-                '--recalculate' => $this->option('recalculate'),
-            ]);
+            $this->calculateMonth($month);
             $this->newLine();
         }
 

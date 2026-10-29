@@ -4,6 +4,7 @@ All notable changes to Mining Manager will be documented in this file.
 
 ## [2.3.1] — 2026-10-29
 
+- **calculate-monthly-stats --all-history** skipped every month ("Another instance of this command is already running"): it called itself for each month and ran into its own lock. The months now run in the same process. This also affected the backfill in `initialize`.
 - **Tax codes can be turned off.** Settings > Tax Rates > Use Tax Codes (was Auto-Generate Tax Codes). Off: no codes are made, and none are shown on Tax Overview, My Taxes, bill details or the ore payment steps; the Tax Codes tab is hidden. Ore contracts are matched to the pilot's open bills; ISK transfers are matched by hand on the Wallet page.
 
 ## [2.3.0] — 2026-10-29
