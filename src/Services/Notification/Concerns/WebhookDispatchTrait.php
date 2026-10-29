@@ -224,7 +224,7 @@ trait WebhookDispatchTrait
      * should NOT use this helper — they fire to every enabled subscribed
      * webhook regardless of corporation_id.
      *
-     * Individual tax notifications (tax_reminder / tax_invoice / tax_overdue)
+     * Individual tax notifications (tax_invoice / tax_overdue)
      * can pass the miner's corporation_id as `$extraCorpId` to ALSO include
      * webhooks bound to that corp — letting each mining-group director see
      * their own members' notifications in their own Discord channel, while

@@ -30,7 +30,6 @@ use Carbon\Carbon;
  * @property bool $notify_event_completed
  * @property bool $notify_tax_generated
  * @property bool $notify_tax_announcement
- * @property bool $notify_tax_reminder
  * @property bool $notify_tax_invoice
  * @property bool $notify_tax_overdue
  * @property bool $notify_report_generated
@@ -91,7 +90,6 @@ class WebhookConfiguration extends Model
         'notify_event_completed',
         'notify_tax_generated',
         'notify_tax_announcement',
-        'notify_tax_reminder',
         'notify_tax_invoice',
         'notify_tax_overdue',
         'notify_report_generated',
@@ -134,7 +132,6 @@ class WebhookConfiguration extends Model
         'notify_event_completed' => 'boolean',
         'notify_tax_generated' => 'boolean',
         'notify_tax_announcement' => 'boolean',
-        'notify_tax_reminder' => 'boolean',
         'notify_tax_invoice' => 'boolean',
         'notify_tax_overdue' => 'boolean',
         'notify_report_generated' => 'boolean',
@@ -262,7 +259,6 @@ class WebhookConfiguration extends Model
             'event_completed' => 'notify_event_completed',
             'tax_generated' => 'notify_tax_generated',
             'tax_announcement' => 'notify_tax_announcement',
-            'tax_reminder' => 'notify_tax_reminder',
             'tax_invoice' => 'notify_tax_invoice',
             'tax_overdue' => 'notify_tax_overdue',
             'report_generated' => 'notify_report_generated',
@@ -397,7 +393,6 @@ class WebhookConfiguration extends Model
             'event_completed' => $this->notify_event_completed,
             'tax_generated' => $this->notify_tax_generated,
             'tax_announcement' => $this->notify_tax_announcement,
-            'tax_reminder' => $this->notify_tax_reminder,
             'tax_invoice' => $this->notify_tax_invoice,
             'tax_overdue' => $this->notify_tax_overdue,
             'report_generated' => $this->notify_report_generated,

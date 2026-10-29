@@ -125,8 +125,6 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            // Send tax reminders - runs daily at 10 AM
-            // (Command checks send_tax_reminders and tax_reminder_days settings to determine if reminders are needed)
             // Ore tax contracts - hourly at :40. Credits item exchange
             // contracts members made to a corporation that takes its tax in
             // ore. Does nothing while every corporation takes ISK.
@@ -138,22 +136,12 @@ class ScheduleSeeder extends AbstractScheduleSeeder
                 'ping_before' => null,
                 'ping_after' => null,
             ],
-            [
-                'command' => 'mining-manager:send-reminders',
-                'expression' => '0 10 * * *',
-                'allow_overlap' => false,
-                'allow_maintenance' => false,
-                'ping_before' => null,
-                'ping_after' => null,
-            ],
             // Outstanding tax digest for directors. Runs daily but sends rarely:
             // the command holds off until something is actually past its due
             // date, then repeats at most every 7 days until everything clears.
             // Checking daily is what lets the first one land promptly after a
             // due date rather than waiting for a fixed weekday, which matters
             // when biweekly and monthly periods fall due on different days.
-            // 10:30, half an hour after the member reminders, so the two do not
-            // arrive together.
             [
                 'command' => 'mining-manager:send-outstanding-digest',
                 'expression' => '30 10 * * *',
@@ -357,6 +345,9 @@ class ScheduleSeeder extends AbstractScheduleSeeder
             // Retired: it only published moon lifecycle events for another
             // plugin to pick up. Mining Manager now stands on its own.
             'mining-manager:scan-extraction-events',
+            // Removed: tax payment reminders. Members see what they owe on
+            // My Taxes; invoices and overdue notices still go out.
+            'mining-manager:send-reminders',
         ];
     }
 }

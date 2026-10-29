@@ -674,8 +674,6 @@ class SettingsManagerService
             'tax_calculation_period_pending' => $this->getSetting('tax_rates.tax_calculation_period_pending', null),
             'tax_calculation_period_effective_from' => $this->getSetting('tax_rates.tax_calculation_period_effective_from', null),
             'tax_payment_deadline_days' => $this->getSetting('tax_rates.tax_payment_deadline_days', 7),
-            'send_tax_reminders' => $this->getSetting('tax_rates.send_tax_reminders', true),
-            'tax_reminder_days' => $this->getSetting('tax_rates.tax_reminder_days', 3),
         ];
     }
 
@@ -952,12 +950,6 @@ class SettingsManagerService
             if (isset($rates['tax_payment_deadline_days'])) {
                 $this->updateSetting('tax_rates.tax_payment_deadline_days', $rates['tax_payment_deadline_days'], 'integer');
             }
-            if (isset($rates['send_tax_reminders'])) {
-                $this->updateSetting('tax_rates.send_tax_reminders', $rates['send_tax_reminders'], 'boolean');
-            }
-            if (isset($rates['tax_reminder_days'])) {
-                $this->updateSetting('tax_rates.tax_reminder_days', $rates['tax_reminder_days'], 'integer');
-            }
 
             DB::commit();
         } catch (\Exception $e) {
@@ -1141,7 +1133,7 @@ class SettingsManagerService
      */
     public const NOTIFICATION_TYPES = [
         // Tax
-        'tax_generated', 'tax_announcement', 'tax_reminder', 'tax_invoice', 'tax_overdue', 'tax_outstanding_digest',
+        'tax_generated', 'tax_announcement', 'tax_invoice', 'tax_overdue', 'tax_outstanding_digest',
         // Events
         'event_created', 'event_started', 'event_completed',
         // Moon
@@ -1166,7 +1158,7 @@ class SettingsManagerService
      */
     public const SLACK_NOTIFICATION_TYPES = [
         // Tax
-        'tax_generated', 'tax_announcement', 'tax_reminder', 'tax_invoice', 'tax_overdue',
+        'tax_generated', 'tax_announcement', 'tax_invoice', 'tax_overdue',
         // Events
         'event_created', 'event_started', 'event_completed',
         // Moon
@@ -1268,7 +1260,7 @@ class SettingsManagerService
     /**
      * Get per-type notification settings for a specific type
      *
-     * @param string $type Notification type key (e.g., 'tax_reminder')
+     * @param string $type Notification type key (e.g., 'tax_invoice')
      * @return array ['ping_role' => bool, 'role_id' => string|null, 'ping_user' => bool, 'show_amount' => bool]
      */
     public function getTypeNotificationSettings(string $type): array

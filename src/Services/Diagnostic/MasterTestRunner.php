@@ -731,7 +731,7 @@ class MasterTestRunner
             $reflection = new \ReflectionClass($this->notificationService);
             $method = $reflection->getMethod('processCustomTemplate');
             $method->setAccessible(true);
-            $result = $method->invoke($this->notificationService, $template, 'tax_reminder', 'tax_reminder', $hostileInput);
+            $result = $method->invoke($this->notificationService, $template, 'tax_invoice', 'tax_invoice', $hostileInput);
         } catch (Throwable $e) {
             return $this->warn('Custom-template injection safety', 'security', 'Could not invoke processCustomTemplate: ' . $e->getMessage());
         }
@@ -782,7 +782,6 @@ class MasterTestRunner
             'mining-manager:calculate-taxes',
             'mining-manager:generate-invoices',
             'mining-manager:verify-payments --auto-match',
-            'mining-manager:send-reminders',
             'mining-manager:cache-prices',
         ];
 

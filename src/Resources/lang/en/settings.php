@@ -119,10 +119,6 @@ return [
     'tax_calculation_period_help' => 'How often taxes are calculated',
     'tax_payment_deadline' => 'Payment Deadline',
     'tax_payment_deadline_help' => 'Number of days members have to pay taxes after calculation',
-    'send_tax_reminders' => 'Send Tax Reminders',
-    'send_tax_reminders_help' => 'Send reminder notifications before tax deadline',
-    'tax_reminder_days' => 'Reminder Days Before Deadline',
-    'tax_reminder_days_help' => 'Send reminders this many days before the deadline',
     
     // Pricing Settings
     'pricing_settings' => 'Pricing Settings',
@@ -284,7 +280,7 @@ return [
     'help_tax_desc' => 'Set up tax rates and payment methods:',
     'help_tax_1' => 'Configure default tax rates for different ore types',
     'help_tax_2' => 'Set up wallet transfer payment with tax codes',
-    'help_tax_3' => 'Set payment deadlines and reminder schedules',
+    'help_tax_3' => 'Set payment deadlines',
     'help_pricing' => 'Pricing Settings',
     'help_pricing_desc' => 'Control how ore values are calculated:',
     'help_pricing_1' => 'Select price provider and market hub',

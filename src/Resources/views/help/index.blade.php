@@ -1507,10 +1507,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                             <strong>{{ trans('mining-manager::help.tax_step_8_title') }}</strong><br>
                             {{ trans('mining-manager::help.tax_step_8_desc') }}
                         </li>
-                        <li>
-                            <strong>{{ trans('mining-manager::help.tax_step_9_title') }}</strong><br>
-                            {{ trans('mining-manager::help.tax_step_9_desc') }}
-                        </li>
                     </ol>
                 </div>
 
@@ -1578,7 +1574,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         <li>{{ trans('mining-manager::help.pipeline_step_4') }}</li>
                         <li>{{ trans('mining-manager::help.pipeline_step_5') }}</li>
                         <li>{{ trans('mining-manager::help.pipeline_step_6') }}</li>
-                        <li>{{ trans('mining-manager::help.pipeline_step_7') }}</li>
                     </ol>
                     <p>{{ trans('mining-manager::help.pipeline_other') }}</p>
                 </div>
@@ -2472,17 +2467,8 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                         <li>{{ trans('mining-manager::help.collect_step_4') }}</li>
                         <li>{{ trans('mining-manager::help.collect_step_5') }}</li>
                         <li>{{ trans('mining-manager::help.collect_step_6') }}</li>
-                        <li>{{ trans('mining-manager::help.collect_step_7') }}</li>
                         <li>{{ trans('mining-manager::help.collect_step_8') }}</li>
                     </ol>
-
-                    <h4><i class="fas fa-bullhorn text-danger"></i> {{ trans('mining-manager::help.collect_reminders_title') }}</h4>
-                    <p>{{ trans('mining-manager::help.collect_reminders_desc') }}</p>
-                    <ul>
-                        <li>{{ trans('mining-manager::help.collect_reminder_auto') }}</li>
-                        <li>{{ trans('mining-manager::help.collect_reminder_individual') }}</li>
-                        <li>{{ trans('mining-manager::help.collect_reminder_bulk') }}</li>
-                    </ul>
 
                     <h4><i class="fas fa-search-dollar text-info"></i> {{ trans('mining-manager::help.collect_verify_title') }}</h4>
                     <p>{{ trans('mining-manager::help.collect_verify_desc') }}</p>
@@ -4202,13 +4188,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td><code>mining-manager:send-reminders</code></td>
-                                    <td><span class="badge badge-primary">{{ trans('mining-manager::help.schedule_daily') }}</span> 10:00 AM</td>
-                                    <td>Send tax payment reminder notifications to characters with unpaid taxes. Finds taxes within the reminder window (configurable, default 3 days before due date) or already overdue. Groups by character — one notification per player even if they owe multiple periods.<br>
-                                        <small class="text-muted">Options: <code>--overdue-only</code> only overdue taxes, <code>--days-overdue=7</code> days threshold, <code>--dry-run</code> preview without sending</small>
-                                    </td>
-                                </tr>
-                                <tr>
                                     <td><code>mining-manager:send-outstanding-digest</code></td>
                                     <td><span class="badge badge-primary">{{ trans('mining-manager::help.schedule_daily') }}</span> 10:30 AM</td>
                                     <td>Posts the Outstanding Mining Tax digest for directors: who still owes, how much is left and how far through they are. Checks daily, sends once invoices are past due, then every 7 days until everything is paid. Lists only the members of the corporations picked on its card under Settings, Notifications, when any are, and does nothing while that card is switched off.<br>
@@ -4460,10 +4439,6 @@ docker compose -f docker-compose.yml -f docker-compose.mariadb.yml -f docker-com
                                 <tr>
                                     <td><code>mining-manager:detect-theft --days=30 --notify</code></td>
                                     <td>Run theft detection for last 30 days and send notifications</td>
-                                </tr>
-                                <tr>
-                                    <td><code>mining-manager:send-reminders --dry-run</code></td>
-                                    <td>Preview which tax reminders would be sent without actually sending them</td>
                                 </tr>
                                 <tr>
                                     <td><code>mining-manager:diagnose-prices --detailed --show-missing</code></td>

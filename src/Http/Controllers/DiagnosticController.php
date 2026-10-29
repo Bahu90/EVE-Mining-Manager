@@ -3643,7 +3643,7 @@ class DiagnosticController extends Controller
             $cmd = $schedule->command;
             if (str_contains($cmd, 'process-ledger') || str_contains($cmd, 'import-character') || str_contains($cmd, 'update-ledger') || str_contains($cmd, 'update-daily') || str_contains($cmd, 'cache-prices')) {
                 $category = 'data';
-            } elseif (str_contains($cmd, 'calculate-taxes') || str_contains($cmd, 'generate-invoices') || str_contains($cmd, 'verify-payments') || str_contains($cmd, 'send-reminders') || str_contains($cmd, 'generate-tax') || str_contains($cmd, 'finalize')) {
+            } elseif (str_contains($cmd, 'calculate-taxes') || str_contains($cmd, 'generate-invoices') || str_contains($cmd, 'verify-payments') || str_contains($cmd, 'generate-tax') || str_contains($cmd, 'finalize')) {
                 $category = 'tax';
             } elseif (str_contains($cmd, 'metenox')) {
                 // v2.0.1 — metenox cargo scanner cron. Separate category so
@@ -3749,7 +3749,7 @@ class DiagnosticController extends Controller
      * Fire a REAL notification through the full NotificationService pipeline.
      *
      * Unlike testNotification() which does a single-webhook preview POST,
-     * this routes through the actual convenience wrappers (sendTaxReminder,
+     * this routes through the actual convenience wrappers (sendTaxInvoice,
      * sendMoonArrival, sendTheftDetected, etc.) so everything gets exercised:
      * per-type enable/disable toggles, corp-scoped webhook filtering, all
      * subscribed webhooks (not just one), retry logic on transient failures,
@@ -3768,7 +3768,7 @@ class DiagnosticController extends Controller
         $startTime = microtime(true);
         $this->addLog($logs, 'info', '=== Live Notification Fire Started ===');
 
-        $type = $request->input('notification_type', 'tax_reminder');
+        $type = $request->input('notification_type', 'tax_invoice');
         $characterId = (int) $request->input('character_id', 0);
         $characterName = $request->input('character_name', 'Test Character');
 
@@ -3826,12 +3826,6 @@ class DiagnosticController extends Controller
         Request $request
     ): array {
         return match ($type) {
-            'tax_reminder' => $ns->sendTaxReminder(
-                $characterId,
-                (float) ($data['amount'] ?? 5000000),
-                \Carbon\Carbon::parse($data['due_date'] ?? now()->addDays(7)),
-                (int) ($data['days_remaining'] ?? 7)
-            ),
             'tax_overdue' => $ns->sendTaxOverdue(
                 $characterId,
                 (float) ($data['amount'] ?? 5000000),
@@ -4150,7 +4144,7 @@ class DiagnosticController extends Controller
         $this->addLog($logs, 'info', '=== Notification Test Started ===');
 
         // 1. Parse inputs
-        $notificationType = $request->input('notification_type', 'tax_reminder');
+        $notificationType = $request->input('notification_type', 'tax_invoice');
         $channels = $request->input('channels', []);
         $characterId = (int) $request->input('character_id', 0);
         $characterName = $request->input('character_name', 'Test Character');
@@ -4177,7 +4171,6 @@ class DiagnosticController extends Controller
         $typeLabels = [
             'tax_generated' => 'Mining Taxes Summary (General)',
             'tax_announcement' => 'New Invoices Announcement (General)',
-            'tax_reminder' => 'Tax Payment Reminder (Individual)',
             'tax_invoice' => 'Tax Invoice Created (Individual)',
             'tax_overdue' => 'Tax Payment Overdue (Individual)',
             'event_created' => 'Mining Event Created',
@@ -4354,7 +4347,6 @@ class DiagnosticController extends Controller
         $typeConst = match ($type) {
             'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
             'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-            'tax_reminder' => NotificationService::TYPE_TAX_REMINDER,
             'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
             'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
             'event_created' => NotificationService::TYPE_EVENT_CREATED,
@@ -4564,7 +4556,6 @@ class DiagnosticController extends Controller
             $typeConst = match ($type) {
                 'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
                 'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-                'tax_reminder' => NotificationService::TYPE_TAX_REMINDER,
                 'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
                 'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
                 'event_created' => NotificationService::TYPE_EVENT_CREATED,
@@ -4602,7 +4593,7 @@ class DiagnosticController extends Controller
         }
 
         // Check Discord pinging (tax types only — moon notifications don't ping individuals)
-        $isTaxType = in_array($type, ['tax_reminder', 'tax_invoice', 'tax_overdue']);
+        $isTaxType = in_array($type, ['tax_invoice', 'tax_overdue']);
         $pingingEnabled = $settings['discord_pinging_enabled'] ?? false;
         $doPing = ($testPing || $pingingEnabled) && $isTaxType;
 
@@ -4642,7 +4633,6 @@ class DiagnosticController extends Controller
 
                         // Use production-matching action messages
                         $action = match ($type) {
-                            'tax_reminder' => 'You have a tax payment coming due.',
                             'tax_invoice' => 'A new tax invoice has been created for you.',
                             'tax_overdue' => 'Your tax payment is overdue!',
                             default => 'You have a pending tax notification.',
@@ -4853,7 +4843,6 @@ class DiagnosticController extends Controller
             $typeConst = match ($type) {
                 'tax_generated' => NotificationService::TYPE_TAX_GENERATED,
                 'tax_announcement' => NotificationService::TYPE_TAX_ANNOUNCEMENT,
-                'tax_reminder' => NotificationService::TYPE_TAX_REMINDER,
                 'tax_invoice' => NotificationService::TYPE_TAX_INVOICE,
                 'tax_overdue' => NotificationService::TYPE_TAX_OVERDUE,
                 'event_created' => NotificationService::TYPE_EVENT_CREATED,
@@ -4907,7 +4896,6 @@ class DiagnosticController extends Controller
     {
         $amount = $request->input('test_amount', 5000000);
         $dueDate = $request->input('test_due_date', now()->addDays(7)->format('Y-m-d'));
-        $daysRemaining = $request->input('test_days_remaining', 7);
         $daysOverdue = $request->input('test_days_overdue', 3);
 
         // Get show_amount setting and URLs to match production notifications
@@ -4955,9 +4943,6 @@ class DiagnosticController extends Controller
                 'my_taxes_url' => $myTaxesUrl,
                 'help_url' => $helpUrl,
             ],
-            'tax_reminder' => array_merge($base, [
-                'days_remaining' => $daysRemaining,
-            ]),
             'tax_invoice' => array_merge($base, [
                 'invoice_id' => 99999,
             ]),

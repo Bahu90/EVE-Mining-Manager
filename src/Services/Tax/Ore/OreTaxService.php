@@ -16,7 +16,7 @@ use MiningManager\Services\Configuration\SettingsManagerService;
  * others take a share of the ore itself, handed over in an item exchange
  * contract to the corporation. This is set per corporation (Settings > Tax
  * Rates > How members pay). Bills stay ISK amounts either way, which keeps
- * reminders, balances and reports working as they do; in ore mode members
+ * notifications, balances and reports working as they do; in ore mode members
  * are shown the ore their bill comes to, and accepted contracts are credited
  * against it (OreContractService).
  */

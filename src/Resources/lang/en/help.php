@@ -80,7 +80,7 @@ return [
     'step_2_title' => 'Set Tax Rates',
     'step_2_desc' => 'Configure tax rates for different ore categories: moon ore by rarity (R64, R32, R16, R8, R4), regular ore, ice, gas, abyssal ore, and triglavian ore. Select which ore types to tax.',
     'step_3_title' => 'Configure Tax Payment',
-    'step_3_desc' => 'Set up wallet transfer payment settings including tax code prefix, grace period, reminder schedule, and minimum tax amount.',
+    'step_3_desc' => 'Set up wallet transfer payment settings including tax code prefix, grace period and minimum tax amount.',
     'step_4_title' => 'Grant Permissions',
     'step_4_desc' => 'Set up permissions for your members using SeAT\'s ACL system. Assign view, member, director, or admin roles as appropriate.',
     'step_5_title' => 'Start Mining',
@@ -148,8 +148,6 @@ return [
     'tax_step_7_desc' => 'Each tax record gets a unique payment code (e.g., TAX-MINC-VX45XUQC). Members pay by sending ISK to the corporation wallet with their code in the transfer reason field. Each period gets its own code.',
     'tax_step_8_title' => '8. Payments are Verified',
     'tax_step_8_desc' => 'The verify-payments command scans corporation wallet journal entries every 6 hours and automatically matches the reason field against issued tax codes. A payment that covers the bill marks it "paid"; one that covers part of it marks it "partial", and the bill keeps asking for what is left.',
-    'tax_step_9_title' => '9. Reminders are Sent',
-    'tax_step_9_desc' => 'The send-reminders command runs daily at 10:00 AM. It finds unpaid taxes approaching their due date (within the configured reminder window, default 3 days before) or already overdue, and sends one notification per character with their total owed and earliest due date.',
 
     // Tax Periods
     'tax_periods_title' => 'Tax Calculation Periods',
@@ -170,7 +168,6 @@ return [
     'pipeline_step_4' => '2:15 AM — calculate-taxes: Creates tax records for the completed period. Only acts on period boundary days (2nd for monthly, 2nd/16th for biweekly). The 1-day shift allows late observer data to be reconciled first. Every night it also marks bills overdue once their due date is over.',
     'pipeline_step_5' => '2:30 AM — generate-invoices: Creates invoice records for any new unpaid taxes with completed periods.',
     'pipeline_step_6' => '3:00 AM — calculate-monthly-stats (2nd only): Pre-calculates dashboard statistics for the closed month.',
-    'pipeline_step_7' => '10:00 AM — send-reminders: Sends payment reminders for taxes approaching or past their due date.',
     'pipeline_other' => 'Additionally, verify-payments runs every 6 hours to match wallet transfers against tax codes, and calculate-monthly-stats --current-month runs every 30 minutes to keep the dashboard current.',
 
     // Triggered By / Audit Trail
@@ -543,7 +540,7 @@ return [
     'faq_q2' => 'How does alt grouping work for taxes?',
     'faq_a2' => 'Mining Manager uses accumulated mode, which groups all alt characters under the main character (via SeAT\'s refresh token / user affiliation system). Tax is calculated on the combined total.',
     'faq_q3' => 'What happens if someone doesn\'t pay their taxes?',
-    'faq_a3' => 'The system tracks payment status and sends reminder notifications daily at 10:00 AM for taxes approaching their due date (configurable reminder window, default 3 days before) or already overdue. Directors can view all outstanding taxes on the Tax Overview page.',
+    'faq_a3' => 'The system tracks payment status. Each member sees what they owe and what they paid on My Taxes, an invoice notification goes out when a bill is raised, and an overdue notification once it is late. Directors can view all outstanding taxes on the Tax Overview page.',
     'faq_q4' => 'Where do I put my tax code when paying?',
     'faq_a4' => 'When you pay the corporation in game (right-click its name and choose "Give Money"), enter your tax code in the "reason" field of the transfer dialog. This is how the system matches your payment.',
     'faq_q5' => 'How are ore prices determined?',
@@ -716,7 +713,7 @@ return [
     'collect_setup_desc' => 'Before taxes can be collected, an admin needs to configure these settings:',
     'collect_setup_step_1' => 'Settings > Tax Rates — Set tax percentages for each ore type (moon R64-R4, regular ore, ice, gas). The tax selector controls which ore types are taxed.',
     'collect_setup_step_2' => 'Settings > General — Set the moon owner corporation and payment settings. Settings > Pricing — Set the price provider, valuation method, and market region. These control how ore values are calculated.',
-    'collect_setup_step_3' => 'Settings > Webhooks — Create webhook(s) for Discord/Slack notifications. Enable the tax-related toggles (Tax Generated, New Invoices Announcement, Tax Reminder, Tax Invoice, Tax Overdue) so members get notified, and Outstanding Mining Tax on a directors\' channel for the weekly list of who still owes.',
+    'collect_setup_step_3' => 'Settings > Webhooks — Create webhook(s) for Discord/Slack notifications. Enable the tax-related toggles (Tax Generated, New Invoices Announcement, Tax Invoice, Tax Overdue) so members get notified, and Outstanding Mining Tax on a directors\' channel for the weekly list of who still owes.',
     'collect_setup_step_4' => 'Settings > Features — Make sure "Wallet Verification" and "Notifications" are enabled.',
 
     'collect_timeline_title' => 'The Tax Collection Timeline',
@@ -727,14 +724,8 @@ return [
     'collect_step_4' => 'Notifications go out — members receive their tax bill amount, due date, and a link to the tax page. Check the Tax Overview page to see all generated bills.',
     'collect_step_5' => 'Members pay by sending ISK to the corp wallet with their tax code in the "Reason" field.',
     'collect_step_6' => 'Every 6 hours, the verify-payments command scans the corporation wallet journal and auto-matches payments using tax codes. Matched payments update the bill status.',
-    'collect_step_7' => 'Daily at 10:00 AM, the send-reminders command checks for unpaid taxes approaching their due date and sends reminder notifications to those members.',
     'collect_step_8' => 'Once the due date is over, an unpaid bill is marked "Overdue" (later if the ESI Wallet Lag Buffer under Settings, General is set above its default 24 hours, to give a payment made late on the due date time to reach SeAT). You can view all overdue taxes on the Tax Overview page and take action.',
 
-    'collect_reminders_title' => 'Sending Reminders',
-    'collect_reminders_desc' => 'There are three ways to remind members about unpaid taxes:',
-    'collect_reminder_auto' => 'Automatic — The send-reminders command runs daily at 10:00 AM and notifies members with taxes due within the configured reminder window (default: 3 days before due date) or already overdue.',
-    'collect_reminder_individual' => 'Individual — On the Tax Overview page, click the bell icon next to any unpaid tax to send a reminder to that specific member.',
-    'collect_reminder_bulk' => 'Bulk — Click the "Remind All Unpaid" button on the Tax Overview page to send reminders to ALL members with unpaid, partial, or overdue taxes in one click. Personal reminders skip the general role ping to avoid spam.',
 
     'collect_verify_title' => 'Verifying Payments',
     'collect_verify_desc' => 'Payment verification happens automatically, but directors have additional tools:',
@@ -766,7 +757,7 @@ return [
     'webhook_example_theft' => '#theft-alerts',
     'webhook_example_theft_desc' => 'Webhook with only theft toggles enabled. Theft detected, critical theft, active theft, and incident resolved notifications go here.',
     'webhook_example_tax' => '#tax-channel',
-    'webhook_example_tax_desc' => 'Webhook with only tax toggles enabled. Tax generated, reminders, invoices, and overdue notifications go here.',
+    'webhook_example_tax_desc' => 'Webhook with only tax toggles enabled. Tax generated, invoices, and overdue notifications go here.',
     'webhook_example_officers' => '#officers',
     'webhook_example_officers_desc' => 'Webhook with everything enabled. All notifications go here for leadership visibility.',
 
@@ -782,16 +773,16 @@ return [
     'webhook_cat_events' => 'Mining Events',
     'webhook_cat_events_list' => 'Event Created, Event Started, Event Completed',
     'webhook_cat_tax' => 'Tax',
-    'webhook_cat_tax_events' => 'Tax Generated (broadcast), Tax Announcement (broadcast: new invoices notification without ISK amounts), Tax Reminder (personal), Tax Invoice (personal), Tax Overdue (personal), Outstanding Mining Tax (weekly digest for directors of who still owes)',
+    'webhook_cat_tax_events' => 'Tax Generated (broadcast), Tax Announcement (broadcast: new invoices notification without ISK amounts), Tax Invoice (personal), Tax Overdue (personal), Outstanding Mining Tax (weekly digest for directors of who still owes)',
     'webhook_cat_reports' => 'Reports',
     'webhook_cat_reports_events' => 'Report Generated (when a scheduled report completes)',
     'webhook_cat_health' => 'Plugin Health',
     'webhook_cat_health_events' => 'Price Provider Trouble (price refreshes started failing, the fallback provider took over or stopped answering, or they work again), Moon Scan Missing (moons your refineries drill with no scan in SeAT, valued from the game\'s notices until they are scanned; once per new reason, and daily as well if you switch that on)',
 
     'webhook_role_ping_title' => 'Discord Role Pinging',
-    'webhook_role_ping_desc' => 'Role pinging is configured per notification type on the Notifications tab. Each notification type has its own "Ping Role" toggle and "Role ID" field, allowing you to ping different roles for different events (e.g., @officers for theft alerts, @miners for event announcements). Personal tax notifications (reminder, invoice, overdue) can optionally ping individual Discord users via seat-connector instead of a role. The "Show ISK Amount" toggle controls whether tax amounts are visible in notifications — disable this for privacy if the notification channel is public.',
+    'webhook_role_ping_desc' => 'Role pinging is configured per notification type on the Notifications tab. Each notification type has its own "Ping Role" toggle and "Role ID" field, allowing you to ping different roles for different events (e.g., @officers for theft alerts, @miners for event announcements). Personal tax notifications (invoice, overdue) can optionally ping individual Discord users via seat-connector instead of a role. The "Show ISK Amount" toggle controls whether tax amounts are visible in notifications — disable this for privacy if the notification channel is public.',
 
-    'webhook_role_ping_note' => 'Personal notifications (reminders, invoices, overdue) support user pinging via seat-connector, which maps SeAT characters to Discord users for individual @mentions. Role pinging on personal notifications is also available but should be used carefully to avoid spamming your officer team with individual reminders.',
+    'webhook_role_ping_note' => 'Personal notifications (invoices, overdue) support user pinging via seat-connector, which maps SeAT characters to Discord users for individual @mentions. Role pinging on personal notifications is also available but should be used carefully to avoid spamming your officer team with individual notices.',
 
     // ================================================================
     // Diagnostic Page (Tax Trace)
@@ -839,7 +830,7 @@ return [
     'per_type_settings_title' => 'Per-Type Notification Settings',
     'per_type_settings_desc' => 'On the Notifications tab, each notification type has individual settings:',
     'per_type_ping_role' => 'Ping Role — When enabled, the specified Discord Role ID will be @mentioned in the notification. Configure a different role for different notification types (e.g., @officers for theft, @miners for events).',
-    'per_type_ping_user' => 'Ping User — For personal tax notifications (reminder, invoice, overdue), individual Discord users can be @mentioned. This requires the seat-connector package to map SeAT characters to Discord users.',
+    'per_type_ping_user' => 'Ping User — For personal tax notifications (invoice, overdue), individual Discord users can be @mentioned. This requires the seat-connector package to map SeAT characters to Discord users.',
     'per_type_show_amount' => 'Show ISK Amount — For tax notifications, controls whether the ISK amount is visible in the message. Disable this for privacy if the notification channel is public.',
     'per_type_corporations' => 'Corporations: Outstanding Mining Tax only. Pick corporations and the weekly digest lists just their members, by the corporation SeAT or the plugin\'s lookups place each one in, and says which corporations it covers. With one picked, its link opens Tax Overview on that corporation. Pick none to list everyone who owes.',
 

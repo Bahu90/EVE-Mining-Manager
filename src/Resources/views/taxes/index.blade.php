@@ -205,14 +205,6 @@
                             <i class="fas fa-download"></i> {{ trans('mining-manager::taxes.export') }}
                         </button>
                         @endif
-                        @if($isAdmin ?? false)
-                        <button type="button" class="btn btn-sm btn-warning" id="remindAllUnpaid" data-toggle="tooltip" title="Send reminders to all unpaid/overdue taxes">
-                            <i class="fas fa-bullhorn"></i> Remind All Unpaid
-                        </button>
-                        <button type="button" class="btn btn-sm btn-success" id="sendReminders" data-toggle="tooltip" title="{{ trans('mining-manager::taxes.send_reminders_to_selected') }}">
-                            <i class="fas fa-envelope"></i> {{ trans('mining-manager::taxes.send_reminders') }}
-                        </button>
-                        @endif
                     </div>
                 </div>
                 <div class="card-body">
@@ -465,8 +457,7 @@
                                                 {{-- A part-paid invoice keeps status 'partial' however late it
                                                      gets, because the status column records how much is paid, not
                                                      how late it is. Without this second badge the page would show
-                                                     a calm "Partial" for something the reminder is already
-                                                     chasing as overdue. --}}
+                                                     a calm "Partial" for something already overdue. --}}
                                                 @if($tax->isOverdue())
                                                 <span class="badge badge-danger" title="{{ trans('mining-manager::taxes.partial_overdue_help') }}">
                                                     <i class="fas fa-exclamation-circle"></i> {{ trans('mining-manager::taxes.overdue') }}
@@ -548,14 +539,6 @@
                                                 <i class="fas fa-check"></i>
                                             </button>
                                             <button type="button"
-                                                    class="btn btn-sm btn-warning send-reminder"
-                                                    data-tax-id="{{ $tax->id }}"
-                                                    data-character-name="{{ $tax->character_info['name'] ?? $tax->character_name }}"
-                                                    data-toggle="tooltip"
-                                                    title="{{ trans('mining-manager::taxes.send_reminder') }}">
-                                                <i class="fas fa-envelope"></i>
-                                            </button>
-                                            <button type="button"
                                                     class="btn btn-sm btn-danger delete-tax"
                                                     data-tax-id="{{ $tax->id }}"
                                                     data-character-name="{{ $tax->character_info['name'] ?? $tax->character_name }}"
@@ -597,9 +580,6 @@
                         <div class="col-md-6 text-right">
                             <button type="button" class="btn btn-success" id="bulkMarkPaid">
                                 <i class="fas fa-check"></i> {{ trans('mining-manager::taxes.mark_as_paid') }}
-                            </button>
-                            <button type="button" class="btn btn-warning" id="bulkSendReminders">
-                                <i class="fas fa-envelope"></i> {{ trans('mining-manager::taxes.send_reminders') }}
                             </button>
                             <button type="button" class="btn btn-danger" id="bulkDelete">
                                 <i class="fas fa-trash"></i> Delete Selected
@@ -793,29 +773,6 @@ $(document).ready(function() {
         });
     });
 
-    // Send reminder - single
-    $('.send-reminder').on('click', function() {
-        const taxId = $(this).data('tax-id');
-        const characterName = $(this).data('character-name');
-        
-        if (confirm('{{ trans("mining-manager::taxes.confirm_send_reminder") }} ' + characterName + '?')) {
-            $.ajax({
-                url: '{{ route("mining-manager.taxes.send-reminder") }}',
-                method: 'POST',
-                data: { tax_id: taxId },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    toastr.success(response.message || '{{ trans("mining-manager::taxes.reminder_sent") }}');
-                },
-                error: function(xhr) {
-                    toastr.error(xhr.responseJSON?.message || '{{ trans("mining-manager::taxes.error_sending_reminder") }}');
-                }
-            });
-        }
-    });
-
     // Bulk mark as paid
     $('#bulkMarkPaid').on('click', function() {
         const selectedIds = $('.tax-checkbox:checked').map(function() {
@@ -836,75 +793,6 @@ $(document).ready(function() {
                 },
                 error: function(xhr) {
                     toastr.error(xhr.responseJSON?.message || '{{ trans("mining-manager::taxes.error_bulk_marking") }}');
-                }
-            });
-        }
-    });
-
-    // Bulk send reminders
-    // Remind All Unpaid — sends reminders for all unpaid/overdue taxes without checkbox selection
-    $('#remindAllUnpaid').on('click', function() {
-        // Collect all tax IDs with unpaid/overdue/partial status
-        var unpaidIds = [];
-        $('.tax-row').each(function() {
-            var status = $(this).data('status');
-            if (status === 'unpaid' || status === 'overdue' || status === 'partial') {
-                unpaidIds.push($(this).data('tax-id'));
-            }
-        });
-
-        if (unpaidIds.length === 0) {
-            toastr.info('No unpaid taxes to remind about.');
-            return;
-        }
-
-        if (confirm('Send payment reminders for ' + unpaidIds.length + ' unpaid tax entries?')) {
-            var btn = $(this);
-            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sending...');
-
-            $.ajax({
-                url: '{{ route("mining-manager.taxes.bulk-send-reminders") }}',
-                method: 'POST',
-                data: { tax_ids: unpaidIds },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    toastr.success(response.message || 'Reminders sent!');
-                },
-                error: function(xhr) {
-                    toastr.error(xhr.responseJSON?.message || 'Failed to send reminders');
-                },
-                complete: function() {
-                    btn.prop('disabled', false).html('<i class="fas fa-bullhorn"></i> Remind All Unpaid');
-                }
-            });
-        }
-    });
-
-    $('#bulkSendReminders, #sendReminders').on('click', function() {
-        const selectedIds = $('.tax-checkbox:checked').map(function() {
-            return $(this).val();
-        }).get();
-        
-        if (selectedIds.length === 0) {
-            toastr.warning('{{ trans("mining-manager::taxes.select_items_first") }}');
-            return;
-        }
-        
-        if (confirm('{{ trans("mining-manager::taxes.confirm_bulk_reminders") }} ' + selectedIds.length + ' {{ trans("mining-manager::taxes.members") }}?')) {
-            $.ajax({
-                url: '{{ route("mining-manager.taxes.bulk-send-reminders") }}',
-                method: 'POST',
-                data: { tax_ids: selectedIds },
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                },
-                success: function(response) {
-                    toastr.success(response.message || '{{ trans("mining-manager::taxes.reminders_sent") }}');
-                },
-                error: function(xhr) {
-                    toastr.error(xhr.responseJSON?.message || '{{ trans("mining-manager::taxes.error_sending_reminders") }}');
                 }
             });
         }

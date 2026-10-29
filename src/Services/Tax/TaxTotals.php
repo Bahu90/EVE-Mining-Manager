@@ -23,7 +23,7 @@ class TaxTotals
      * Sums what is left on each bill rather than what it was for. A part-paid
      * bill keeps status Partial however late it gets, so it is counted as late
      * once isOverdue() says so: the same rule as the red badge Tax Overview
-     * shows beside it and the overdue wording the reminders use.
+     * shows beside it and the overdue notification uses.
      *
      * @param \Illuminate\Database\Eloquent\Builder $bills already scoped to whoever is looking
      * @return array{owed: float, owed_count: int, overdue: float, overdue_count: int}

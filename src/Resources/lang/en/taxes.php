@@ -120,9 +120,6 @@ return [
     'view_details' => 'View Details',
     'view_tax' => 'View Tax',
     'details' => 'Details',
-    'send_reminder' => 'Send Reminder',
-    'send_reminders' => 'Send Reminders',
-    'send_reminders_to_selected' => 'Send Reminders to Selected',
     'sync_wallet' => 'Sync Wallet',
     'clear' => 'Clear',
 
@@ -197,13 +194,8 @@ return [
     // Success/Error Messages
     'marked_as_paid_success' => 'Tax successfully marked as paid',
     'error_marking_paid' => 'Error marking tax as paid',
-    'reminder_sent' => 'Payment reminder sent successfully',
-    'error_sending_reminder' => 'Error sending reminder',
     'bulk_marked_success' => ':count taxes marked as paid successfully',
     'error_bulk_marking' => 'Error bulk marking taxes as paid',
-    'confirm_bulk_reminders' => 'Send tax reminders to',
-    'bulk_reminders_sent' => ':count reminders sent successfully',
-    'error_bulk_reminders' => 'Error sending bulk reminders',
 
     // Scope / Permission
     'director_view' => 'Director View',
@@ -235,12 +227,9 @@ return [
     'isk_paid' => 'ISK Paid',
 
     // JavaScript UI translations (confirmations, toasts, etc.)
-    'confirm_send_reminder' => 'Send tax reminder to',
     'confirm_bulk_mark_paid' => 'Mark as paid for',
     'items' => 'items',
     'select_items_first' => 'Please select items first',
-    'reminders_sent' => 'Reminders sent successfully',
-    'error_sending_reminders' => 'Error sending reminders',
     'error_occurred' => 'An error occurred',
     'error_refreshing_tracking' => 'Error refreshing tracking data',
     'code_copied' => 'Tax code copied to clipboard',

@@ -193,11 +193,6 @@
                                                     <i class="fas fa-bullhorn"></i>
                                                 </span>
                                             @endif
-                                            @if($webhook->notify_tax_reminder)
-                                                <span class="badge badge-warning" title="Tax Reminder">
-                                                    <i class="fas fa-clock"></i>
-                                                </span>
-                                            @endif
                                             @if($webhook->notify_tax_invoice)
                                                 <span class="badge badge-info" title="Tax Invoice">
                                                     <i class="fas fa-file-invoice"></i>
@@ -570,13 +565,6 @@
                             <label class="custom-control-label" for="notify-tax-announcement">
                                 <i class="fas fa-bullhorn text-primary"></i>
                                 New Invoices Announcement <span class="badge badge-secondary badge-sm">General</span>
-                            </label>
-                        </div>
-                        <div class="custom-control custom-checkbox">
-                            <input type="checkbox" class="custom-control-input" id="notify-tax-reminder" name="notify_tax_reminder" value="1">
-                            <label class="custom-control-label" for="notify-tax-reminder">
-                                <i class="fas fa-clock text-warning"></i>
-                                Tax Reminder
                             </label>
                         </div>
                         <div class="custom-control custom-checkbox">

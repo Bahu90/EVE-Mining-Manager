@@ -848,9 +848,9 @@ class SettingsController extends Controller
 
             // Legacy discord pinging — derive from per-type settings
             // If any tax type has ping_user enabled, consider pinging enabled
-            $data['discord_pinging_enabled'] = collect(['tax_reminder', 'tax_invoice', 'tax_overdue'])
+            $data['discord_pinging_enabled'] = collect(['tax_invoice', 'tax_overdue'])
                 ->contains(fn ($t) => $typeSettings[$t]['ping_user'] ?? false);
-            $data['discord_ping_show_amount'] = $typeSettings['tax_reminder']['show_amount'] ?? true;
+            $data['discord_ping_show_amount'] = $typeSettings['tax_invoice']['show_amount'] ?? true;
 
             // Metenox cargo full threshold (default 85). Operator-configurable
             // via the input below the metenox_cargo_full type card.
@@ -991,8 +991,6 @@ class SettingsController extends Controller
             // rows can be created).
             'tax_calculation_period' => 'required|in:monthly,biweekly',
             'tax_payment_deadline_days' => 'required|integer|min:1|max:90',
-            'send_tax_reminders' => 'nullable|boolean',
-            'tax_reminder_days' => 'required|integer|min:1|max:30',
         ]);
 
         if ($validator->fails()) {
@@ -1029,7 +1027,6 @@ class SettingsController extends Controller
 
             // Convert other checkboxes
             $data['auto_generate_tax_codes'] = $request->has('auto_generate_tax_codes');
-            $data['send_tax_reminders'] = $request->has('send_tax_reminders');
 
             // Pass through the "apply period change immediately" override flag.
             // When unchecked (default), the settings service queues any
@@ -1577,7 +1574,6 @@ class SettingsController extends Controller
             $data['notify_event_completed'] = $request->boolean('notify_event_completed');
             $data['notify_tax_generated'] = $request->boolean('notify_tax_generated');
             $data['notify_tax_announcement'] = $request->boolean('notify_tax_announcement');
-            $data['notify_tax_reminder'] = $request->boolean('notify_tax_reminder');
             $data['notify_tax_invoice'] = $request->boolean('notify_tax_invoice');
             $data['notify_tax_overdue'] = $request->boolean('notify_tax_overdue');
             $data['notify_report_generated'] = $request->boolean('notify_report_generated');
@@ -1658,7 +1654,6 @@ class SettingsController extends Controller
             $data['notify_event_completed'] = $request->boolean('notify_event_completed');
             $data['notify_tax_generated'] = $request->boolean('notify_tax_generated');
             $data['notify_tax_announcement'] = $request->boolean('notify_tax_announcement');
-            $data['notify_tax_reminder'] = $request->boolean('notify_tax_reminder');
             $data['notify_tax_invoice'] = $request->boolean('notify_tax_invoice');
             $data['notify_tax_overdue'] = $request->boolean('notify_tax_overdue');
             $data['notify_report_generated'] = $request->boolean('notify_report_generated');
@@ -1815,7 +1810,6 @@ class SettingsController extends Controller
             'notify_event_completed' => 'nullable|boolean',
             'notify_tax_generated' => 'nullable|boolean',
             'notify_tax_announcement' => 'nullable|boolean',
-            'notify_tax_reminder' => 'nullable|boolean',
             'notify_tax_invoice' => 'nullable|boolean',
             'notify_tax_overdue' => 'nullable|boolean',
             'notify_report_generated' => 'nullable|boolean',

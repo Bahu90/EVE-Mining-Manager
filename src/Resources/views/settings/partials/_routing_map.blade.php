@@ -168,7 +168,6 @@
             'types' => [
                 'tax_generated'    => ['label' => 'Mining Taxes Summary',     'col' => 'notify_tax_generated'],
                 'tax_announcement' => ['label' => 'New Invoices Announcement','col' => 'notify_tax_announcement'],
-                'tax_reminder'     => ['label' => 'Tax Payment Reminder',     'col' => 'notify_tax_reminder'],
                 'tax_invoice'      => ['label' => 'Tax Invoice Created',      'col' => 'notify_tax_invoice', 'role_blocked' => true],
                 'tax_overdue'      => ['label' => 'Tax Payment Overdue',      'col' => 'notify_tax_overdue'],
             ],

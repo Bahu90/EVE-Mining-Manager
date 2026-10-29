@@ -49,8 +49,7 @@ class CalculateMonthlyTaxesCommand extends Command
         try {
         // Bills already raised go overdue on time every day, so this runs
         // before anything below can skip the run or fail it. Most days are not
-        // a period boundary, and Send Tax Reminders, the only other daily
-        // caller, can be switched off.
+        // a period boundary, and this is the only daily caller.
         try {
             $overdueCount = $this->taxService->updateOverdueTaxes();
             if ($overdueCount > 0) {

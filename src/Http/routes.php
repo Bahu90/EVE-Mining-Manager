@@ -325,21 +325,9 @@ Route::group([
             'middleware' => 'can:mining-manager.director',
         ]);
 
-        Route::post('/send-reminder', [
-            'as' => 'mining-manager.taxes.send-reminder',
-            'uses' => 'TaxController@sendReminder',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
         Route::post('/bulk/mark-paid', [
             'as' => 'mining-manager.taxes.bulk-mark-paid',
             'uses' => 'TaxController@bulkMarkPaid',
-            'middleware' => 'can:mining-manager.admin',
-        ]);
-
-        Route::post('/bulk/send-reminders', [
-            'as' => 'mining-manager.taxes.bulk-send-reminders',
-            'uses' => 'TaxController@bulkSendReminders',
             'middleware' => 'can:mining-manager.admin',
         ]);
 

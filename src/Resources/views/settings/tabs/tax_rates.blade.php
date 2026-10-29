@@ -828,47 +828,6 @@
                     {{ trans('mining-manager::settings.tax_payment_deadline_help') }}
                 </small>
             </div>
-
-            <div class="custom-control custom-switch">
-                <input type="checkbox"
-                       class="custom-control-input"
-                       id="send_tax_reminders"
-                       name="send_tax_reminders"
-                       value="1"
-                       {{ old('send_tax_reminders', $settings->send_tax_reminders ?? true) ? 'checked' : '' }}>
-                <label class="custom-control-label" for="send_tax_reminders">
-                    <i class="fas fa-bell"></i>
-                    {{ trans('mining-manager::settings.send_tax_reminders') }}
-                </label>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.send_tax_reminders_help') }}
-                </small>
-            </div>
-
-            <div class="form-group mt-3">
-                <label for="tax_reminder_days">
-                    <i class="fas fa-calendar-day"></i>
-                    {{ trans('mining-manager::settings.tax_reminder_days') }}
-                </label>
-                <div class="input-group">
-                    <input type="number"
-                           class="form-control @error('tax_reminder_days') is-invalid @enderror"
-                           id="tax_reminder_days"
-                           name="tax_reminder_days"
-                           value="{{ old('tax_reminder_days', $settings->tax_reminder_days ?? 3) }}"
-                           min="1"
-                           max="30">
-                    <div class="input-group-append">
-                        <span class="input-group-text">{{ trans('mining-manager::settings.days') }}</span>
-                    </div>
-                    @error('tax_reminder_days')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-                <small class="form-text text-muted">
-                    {{ trans('mining-manager::settings.tax_reminder_days_help') }}
-                </small>
-            </div>
         </div>
     </div>
 

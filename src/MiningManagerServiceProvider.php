@@ -12,7 +12,6 @@ use MiningManager\Console\Commands\GenerateTaxInvoicesCommand;
 use MiningManager\Console\Commands\UpdateMiningEventsCommand;
 use MiningManager\Console\Commands\GenerateReportsCommand;
 use MiningManager\Console\Commands\VerifyWalletPaymentsCommand;
-use MiningManager\Console\Commands\SendTaxRemindersCommand;
 use MiningManager\Console\Commands\SendOutstandingDigestCommand;
 use MiningManager\Console\Commands\UpdateMoonExtractionsCommand;
 use MiningManager\Console\Commands\CheckExtractionArrivalsCommand;
@@ -119,7 +118,6 @@ class MiningManagerServiceProvider extends AbstractSeatPlugin
                 UpdateMiningEventsCommand::class,
                 GenerateReportsCommand::class,
                 VerifyWalletPaymentsCommand::class,
-                SendTaxRemindersCommand::class,
                 SendOutstandingDigestCommand::class,
                 UpdateMoonExtractionsCommand::class,
                 CheckExtractionArrivalsCommand::class,

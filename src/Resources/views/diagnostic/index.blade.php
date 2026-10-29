@@ -1333,7 +1333,6 @@
                                             <optgroup label="Tax Notifications">
                                                 <option value="tax_generated">📋 Mining Taxes Summary (General)</option>
                                                 <option value="tax_announcement">📢 New Invoices Announcement (General)</option>
-                                                <option value="tax_reminder">⏰ Tax Payment Reminder (Individual)</option>
                                                 <option value="tax_invoice">📧 Tax Invoice Created (Individual)</option>
                                                 <option value="tax_overdue">❌ Tax Payment Overdue (Individual)</option>
                                             </optgroup>
@@ -1522,10 +1521,6 @@
                                                 <div class="form-group mb-2">
                                                     <label class="small mb-1">Due Date</label>
                                                     <input type="date" id="ntDueDate" class="form-control form-control-sm" value="{{ now()->addDays(7)->format('Y-m-d') }}">
-                                                </div>
-                                                <div class="form-group mb-2" id="ntDaysRemainingGroup">
-                                                    <label class="small mb-1">Days Remaining</label>
-                                                    <input type="number" id="ntDaysRemaining" class="form-control form-control-sm" value="7" min="0">
                                                 </div>
                                                 <div class="form-group mb-2" id="ntDaysOverdueGroup" style="display:none;">
                                                     <label class="small mb-1">Days Overdue</label>
@@ -3325,7 +3320,6 @@ function runNotificationTest() {
         test_ping: document.getElementById('ntTestPing')?.checked || false,
         test_amount: parseFloat(document.getElementById('ntAmount').value) || 5000000,
         test_due_date: document.getElementById('ntDueDate').value,
-        test_days_remaining: parseInt(document.getElementById('ntDaysRemaining').value) || 7,
         test_days_overdue: parseInt(document.getElementById('ntDaysOverdue').value) || 3,
         test_event_name: document.getElementById('ntEventName').value || 'Test Mining Event',
         test_location: document.getElementById('ntLocation').value || 'Jita',
@@ -3429,7 +3423,6 @@ function runNotificationLiveFire() {
         // ingests these on the server side to shape $data for the wrapper.
         test_amount: parseFloat(document.getElementById('ntAmount').value) || 5000000,
         test_due_date: document.getElementById('ntDueDate').value,
-        test_days_remaining: parseInt(document.getElementById('ntDaysRemaining').value) || 7,
         test_days_overdue: parseInt(document.getElementById('ntDaysOverdue').value) || 3,
         test_event_name: document.getElementById('ntEventName').value || 'Test Mining Event',
         test_location: document.getElementById('ntLocation').value || 'Jita',
@@ -3500,7 +3493,6 @@ function runFireAllNotifications() {
     // Order: lightest first (tax/event) → moon/report → theft last
     // so the user sees quick wins before the longer theft chain.
     const allTypes = [
-        { type: 'tax_reminder',     label: '⏰ Tax Reminder' },
         { type: 'tax_invoice',      label: '📧 Tax Invoice' },
         { type: 'tax_overdue',      label: '❌ Tax Overdue' },
         { type: 'tax_generated',    label: '📋 Mining Taxes Summary' },
@@ -3559,7 +3551,6 @@ function runFireAllNotifications() {
         character_name: characterName,
         test_amount: parseFloat(document.getElementById('ntAmount').value) || 5000000,
         test_due_date: document.getElementById('ntDueDate').value,
-        test_days_remaining: parseInt(document.getElementById('ntDaysRemaining').value) || 7,
         test_days_overdue: parseInt(document.getElementById('ntDaysOverdue').value) || 3,
         test_event_name: document.getElementById('ntEventName').value || 'Test Mining Event',
         test_location: document.getElementById('ntLocation').value || 'Jita',
@@ -3689,15 +3680,12 @@ function updateNotifTestFields() {
     document.getElementById('ntMoonFields').style.display = 'none';
     document.getElementById('ntTheftFields').style.display = 'none';
 
-    document.getElementById('ntDaysRemainingGroup').style.display = 'none';
     document.getElementById('ntDaysOverdueGroup').style.display = 'none';
     document.getElementById('ntActiveTheftFields').style.display = 'none';
 
-    if (type === 'tax_reminder' || type === 'tax_invoice' || type === 'tax_overdue' || type === 'tax_generated' || type === 'tax_announcement') {
+    if (type === 'tax_invoice' || type === 'tax_overdue' || type === 'tax_generated' || type === 'tax_announcement') {
         document.getElementById('ntTaxFields').style.display = 'block';
-        if (type === 'tax_reminder') {
-            document.getElementById('ntDaysRemainingGroup').style.display = 'block';
-        } else if (type === 'tax_overdue') {
+        if (type === 'tax_overdue') {
             document.getElementById('ntDaysOverdueGroup').style.display = 'block';
         }
     } else if (type === 'event_created' || type === 'event_started' || type === 'event_completed') {

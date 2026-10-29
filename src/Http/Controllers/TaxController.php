@@ -171,10 +171,9 @@ class TaxController extends Controller
             'enable_upfront_payments' => (bool) ($flags['enable_upfront_payments'] ?? false),
             'allow_export_data' => (bool) ($flags['allow_export_data'] ?? true),
 
-            // Not feature flags in the service's sense, they live under
-            // tax_rates, so these two stay direct reads.
+            // Not a feature flag in the service's sense, it lives under
+            // tax_rates, so it stays a direct read.
             'tax_codes' => (bool) $this->settingsService->getSetting('tax_rates.auto_generate_tax_codes', true),
-            'reminders' => (bool) $this->settingsService->getSetting('tax_rates.send_tax_reminders', false),
         ];
     }
 
@@ -1421,68 +1420,6 @@ class TaxController extends Controller
     }
 
     /**
-     * Send payment reminder
-     */
-    public function sendReminder(Request $request)
-    {
-        try {
-            // Validate up front for parity with markPaid — otherwise a
-            // non-integer tax_id falls through to MySQL with a soft cast.
-            $validated = $request->validate([
-                'tax_id' => 'required|integer|exists:mining_taxes,id',
-            ]);
-
-            $taxId = (int) $validated['tax_id'];
-            $tax = MiningTax::findOrFail($taxId);
-
-            $dueDate = $tax->due_date ? Carbon::parse($tax->due_date) : Carbon::now();
-            $daysRemaining = (int) max(0, Carbon::now()->startOfDay()->diffInDays($dueDate->startOfDay(), false));
-
-            // Ask for what is left, not what was originally charged, and say
-            // how much of it their balance already met.
-            $outstanding = round((float) $tax->amount_owed - (float) ($tax->amount_paid ?? 0), 2);
-            $creditApplied = round((float) PaymentAllocation::where('mining_tax_id', $tax->id)
-                ->where('source', PaymentAllocation::SOURCE_CREDIT)
-                ->sum('amount'), 2);
-
-            $result = $this->notificationService->sendTaxReminder(
-                (int) $tax->character_id,
-                $outstanding,
-                $dueDate,
-                $daysRemaining,
-                ['credit_applied' => $creditApplied]
-            );
-
-            // Update reminder tracking on the tax record
-            $tax->update([
-                'last_reminder_sent' => Carbon::now(),
-                'reminder_count' => ($tax->reminder_count ?? 0) + 1,
-            ]);
-
-            Log::info('Payment reminder sent', [
-                'tax_id' => $taxId,
-                'character_id' => $tax->character_id,
-                'amount' => $tax->amount_owed,
-                'requested_by' => auth()->user()->name,
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => trans('mining-manager::taxes.reminder_sent'),
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error sending reminder: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => 'error',
-                'message' => trans('mining-manager::taxes.error_sending_reminder'),
-                'error' => PublicError::message($e),
-            ], 500);
-        }
-    }
-
-    /**
      * Bulk mark taxes as paid
      */
     public function bulkMarkPaid(Request $request)
@@ -1568,91 +1505,6 @@ class TaxController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => trans('mining-manager::taxes.error_bulk_marking'),
-                'error' => PublicError::message($e),
-            ], 500);
-        }
-    }
-
-    /**
-     * Bulk send reminders
-     */
-    public function bulkSendReminders(Request $request)
-    {
-        $request->validate([
-            'tax_ids' => 'required|array|min:1',
-            'tax_ids.*' => 'integer|min:1',
-        ]);
-
-        try {
-            $taxIds = $request->input('tax_ids', []);
-
-            $taxes = MiningTax::whereIn('id', $taxIds)->get();
-            $sent = 0;
-            $errors = 0;
-
-            // Group by character to send one reminder per character
-            $taxesByCharacter = $taxes->groupBy('character_id');
-
-            foreach ($taxesByCharacter as $characterId => $characterTaxes) {
-                try {
-                    $totalOwed = round($characterTaxes->sum(
-                        fn ($t) => max(0, (float) $t->amount_owed - (float) ($t->amount_paid ?? 0))
-                    ), 2);
-
-                    if ($totalOwed <= 0) {
-                        continue;
-                    }
-
-                    $creditApplied = round((float) PaymentAllocation::whereIn('mining_tax_id', $characterTaxes->pluck('id'))
-                        ->where('source', PaymentAllocation::SOURCE_CREDIT)
-                        ->sum('amount'), 2);
-
-                    // Find the earliest due date among these taxes
-                    $earliestDueDate = $characterTaxes->min('due_date');
-                    $dueDate = $earliestDueDate ? Carbon::parse($earliestDueDate) : Carbon::now();
-                    $daysRemaining = (int) max(0, Carbon::now()->startOfDay()->diffInDays($dueDate->startOfDay(), false));
-
-                    $this->notificationService->sendTaxReminder(
-                        (int) $characterId,
-                        (float) $totalOwed,
-                        $dueDate,
-                        $daysRemaining,
-                        ['credit_applied' => $creditApplied]
-                    );
-
-                    // Update reminder tracking on each tax record
-                    foreach ($characterTaxes as $tax) {
-                        $tax->update([
-                            'last_reminder_sent' => Carbon::now(),
-                            'reminder_count' => ($tax->reminder_count ?? 0) + 1,
-                        ]);
-                    }
-
-                    $sent++;
-                } catch (\Exception $e) {
-                    Log::warning("Failed to send reminder to character {$characterId}: " . $e->getMessage());
-                    $errors++;
-                }
-            }
-
-            Log::info('Bulk reminders sent', [
-                'requested' => count($taxIds),
-                'characters_notified' => $sent,
-                'errors' => $errors,
-                'requested_by' => auth()->user()->name,
-            ]);
-
-            return response()->json([
-                'status' => 'success',
-                'message' => trans('mining-manager::taxes.bulk_reminders_sent', ['count' => $sent]),
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Error sending bulk reminders: ' . $e->getMessage());
-
-            return response()->json([
-                'status' => 'error',
-                'message' => trans('mining-manager::taxes.error_bulk_reminders'),
                 'error' => PublicError::message($e),
             ], 500);
         }

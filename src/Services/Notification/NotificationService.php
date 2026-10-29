@@ -29,7 +29,7 @@ use Exception;
  *  - Discord / Slack / Custom (per-webhook configurations table)
  *
  * Supported notification types:
- *  - Tax: tax_reminder, tax_invoice, tax_overdue, tax_generated, tax_announcement
+ *  - Tax: tax_invoice, tax_overdue, tax_generated, tax_announcement
  *  - Event: event_created, event_started, event_completed
  *  - Moon: moon_ready (chunk arrival), jackpot_detected
  *  - Theft: theft_detected, critical_theft, active_theft, incident_resolved
@@ -56,7 +56,6 @@ class NotificationService
      */
     const TYPE_TAX_GENERATED = 'tax_generated';
     const TYPE_TAX_ANNOUNCEMENT = 'tax_announcement';
-    const TYPE_TAX_REMINDER = 'tax_reminder';
     const TYPE_TAX_INVOICE = 'tax_invoice';
     const TYPE_TAX_OVERDUE = 'tax_overdue';
     const TYPE_TAX_OUTSTANDING_DIGEST = 'tax_outstanding_digest';
@@ -152,49 +151,6 @@ class NotificationService
         $this->logNotification($type, $recipients, $channels, $results);
 
         return $results;
-    }
-
-    /**
-     * Send tax reminder notification
-     *
-     * @param int $characterId
-     * @param float $amount
-     * @param Carbon $dueDate
-     * @param int $daysRemaining
-     * @return array
-     */
-    public function sendTaxReminder(int $characterId, float $amount, Carbon $dueDate, int $daysRemaining, array $context = []): array
-    {
-        $typeSettings = $this->settings->getTypeNotificationSettings('tax_reminder');
-
-        $data = [
-            'amount' => $amount,
-            'due_date' => $dueDate->format('Y-m-d'),
-            'days_remaining' => $daysRemaining,
-            'formatted_amount' => number_format($amount, 2) . ' ISK',
-            'show_amount' => $typeSettings['show_amount'],
-            'tax_page_url' => $this->getTaxPageUrl(),
-            'my_taxes_url' => $this->getMyTaxesUrl(),
-            'help_url' => $this->getHelpPayUrl(),
-            'is_personal' => true,
-            // Miner's current corp — lets sendViaWebhooks extend scope to
-            // include per-corp webhooks so individual mining-group directors
-            // can receive tax notifications for just their own members.
-            'miner_corporation_id' => $this->resolveMinerCorporationId($characterId),
-        ];
-
-        // Money already met from the member's balance. Passed by the caller
-        // because only it knows which invoices this figure covers. Without it a
-        // member sees a smaller number than the invoice they remember and has
-        // no way to tell whether it is a discount, an error, or their own money.
-        $creditApplied = round((float) ($context['credit_applied'] ?? 0), 2);
-
-        if ($creditApplied > 0) {
-            $data['credit_applied'] = $creditApplied;
-            $data['formatted_credit_applied'] = number_format($creditApplied, 2) . ' ISK';
-        }
-
-        return $this->send(self::TYPE_TAX_REMINDER, [$characterId], $data);
     }
 
     /**
@@ -920,7 +876,6 @@ class NotificationService
         $typeConst = match ($eventType) {
             'tax_generated' => self::TYPE_TAX_GENERATED,
             'tax_announcement' => self::TYPE_TAX_ANNOUNCEMENT,
-            'tax_reminder' => self::TYPE_TAX_REMINDER,
             'tax_invoice' => self::TYPE_TAX_INVOICE,
             'tax_overdue' => self::TYPE_TAX_OVERDUE,
             'tax_outstanding_digest' => self::TYPE_TAX_OUTSTANDING_DIGEST,
@@ -1356,7 +1311,6 @@ class NotificationService
     protected function isTaxNotificationType(string $type): bool
     {
         return in_array($type, [
-            self::TYPE_TAX_REMINDER,
             self::TYPE_TAX_INVOICE,
             self::TYPE_TAX_OVERDUE,
         ]);
@@ -1379,7 +1333,6 @@ class NotificationService
         $typeKey = match ($type) {
             self::TYPE_TAX_GENERATED => 'tax_generated',
             self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_REMINDER => 'tax_reminder',
             self::TYPE_TAX_INVOICE => 'tax_invoice',
             self::TYPE_TAX_OVERDUE => 'tax_overdue',
             self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
@@ -1426,7 +1379,6 @@ class NotificationService
         $typeKey = match ($type) {
             self::TYPE_TAX_GENERATED => 'tax_generated',
             self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_REMINDER => 'tax_reminder',
             self::TYPE_TAX_INVOICE => 'tax_invoice',
             self::TYPE_TAX_OVERDUE => 'tax_overdue',
             self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
@@ -1605,7 +1557,6 @@ class NotificationService
         $eventType = match ($type) {
             self::TYPE_TAX_GENERATED => 'tax_generated',
             self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_REMINDER => 'tax_reminder',
             self::TYPE_TAX_INVOICE => 'tax_invoice',
             self::TYPE_TAX_OVERDUE => 'tax_overdue',
             self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
@@ -1650,8 +1601,7 @@ class NotificationService
         // Webhook scoping rules:
         //  - Report notifications (report_generated): GLOBAL — reports
         //    aggregate across the install, not a single corp.
-        //  - Individual tax notifications (tax_reminder / tax_invoice /
-        //    tax_overdue): scoped to NULL + Tax Program Corp + the MINER'S
+        //  - Individual tax notifications (tax_invoice / tax_overdue): scoped to NULL + Tax Program Corp + the MINER'S
         //    OWN corp. Lets each mining-group director see their own
         //    members' notifications.
         //  - Event notifications (event_created / event_started /
@@ -1662,7 +1612,7 @@ class NotificationService
         //  - Everything else (broadcast tax_*, moon_*, theft_*): scoped to
         //    the Tax Program / Moon Owner Corporation only.
         $eventTypesThatAreGlobal = ['report_generated'];
-        $individualTaxEventTypes = ['tax_reminder', 'tax_invoice', 'tax_overdue'];
+        $individualTaxEventTypes = ['tax_invoice', 'tax_overdue'];
         $eventDispatchTypes = ['event_created', 'event_started', 'event_completed'];
 
         if (in_array($eventType, $eventTypesThatAreGlobal, true)) {
@@ -1671,8 +1621,8 @@ class NotificationService
                 ->get();
         } elseif (in_array($eventType, $individualTaxEventTypes, true)) {
             // Individual tax notifications — include the miner's corp in the
-            // scope filter if available. The wrapper methods (sendTaxReminder,
-            // sendTaxInvoice, sendTaxOverdue) resolve the miner's current corp
+            // scope filter if available. The wrapper methods (sendTaxInvoice,
+            // sendTaxOverdue) resolve the miner's current corp
             // via character_affiliations and inject miner_corporation_id.
             $minerCorpId = isset($data['miner_corporation_id']) && $data['miner_corporation_id']
                 ? (int) $data['miner_corporation_id']
@@ -1820,7 +1770,6 @@ class NotificationService
         $typeKey = match ($type) {
             self::TYPE_TAX_GENERATED => 'tax_generated',
             self::TYPE_TAX_ANNOUNCEMENT => 'tax_announcement',
-            self::TYPE_TAX_REMINDER => 'tax_reminder',
             self::TYPE_TAX_INVOICE => 'tax_invoice',
             self::TYPE_TAX_OVERDUE => 'tax_overdue',
             self::TYPE_TAX_OUTSTANDING_DIGEST => 'tax_outstanding_digest',
@@ -1858,7 +1807,6 @@ class NotificationService
         $mentionStr = implode(' ', $mentions);
 
         $action = match ($type) {
-            self::TYPE_TAX_REMINDER => 'You have a tax payment coming due.',
             self::TYPE_TAX_INVOICE => 'A new tax invoice has been created for you.',
             self::TYPE_TAX_OVERDUE => 'Your tax payment is overdue!',
             default => 'You have a pending tax notification.',
@@ -1887,22 +1835,6 @@ class NotificationService
     public function formatMessageForESI(string $type, array $data): array
     {
         return match ($type) {
-            self::TYPE_TAX_REMINDER => [
-                'subject' => 'Mining Tax Payment Reminder',
-                'body' => sprintf(
-                    "Hello,\n\nThis is a reminder that you have an outstanding mining tax payment due.\n\n" .
-                    "Amount: %s\nDue Date: %s\nDays Remaining: %d\n%s\n" .
-                    "Please make your payment before the due date to avoid any penalties.\n\n" .
-                    "Thank you,\n%s Management",
-                    $data['formatted_amount'],
-                    $data['due_date'],
-                    $data['days_remaining'],
-                    !empty($data['formatted_credit_applied'])
-                        ? "\n{$data['formatted_credit_applied']} of this period was already covered from your account balance.\n"
-                        : '',
-                    $this->getCorpName()
-                )
-            ],
             self::TYPE_TAX_INVOICE => [
                 'subject' => 'Mining Tax Invoice',
                 'body' => sprintf(
@@ -2289,7 +2221,6 @@ class NotificationService
             self::TYPE_TAX_OUTSTANDING_DIGEST => 'warning',
             self::TYPE_PRICE_PROVIDER => 'warning',
             self::TYPE_MOON_SCAN_MISSING => '#E67E22',
-            self::TYPE_TAX_REMINDER => 'warning',
             self::TYPE_TAX_INVOICE => 'warning',
             self::TYPE_TAX_GENERATED => 'good',
             self::TYPE_TAX_ANNOUNCEMENT => '#3498DB',
@@ -2316,7 +2247,6 @@ class NotificationService
         $text = match ($type) {
             self::TYPE_TAX_GENERATED => "Mining Taxes Summary: {$data['tax_count']} accounts taxed — {$data['formatted_amount']}",
             self::TYPE_TAX_ANNOUNCEMENT => "New Mining Invoices — {$data['period_label']}. Check My Taxes for details.",
-            self::TYPE_TAX_REMINDER => "Tax Payment Reminder: {$data['formatted_amount']} due {$data['due_date']}",
             self::TYPE_TAX_INVOICE => "New Tax Invoice: {$data['formatted_amount']} due {$data['due_date']}",
             self::TYPE_TAX_OVERDUE => "Overdue Tax: {$data['formatted_amount']} - {$data['days_overdue']} days overdue",
             self::TYPE_TAX_OUTSTANDING_DIGEST => "Outstanding mining tax: " . ($data['member_count'] ?? 0) . " member(s), " . ($data['formatted_total'] ?? '0 ISK') . " still owed",
@@ -2595,8 +2525,7 @@ class NotificationService
             self::TYPE_TAX_OUTSTANDING_DIGEST => 15105570, // Amber - a summary, not an alarm
             self::TYPE_PRICE_PROVIDER => 15158332, // Red while it is failing; the title says which way it went
             self::TYPE_MOON_SCAN_MISSING => 0xE67E22, // Orange: valued from a fallback until somebody scans
-            self::TYPE_TAX_REMINDER => 16776960, // Yellow
-            self::TYPE_TAX_INVOICE => 16776960, // Yellow (action required, same as reminder)
+            self::TYPE_TAX_INVOICE => 16776960, // Yellow: action required
             self::TYPE_TAX_GENERATED => 3447003, // Teal
             self::TYPE_TAX_ANNOUNCEMENT => 4437216, // Blue
             self::TYPE_EVENT_CREATED => 4437216, // Blue
@@ -2629,7 +2558,6 @@ class NotificationService
         $title = match ($type) {
             self::TYPE_TAX_GENERATED => '📋 Mining Taxes Summary',
             self::TYPE_TAX_ANNOUNCEMENT => '📢 New Mining Invoices',
-            self::TYPE_TAX_REMINDER => '⏰ Tax Payment Reminder',
             self::TYPE_TAX_INVOICE => '📧 New Tax Invoice',
             self::TYPE_TAX_OVERDUE => '❌ Overdue Tax Payment',
             self::TYPE_TAX_OUTSTANDING_DIGEST => '📋 Outstanding Mining Tax',
@@ -2708,7 +2636,7 @@ class NotificationService
                 isset($data['my_taxes_url']) ? ['title' => 'My Taxes', 'value' => '<' . $data['my_taxes_url'] . '|View My Taxes>', 'short' => true] : null,
                 isset($data['help_url']) ? ['title' => 'How to Pay', 'value' => '<' . $data['help_url'] . '|Payment Guide>', 'short' => true] : null,
             ])),
-            self::TYPE_TAX_REMINDER, self::TYPE_TAX_INVOICE => array_values(array_filter([
+            self::TYPE_TAX_INVOICE => array_values(array_filter([
                 ($data['show_amount'] ?? true) ? ['title' => 'Amount', 'value' => $data['formatted_amount'], 'short' => true] : null,
                 (($data['show_amount'] ?? true) && !empty($data['formatted_credit_applied']))
                     ? ['title' => 'Already covered from balance', 'value' => $data['formatted_credit_applied'], 'short' => true]
@@ -2964,16 +2892,6 @@ class NotificationService
                 ['name' => '📅 Period', 'value' => $data['period_label'], 'inline' => true],
                 ['name' => '📆 Due Date', 'value' => $data['due_date'] ?? 'See tax page', 'inline' => true],
                 ['name' => 'ℹ️ Info', 'value' => "Mining tax invoices have been generated for this period.\nCheck **My Taxes** to view your invoice and payment instructions.", 'inline' => false],
-                isset($data['my_taxes_url']) ? ['name' => '📋 My Taxes', 'value' => '[View My Taxes](' . $data['my_taxes_url'] . ')', 'inline' => true] : null,
-                isset($data['help_url']) ? ['name' => '❓ How to Pay', 'value' => '[Payment Guide](' . $data['help_url'] . ')', 'inline' => true] : null,
-            ])),
-            self::TYPE_TAX_REMINDER => array_values(array_filter([
-                ($data['show_amount'] ?? true) ? ['name' => '💰 Amount', 'value' => $data['formatted_amount'], 'inline' => true] : null,
-                (($data['show_amount'] ?? true) && !empty($data['formatted_credit_applied']))
-                    ? ['name' => '🐷 Already covered from balance', 'value' => $data['formatted_credit_applied'], 'inline' => true]
-                    : null,
-                ['name' => '📅 Due Date', 'value' => $data['due_date'], 'inline' => true],
-                isset($data['days_remaining']) ? ['name' => '⏳ Days Remaining', 'value' => (string) $data['days_remaining'], 'inline' => true] : null,
                 isset($data['my_taxes_url']) ? ['name' => '📋 My Taxes', 'value' => '[View My Taxes](' . $data['my_taxes_url'] . ')', 'inline' => true] : null,
                 isset($data['help_url']) ? ['name' => '❓ How to Pay', 'value' => '[Payment Guide](' . $data['help_url'] . ')', 'inline' => true] : null,
             ])),
@@ -3334,7 +3252,7 @@ class NotificationService
      *      entire CHANNEL_DISCORD dispatch path (which actually fans out to
      *      all three types via sendViaWebhooks) would be skipped, silently
      *      dropping ALL per-webhook notifications.
-     *   2. OR-ing only a subset of the `notify_*` flags (tax_reminder/invoice/
+     *   2. OR-ing only a subset of the `notify_*` flags (tax_invoice/
      *      overdue, event_*, moon_arrival). Missing
      *      notify_jackpot_detected, notify_moon_chunk_unstable,
      *      notify_theft_*,

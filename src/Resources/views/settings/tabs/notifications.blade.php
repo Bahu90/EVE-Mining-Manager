@@ -43,15 +43,6 @@
                         'has_user_ping' => false,
                         'has_show_amount' => false,
                     ],
-                    'tax_reminder' => [
-                        'label' => 'Tax Payment Reminder',
-                        'icon' => 'fas fa-clock text-warning',
-                        'desc' => 'Reminder sent to individual miners before the payment deadline',
-                        'scope' => 'individual',
-                        'has_role_ping' => true,
-                        'has_user_ping' => true,
-                        'has_show_amount' => true,
-                    ],
                     'tax_invoice' => [
                         'label' => 'Tax Invoice Created',
                         'icon' => 'fas fa-file-invoice text-info',
@@ -572,10 +563,9 @@
                                     </td>
                                     <td class="text-center">
                                         @if($wh->notify_tax_generated) <span class="badge badge-info" title="Taxes Summary"><i class="fas fa-calculator"></i></span> @endif
-                                        @if($wh->notify_tax_reminder) <span class="badge badge-warning" title="Tax Reminder"><i class="fas fa-clock"></i></span> @endif
                                         @if($wh->notify_tax_invoice) <span class="badge badge-info" title="Tax Invoice"><i class="fas fa-file-invoice"></i></span> @endif
                                         @if($wh->notify_tax_overdue) <span class="badge badge-danger" title="Tax Overdue"><i class="fas fa-exclamation-circle"></i></span> @endif
-                                        @if(!$wh->notify_tax_generated && !$wh->notify_tax_reminder && !$wh->notify_tax_invoice && !$wh->notify_tax_overdue)
+                                        @if(!$wh->notify_tax_generated && !$wh->notify_tax_invoice && !$wh->notify_tax_overdue)
                                             <span class="text-muted">-</span>
                                         @endif
                                     </td>
@@ -665,7 +655,6 @@
                     $slackTypeList = [
                         'tax_generated' => ['label' => 'Mining Taxes Summary', 'icon' => 'fas fa-calculator text-info'],
                         'tax_announcement' => ['label' => 'New Invoices Announcement', 'icon' => 'fas fa-bullhorn text-primary'],
-                        'tax_reminder' => ['label' => 'Tax Reminder', 'icon' => 'fas fa-clock text-warning'],
                         'tax_invoice' => ['label' => 'Tax Invoice Created', 'icon' => 'fas fa-file-invoice text-info'],
                         'tax_overdue' => ['label' => 'Tax Overdue', 'icon' => 'fas fa-exclamation-circle text-danger'],
                         'event_created' => ['label' => 'Event Created', 'icon' => 'fas fa-calendar-plus text-primary'],
